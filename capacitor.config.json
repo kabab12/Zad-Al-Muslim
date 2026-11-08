@@ -1,0 +1,7 @@
+{
+  "appId": "com.zadalmuslim.app",
+  "appName": "زاد المسلم",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "plugins": { "StatusBar": { "overlaysWebView": true, "style": "DARK" } }
+}
