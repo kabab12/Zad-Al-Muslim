@@ -1,5 +1,6 @@
 package com.zadalmuslim.app;
 
+import android.content.pm.ActivityInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -30,6 +31,16 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    /** تدوير الشاشة داخل المصحف حتى لو كان «التدوير التلقائي» مغلقًا في الهاتف */
+    private class OrientBridge {
+        @JavascriptInterface
+        public void setSensor(boolean on) {
+            runOnUiThread(() -> setRequestedOrientation(on
+                    ? ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                    : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED));
+        }
+    }
+
     private void stopAdhan() {
         if (!adhanPlaying) return;
         adhanPlaying = false;
@@ -46,6 +57,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         try {
             getBridge().getWebView().addJavascriptInterface(new AdhanBridge(), "AdhanNative");
+            getBridge().getWebView().addJavascriptInterface(new OrientBridge(), "OrientNative");
         } catch (Exception ignored) { }
 
         // ظهور شريط الحالة (السحبة الأولى في وضع ملء الشاشة) = إيقاف الأذان
