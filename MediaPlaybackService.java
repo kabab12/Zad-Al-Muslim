@@ -103,6 +103,15 @@ public class MediaPlaybackService extends Service {
         else if (A_NEXT.equals(a)) MainActivity.sendToJs("next", 0);
         else if (A_PREV.equals(a)) MainActivity.sendToJs("prev", 0);
         else if (A_STOP.equals(a)) { MainActivity.sendToJs("stop", 0); shutdown(); return START_NOT_STICKY; }
+        if (!inFg) { // نظام أندرويد يشترط استدعاء startForeground بعد startForegroundService
+            try {
+                Notification n0 = build();
+                if (Build.VERSION.SDK_INT >= 29)
+                    startForeground(NID, n0, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+                else startForeground(NID, n0);
+                inFg = true;
+            } catch (Exception ignored) { }
+        }
         refreshState(true);
         return START_NOT_STICKY;
     }
