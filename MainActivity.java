@@ -1,15 +1,11 @@
 package com.zadalmuslim.app;
 
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebView;
 
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -17,14 +13,11 @@ import androidx.core.view.WindowInsetsCompat;
 import com.getcapacitor.BridgeActivity;
 
 /**
- * - إيقاف الأذان بزر الصوت أو بسحب ستارة الإشعارات
- * - تدوير الشاشة داخل المصحف
- * - جسر إشعار الوسائط (MediaNative): تشغيل/إيقاف/السابق/التالي في الستارة وشاشة القفل
- * - جسر النظام (SysNative): فتح إعدادات البطارية وإعدادات التطبيق
+ * إيقاف الأذان:
+ *  1) بزر الصوت (رفع أو خفض)
+ *  2) بسحب ستارة الإشعارات ولو قليلًا
  */
 public class MainActivity extends BridgeActivity {
-
-    private static MainActivity inst;
 
     private volatile boolean adhanPlaying = false;
     private boolean swallowVolume = false;
@@ -48,66 +41,6 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
-    /** إشعار الوسائط: الصفحة تُخبر الخدمة الأصلية بما يُشغَّل وحالته */
-    private class MediaBridge {
-        @JavascriptInterface
-        public void meta(String title, String artist, boolean hasPrev, boolean hasNext) {
-            MediaPlaybackService.setMeta(getApplicationContext(), title, artist, hasPrev, hasNext);
-        }
-
-        @JavascriptInterface
-        public void state(boolean playing, long posMs, long durMs) {
-            MediaPlaybackService.setState(getApplicationContext(), playing, posMs, durMs);
-        }
-
-        @JavascriptInterface
-        public void clear() {
-            MediaPlaybackService.clear(getApplicationContext());
-        }
-    }
-
-    /** اختصارات إعدادات النظام لضمان وصول التنبيهات */
-    private class SysBridge {
-        @JavascriptInterface
-        public void openBattery() {
-            runOnUiThread(() -> {
-                try {
-                    if (Build.VERSION.SDK_INT >= 23) {
-                        startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS));
-                    } else {
-                        openAppDetails();
-                    }
-                } catch (Exception e) {
-                    openAppDetails();
-                }
-            });
-        }
-
-        @JavascriptInterface
-        public void openAppSettings() {
-            runOnUiThread(() -> openAppDetails());
-        }
-    }
-
-    private void openAppDetails() {
-        try {
-            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:" + getPackageName())));
-        } catch (Exception ignored) { }
-    }
-
-    /** تستدعيها خدمة الوسائط لإيصال أزرار الستارة إلى الصفحة */
-    static void sendToJs(final String cmd, final long val) {
-        final MainActivity a = inst;
-        if (a == null) return;
-        a.runOnUiThread(() -> {
-            try {
-                a.getBridge().getWebView().evaluateJavascript(
-                        "window.zadMediaCmd&&window.zadMediaCmd('" + cmd + "'," + val + ")", null);
-            } catch (Exception ignored) { }
-        });
-    }
-
     private void stopAdhan() {
         if (!adhanPlaying) return;
         adhanPlaying = false;
@@ -122,14 +55,9 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        inst = this;
         try {
-            WebView wv = getBridge().getWebView();
-            wv.getSettings().setMediaPlaybackRequiresUserGesture(false);
-            wv.addJavascriptInterface(new AdhanBridge(), "AdhanNative");
-            wv.addJavascriptInterface(new OrientBridge(), "OrientNative");
-            wv.addJavascriptInterface(new MediaBridge(), "MediaNative");
-            wv.addJavascriptInterface(new SysBridge(), "SysNative");
+            getBridge().getWebView().addJavascriptInterface(new AdhanBridge(), "AdhanNative");
+            getBridge().getWebView().addJavascriptInterface(new OrientBridge(), "OrientNative");
         } catch (Exception ignored) { }
 
         // ظهور شريط الحالة (السحبة الأولى في وضع ملء الشاشة) = إيقاف الأذان
@@ -145,25 +73,6 @@ public class MainActivity extends BridgeActivity {
                 if ((flags & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) stopAdhan();
             });
         }
-    }
-
-    // إبقاء الصفحة تعمل أثناء تشغيل التلاوة والشاشة مطفأة أو التطبيق في الخلفية
-    @Override
-    public void onPause() {
-        super.onPause();
-        if (MediaPlaybackService.playing) {
-            try {
-                WebView wv = getBridge().getWebView();
-                wv.onResume();
-                wv.resumeTimers();
-            } catch (Exception ignored) { }
-        }
-    }
-
-    @Override
-    public void onDestroy() {
-        if (inst == this) inst = null;
-        super.onDestroy();
     }
 
     // سحب الستارة (في الوضع العادي) يُفقد النافذة التركيز
