@@ -2,17 +2,6 @@
   "appId": "com.zadalmuslim.app",
   "appName": "زاد المسلم",
   "webDir": "www",
-  "android": {
-    "allowMixedContent": false
-  },
-  "plugins": {
-    "StatusBar": {
-      "overlaysWebView": true,
-      "style": "DARK"
-    },
-    "LocalNotifications": {
-      "smallIcon": "ic_stat_zad",
-      "iconColor": "#2E7D5B"
-    }
-  }
+  "android": { "allowMixedContent": false },
+  "plugins": { "StatusBar": { "overlaysWebView": true, "style": "DARK" } }
 }
