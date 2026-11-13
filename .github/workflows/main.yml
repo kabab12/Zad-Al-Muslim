@@ -1,28 +1,90 @@
-name: Build APK
-on:
-  workflow_dispatch:
-  push:
-    branches: [main]
+#!/usr/bin/env bash
+# بناء APK لتطبيق زاد المسلم باستخدام Capacitor
+# الاستعمال: bash zad-build.sh full|basic
+set -euo pipefail
 
-jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [full, basic]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-      - name: Build ${{ matrix.variant }}
-        run: bash zad-build.sh ${{ matrix.variant }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: zad-${{ matrix.variant }}-apk
-          path: out/zad-${{ matrix.variant }}.apk
+VARIANT="${1:-basic}"
+ROOT="$(pwd)"
+WORK="$ROOT/_build"
+OUT="$ROOT/out"
+APP_ID="com.zad.muslim"
+APP_NAME="زاد المسلم"
+
+[ -f "$ROOT/index.html" ] || { echo "ERROR: index.html غير موجود في جذر المستودع"; exit 1; }
+
+rm -rf "$WORK"; mkdir -p "$WORK/www" "$OUT"
+cp "$ROOT/index.html" "$WORK/www/index.html"
+for f in manifest.webmanifest sw.js; do [ -f "$ROOT/$f" ] && cp "$ROOT/$f" "$WORK/www/$f" || true; done
+
+if [ "$VARIANT" = "full" ]; then
+  if [ -d "$ROOT/offline" ]; then cp -r "$ROOT/offline" "$WORK/www/offline"; echo "تم تضمين مجلد offline"
+  else echo "تنبيه: لا يوجد مجلد offline، النسخة full ستكون مثل basic"; fi
+fi
+
+cd "$WORK"
+cat > package.json <<JSON
+{ "name": "zad-muslim", "version": "1.0.0", "private": true }
+JSON
+npm install --no-audit --no-fund \
+  @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 \
+  @capacitor/geolocation@6 @capacitor/local-notifications@6
+
+cat > capacitor.config.json <<JSON
+{
+  "appId": "$APP_ID",
+  "appName": "$APP_NAME",
+  "webDir": "www",
+  "server": { "androidScheme": "https" },
+  "android": { "allowMixedContent": true }
+}
+JSON
+
+npx cap add android
+npx cap sync android
+
+# الأذونات
+MF="android/app/src/main/AndroidManifest.xml"
+python3 - "$MF" <<'PY'
+import sys
+p=sys.argv[1]; s=open(p,encoding='utf8').read()
+perms=["INTERNET","ACCESS_FINE_LOCATION","ACCESS_COARSE_LOCATION","POST_NOTIFICATIONS",
+"WAKE_LOCK","VIBRATE","RECEIVE_BOOT_COMPLETED","SCHEDULE_EXACT_ALARM","USE_EXACT_ALARM"]
+add="".join(f'    <uses-permission android:name="android.permission.{x}" />\n' for x in perms if f'android.permission.{x}"' not in s)
+s=s.replace("</manifest>",add+"</manifest>")
+open(p,"w",encoding='utf8').write(s)
+PY
+
+# أيقونة الإشعار الصغيرة
+mkdir -p android/app/src/main/res/drawable
+cat > android/app/src/main/res/drawable/ic_stat_zad.xml <<'XML'
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2C6.5,2 2,6.5 2,12s4.5,10 10,10c1.4,0 2.7,-0.3 3.9,-0.8C11.7,20.5 9,16.6 9,12s2.7,-8.5 6.9,-9.2C14.7,2.3 13.4,2 12,2z"/>
+</vector>
+XML
+
+# أيقونة التطبيق من index.html (لا يفشل البناء إن تعذر)
+python3 - <<'PY' || echo "تخطي الأيقونة المخصصة"
+import re,base64,os,glob
+s=open("www/index.html",encoding="utf8").read()
+m=re.search(r'rel="apple-touch-icon"\s+href="data:image/png;base64,([^"]+)"',s)
+if m:
+    data=base64.b64decode(m.group(1))
+    res="android/app/src/main/res"
+    for d in glob.glob(res+"/mipmap-*dpi"):
+        for n in ("ic_launcher.png","ic_launcher_round.png","ic_launcher_foreground.png"):
+            open(os.path.join(d,n),"wb").write(data)
+    for d in glob.glob(res+"/mipmap-anydpi*"):
+        for f in glob.glob(d+"/*.xml"): os.remove(f)
+    print("تم تعيين الأيقونة")
+PY
+
+# البناء
+cd android
+chmod +x gradlew
+./gradlew assembleDebug --no-daemon --stacktrace
+
+cp app/build/outputs/apk/debug/app-debug.apk "$OUT/zad-$VARIANT.apk"
+ls -la "$OUT"
+echo "تم: $OUT/zad-$VARIANT.apk"
