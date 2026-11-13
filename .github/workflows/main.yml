@@ -6,6 +6,10 @@ on:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [full, basic]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,50 +20,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Prepare web files
-        run: |
-          mkdir -p www
-          for f in index.html sw.js manifest.webmanifest; do
-            if [ -f "$f" ]; then cp "$f" www/; fi
-          done
-          for f in icon-*.png; do
-            if [ -f "$f" ]; then cp "$f" www/; fi
-          done
-          test -f www/index.html
-          if ! grep -q 'id="zadps"' www/index.html; then
-            sed -i '0,/<\/head>/s##<script id="zadps">if(location.hostname==="localhost"\&\&navigator.storage){navigator.storage.persist=function(){return Promise.resolve(true)};navigator.storage.persisted=function(){return Promise.resolve(true)}}</script></head>#' www/index.html
-          fi
-      - run: npm install
-      - run: npm install @capacitor/status-bar@^6.0.1
-      - run: npx cap add android
-      - name: Install custom MainActivity
-        run: |
-          src=native/MainActivity.java
-          if [ ! -f "$src" ]; then src=MainActivity.java; fi
-          test -f "$src"
-          f=$(find android/app/src/main/java -name MainActivity.java | head -n 1)
-          cp "$src" "$f"
-      - name: Add permissions
-        run: |
-          M=android/app/src/main/AndroidManifest.xml
-          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' "$M"
-          grep -c ACCESS_FINE_LOCATION "$M"
-      - name: Set app icon
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-          CMD=$(command -v magick || command -v convert)
-          RES=android/app/src/main/res
-          rm -rf $RES/mipmap-anydpi-v26
-          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
-            n=${d%%:*}; s=${d##*:}
-            $CMD www/icon-512.png -resize ${s}x${s} $RES/mipmap-$n/ic_launcher.png
-            $CMD www/icon-512.png -resize ${s}x${s} $RES/mipmap-$n/ic_launcher_round.png
-          done
-      - run: npx cap sync android
-      - name: Build debug APK
-        run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+      - name: Build ${{ matrix.variant }}
+        run: bash zad-build.sh ${{ matrix.variant }}
       - uses: actions/upload-artifact@v4
         with:
-          name: zad-almuslim-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: zad-${{ matrix.variant }}-apk
+          path: out/zad-${{ matrix.variant }}.apk
