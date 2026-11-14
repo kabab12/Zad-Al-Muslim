@@ -214,7 +214,7 @@ function set(){
 function fs(d){S.fs=Math.max(14,Math.min(34,S.fs+d));apply();save()}
 function pick(n){const c=CITIES.find(x=>x[0]==n);S.city=n;S.lat=c[1];S.lng=c[2];S.tz=c[3];S.chosen=1;save()}
 function loc(){const m=$("#ls");if(!navigator.geolocation){m.textContent="الموقع غير مدعوم؛ اختر مدينة.";return}
- navigator.geolocation.getCurrentPosition(p=>{S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city="موقعي الحالي";S.chosen=1;save();m.textContent="تم تحديد موقعك. المواقيت الآن لموقعك الفعلي."},()=>{m.textContent="تعذر تحديد الموقع؛ اختر مدينتك من القائمة."})}
+ navigator.geolocation.getCurrentPosition(p=>{S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city=locName(p.coords.latitude,p.coords.longitude);S.chosen=1;save();m.textContent="تم تحديد موقعك. المواقيت الآن لموقعك الفعلي."},()=>{m.textContent="تعذر تحديد الموقع؛ اختر مدينتك من القائمة."})}
 function apply(){const r=document.documentElement;r.style.setProperty("--fs",S.fs+"px");const T=S.theme||"auto";T=="auto"?r.removeAttribute("data-theme"):r.setAttribute("data-theme",T);try{const dk=T=="dark"||(T=="auto"&&matchMedia("(prefers-color-scheme:dark)").matches);r.style.colorScheme=dk?"dark":"light";let m=document.querySelector('meta[name="theme-color"]');if(m)m.content=dk?"#0e1815":"#0f6b4f"}catch(e){}}
 try{matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{if((S.theme||"auto")=="auto")apply()})}catch(e){}
 const CH=["أذكار الاستيقاظ من النوم","دعاء لبس الثوب","دعاء لبس الثوب الجديد","الدعاء لمن لبس ثوبا جديدا","ما يقول إذا وضع ثوبه","دعاء دخول الخلاء","دعاء الخروج من الخلاء","الذكر قبل الوضوء","الذكر بعد الفراغ من الوضوء","الذكر عند الخروج من المنزل","الذكر عند دخول المنزل","دعاء الذهاب إلى المسجد","دعاء دخول المسجد","دعاء الخروج من المسجد","أذكار الأذان","دعاء الاستفتاح","دعاء الركوع","دعاء الرفع من الركوع","دعاء السجود","دعاء الجلسة بين السجدتين","دعاء سجود التلاوة","التشهد","الصلاة على النبي ﷺ بعد التشهد","الدعاء بعد التشهد الأخير قبل السلام","الأذكار بعد السلام من الصلاة","دعاء صلاة الاستخارة","أذكار الصباح والمساء","أذكار النوم","الدعاء إذا تقلب ليلا","دعاء الفزع في النوم ومن بلي بالوحشة","ما يفعل من رأى الرؤيا أو الحلم","دعاء قنوت الوتر","الذكر عقب السلام من الوتر","دعاء الهم والحزن","دعاء الكرب","دعاء لقاء العدو وذي السلطان","دعاء من خاف ظلم السلطان","الدعاء على العدو","ما يقول من خاف قوما","دعاء من أصابه وسوسة في الإيمان","دعاء قضاء الدين","دعاء الوسوسة في الصلاة والقراءة","دعاء من استصعب عليه أمر","ما يقول ويفعل من أذنب ذنبا","دعاء طرد الشيطان ووساوسه","الدعاء حينما يقع ما لا يرضاه أو غلب على أمره","تهنئة المولود له وجوابه","ما يعوذ به الأولاد","الدعاء للمريض في عيادته","فضل عيادة المريض","دعاء المريض الذي يئس من حياته","تلقين المحتضر","دعاء من أصيب بمصيبة","الدعاء عند إغماض الميت","الدعاء للميت في الصلاة عليه","الدعاء للفرط في الصلاة عليه","دعاء التعزية","الدعاء عند إدخال الميت القبر","الدعاء بعد دفن الميت","دعاء زيارة القبور","دعاء الريح","دعاء الرعد","من أدعية الاستسقاء","الدعاء إذا رأى المطر","الذكر بعد نزول المطر","من أدعية الاستصحاء","دعاء رؤية الهلال","الدعاء عند إفطار الصائم","الدعاء قبل الطعام","الدعاء عند الفراغ من الطعام","دعاء الضيف لصاحب الطعام","التعريض بالدعاء لطلب الطعام أو الشراب","الدعاء إذا أفطر عند أهل بيت","دعاء الصائم إذا حضر الطعام ولم يفطر","ما يقول الصائم إذا سابه أحد","الدعاء عند رؤية باكورة الثمر","دعاء العطاس","ما يقال للكافر إذا عطس فحمد الله","الدعاء للمتزوج","دعاء المتزوج وشراء الدابة","الدعاء قبل إتيان الزوجة","دعاء الغضب","دعاء من رأى مبتلى","ما يقال في المجلس","كفارة المجلس","الدعاء لمن قال غفر الله لك","الدعاء لمن صنع إليك معروفا","ما يعصم الله به من الدجال","الدعاء لمن قال إني أحبك في الله","الدعاء لمن عرض عليك ماله","الدعاء لمن أقرض عند القضاء","دعاء الخوف من الشرك","الدعاء لمن قال بارك الله فيك","دعاء كراهية الطيرة","دعاء الركوب","دعاء السفر","دعاء دخول القرية أو البلدة","دعاء دخول السوق","الدعاء إذا تعس المركوب","دعاء المسافر للمقيم","دعاء المقيم للمسافر","التكبير والتسبيح في سير السفر","دعاء المسافر إذا أسحر","الدعاء إذا نزل منزلا في سفر أو غيره","ذكر الرجوع من السفر","ما يقول من أتاه أمر يسره أو يكرهه","فضل الصلاة على النبي ﷺ","إفشاء السلام","كيف يرد السلام على الكافر إذا سلم","الدعاء عند سماع صياح الديك ونهيق الحمار","الدعاء عند سماع نباح الكلاب بالليل","الدعاء لمن سببته","ما يقول المسلم إذا مدح المسلم","ما يقول المسلم إذا زكي","كيف يلبي المحرم في الحج أو العمرة","التكبير إذا أتى الحجر الأسود","الدعاء بين الركن اليماني والحجر الأسود","دعاء الوقوف على الصفا والمروة","الدعاء يوم عرفة","الذكر عند المشعر الحرام","التكبير عند رمي الجمار مع كل حصاة","دعاء التعجب والأمر السار","ما يفعل من أتاه أمر يسره","ما يفعل ويقول من أحس وجعا في جسده","دعاء من خشي أن يصيب شيئا بعينه","ما يقال عند الفزع","ما يقول عند الذبح أو النحر","ما يقول لرد كيد مردة الشياطين","الاستغفار والتوبة","فضل التسبيح والتحميد، والتهليل، والتكبير","كيف كان النبي ﷺ يسبح؟","من أنواع الخير والآداب الجامعة"];
@@ -512,7 +512,7 @@ function reqLoc(cb){
  if(locBusy)return;locBusy=1;
  const g=navigator.geolocation;let done=0,wid=null;
  const end=()=>{done=1;locBusy=0;clearTimeout(locT);if(wid!=null){try{g.clearWatch(wid)}catch(x){}wid=null}};
- const ok=p=>{if(done)return;end();S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city="موقعي الحالي";S.chosen=1;S.approx=0;save();cb(1,0)};
+ const ok=p=>{if(done)return;end();S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city=locName(p.coords.latitude,p.coords.longitude);S.chosen=1;S.approx=0;save();cb(1,0)};
  const fail=e=>{if(done)return;end();cb(0,e&&e.code||0)};
  locT=setTimeout(()=>fail({code:3}),45000);
  try{
@@ -524,6 +524,7 @@ function reqLoc(cb){
    },{enableHighAccuracy:true,timeout:15000,maximumAge:0})
   },{enableHighAccuracy:false,timeout:10000,maximumAge:600000})
  }catch(x){fail({code:0})}}
+function locName(la,lo){try{let b=null,bd=1e9;CITIES.forEach(c=>{const dl=(c[1]-la)*Math.PI/180,dg=(c[2]-lo)*Math.PI/180,x=Math.sin(dl/2)**2+Math.cos(la*Math.PI/180)*Math.cos(c[1]*Math.PI/180)*Math.sin(dg/2)**2,d=12742*Math.asin(Math.sqrt(x));if(d<bd){bd=d;b=c}});if(b&&bd<=40)return b[0]}catch(e){}return"موقعي الحالي"}
 function locGuess(){try{const z=Intl.DateTimeFormat().resolvedOptions().timeZone;return CITIES.find(c=>c[3]==z)||null}catch(e){return null}}
 function locUseGuess(){const c=locGuess();if(!c)return;pick(c[0]);S.approx=1;save();go(cur=="home"||cur=="qibla"||cur=="set"?cur:"home")}
 function locWhy(c){
@@ -1246,7 +1247,7 @@ function pmDraw(st){const e=document.getElementById("pmr");if(!e)return;
 async function pmOne(k){
  try{
   if(k=="n"&&typeof Notification!="undefined")await Notification.requestPermission();
-  else if(k=="g")await new Promise(res=>{try{navigator.geolocation.getCurrentPosition(p=>{if(!S.chosen){S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city="موقعي الحالي";S.chosen=1;save()}res()},er=>{try{qtoast(er&&er.code==1?"الموقع غير مسموح هنا. جرّب من تطبيق زاد المسلم (APK) أو من متصفح Chrome، أو اختر مدينتك من الإعدادات.":"تعذّر تحديد الموقع. تأكد من تشغيل GPS، أو اختر مدينتك من الإعدادات.",6000)}catch(x){}res()},{timeout:20000,maximumAge:60000})}catch(e){res()}});
+  else if(k=="g")await new Promise(res=>{try{navigator.geolocation.getCurrentPosition(p=>{if(!S.chosen){S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city=locName(p.coords.latitude,p.coords.longitude);S.chosen=1;save()}res()},er=>{try{qtoast(er&&er.code==1?"الموقع غير مسموح هنا. جرّب من تطبيق زاد المسلم (APK) أو من متصفح Chrome، أو اختر مدينتك من الإعدادات.":"تعذّر تحديد الموقع. تأكد من تشغيل GPS، أو اختر مدينتك من الإعدادات.",6000)}catch(x){}res()},{timeout:20000,maximumAge:60000})}catch(e){res()}});
   else if(k=="s"&&navigator.storage&&navigator.storage.persist)await navigator.storage.persist();
   else if(k=="m"&&window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){if(await DeviceOrientationEvent.requestPermission()=="granted"){S.pmm=1;save()}}
  }catch(e){}
@@ -1267,7 +1268,7 @@ function qdiag0(){
  ${row(inst,"يعمل كتطبيق مثبّت",inst?"":"افتحه من كروم ثم «تثبيت التطبيق» وشغّله من أيقونته.")}
  <div class="mu" style="font-size:.8em;margin:8px 0">اضغط الزر ثم اسحب ستارة الإشعارات: يجب أن ترى «اختبار الإشعار» مع أزرار التشغيل.</div>
  <button class="gdl" style="width:100%" onclick="qdiagGo()">▶ تشغيل اختبار (15 ثانية)</button></div>`)}
-async function qdiag(){const N=window.__zadNative;if(!(N&&N.status))return qdiag0();let s={};try{s=await N.status()}catch(e){}const row=(ok,t,n)=>`<div class="set"><span>${ok?"✅":"❌"} ${t}</span></div>${n?`<div class="mu" style="margin:-4px 0 8px;font-size:.8em">${n}</div>`:""}`;const pm={granted:"مسموح",denied:"مرفوض",default:"لم يُطلب بعد"}[s.perm]||"؟";qshow("qo-dg","اختبار الإشعارات والصوت",`<div class="card">${row(s.native,"التطبيق يعمل بنسخة أندرويد","")}${row(s.ln,"إضافة الإشعارات موجودة",s.ln?"":"هذه النسخة بُنيت بلا الإضافات: ثبّت النسخة zad-full-apk")}${row(s.perm=="granted","إذن الإشعارات: "+pm,s.perm=="granted"?"":"اضغط «طلب الإذن»، أو فعّله من إعدادات الهاتف ← التطبيقات ← زاد المسلم ← الإشعارات")}${row(s.pending>0,"إشعارات مجدولة: "+(s.pending||0),s.next?"أقربها: "+s.next:"فعّل تذكيرًا واحدًا على الأقل من الإعدادات")}${row(s.ms,"إضافة تحكم الصوت في الستارة موجودة",s.ms?"":"هذه النسخة بُنيت بلا الإضافات: ثبّت النسخة zad-full-apk")}${row(s.geo,"إضافة الموقع موجودة","")}<div class="mu" style="font-size:.8em;margin:8px 0">جرّب الأزرار ثم اسحب ستارة الإشعارات.</div><button class="gdl" style="width:100%;margin-bottom:8px" onclick="__zadNative.ask&&__zadNative.ask().then(()=>qdiag())">🔔 طلب إذن الإشعارات</button><button class="gdl" style="width:100%;margin-bottom:8px" onclick="__zadNative.testNotify&&__zadNative.testNotify()">📣 إشعار تجريبي بعد 5 ثوانٍ</button><button class="gdl" style="width:100%" onclick="qdiagGo()">▶ اختبار مشغّل الصوت (15 ثانية)</button></div>`)}
+async function qdiag(){const N=window.__zadNative;if(!(N&&N.status))return qdiag0();let s={};try{s=await N.status()}catch(e){}const row=(ok,t,n)=>`<div class="set"><span>${ok?"✅":"❌"} ${t}</span></div>${n?`<div class="mu" style="margin:-4px 0 8px;font-size:.8em">${n}</div>`:""}`;const pm={granted:"مسموح",denied:"مرفوض",default:"لم يُطلب بعد"}[s.perm]||"؟";qshow("qo-dg","اختبار الإشعارات والصوت",`<div class="card">${row(s.native,"التطبيق يعمل بنسخة أندرويد","")}${row(s.ln,"إضافة الإشعارات موجودة",s.ln?"":"هذه النسخة بُنيت بلا الإضافات: ثبّت النسخة zad-full-apk")}${row(s.perm=="granted","إذن الإشعارات: "+pm,s.perm=="granted"?"":"اضغط «طلب الإذن»، أو فعّله من إعدادات الهاتف ← التطبيقات ← زاد المسلم ← الإشعارات")}${row(s.pending>0,"إشعارات مجدولة: "+(s.pending||0),s.next?"أقربها: "+s.next:"فعّل تذكيرًا واحدًا على الأقل من الإعدادات")}${row(s.ms,"إضافة تحكم الصوت في الستارة موجودة",s.ms?"":"هذه النسخة بُنيت بلا الإضافات: ثبّت النسخة zad-full-apk")}${row(s.geo,"إضافة الموقع موجودة","")}<div class="mu" style="font-size:.8em;margin:8px 0">جرّب الأزرار ثم اسحب ستارة الإشعارات.</div><button class="gdl" style="width:100%;margin-bottom:8px" onclick="__zadNative.ask&&__zadNative.ask().then(()=>qdiag())">🔔 طلب إذن الإشعارات</button><button class="gdl" style="width:100%;margin-bottom:8px" onclick="__zadNative.testNotify&&__zadNative.testNotify()">📣 إشعار تجريبي بعد 5 ثوانٍ</button><button class="gdl" style="width:100%" onclick="qdiagGo()">▶ اختبار مشغّل الصوت (15 ثانية)</button><div class="mu" style="font-size:.85em;margin-top:12px;line-height:1.9"><b>لبقاء مشغّل الستارة:</b><br>• اخرج من التطبيق بزر «الرئيسية» وليس بالسحب من التطبيقات الأخيرة، فالسحب يغلق التطبيق ومعه الصوت.<br>• الإعدادات ← التطبيقات ← زاد المسلم ← البطارية ← «بلا قيود».<br>• شاومي وريدمي: فعّل «التشغيل التلقائي» للتطبيق، وثبّت بطاقته في التطبيقات الأخيرة (ضغط مطوّل ← قفل).</div></div>`)}
 function qdiagGo(){try{if(AP.on)qstop();if(HP.on)hstop()}catch(e){}
  msSet("اختبار الإشعار","زاد المسلم",{play:()=>KA.play(),pause:()=>KA.pause(),stop:()=>KA.pause()});
  KA.play().then(()=>{try{navigator.mediaSession.playbackState="playing"}catch(e){}qtoast("اسحب ستارة الإشعارات الآن")}).catch(()=>qtoast("تعذّر التشغيل"));
@@ -1996,6 +1997,7 @@ function slCompat(){
  else{st="⚠ هذا الجهاز لا يدعم تغيير وضع الصامت من التطبيق؛ ستصلك تذكيرات فقط.";alt="فعّل الوضع الصامت يدويًا عند الصلاة.";}
  return `<div class="card"><div class="lh">التوافق مع جهازك</div><div class="mu">${st}</div><div class="mu" style="margin-top:6px">${alt}</div>${and&&vt[v]?`<div class="mu" style="margin-top:6px">لضمان وصول التذكيرات في الخلفية — ${vt[v]}</div>`:""}<div class="mu" style="margin-top:6px">حالة الاختبار: هذه الخاصية لم تُختبر بعد على أجهزة Android حقيقية (Samsung وHuawei وXiaomi وRedmi وHonor وغيرها) ولا على إصدارات Android المختلفة، فلا تُعدّ مكتملة. التذكير اليدوي هو المضمون على كل الأجهزة.</div></div>`}
 
+try{if(S.city==="موقعي الحالي"&&S.chosen&&S.lat!=null){const n=locName(S.lat,S.lng);if(n!=="موقعي الحالي"){S.city=n;save()}}}catch(e){}
 apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();setTimeout(()=>{try{pmGate()}catch(e){}},900);
 
 /* ---- حفظ مكان التلاوة ومتابعتها ---- */
@@ -2009,11 +2011,41 @@ function qresume(){const r=resInfo();if(!r)return;if(r.f&&RC.find(x=>x[0]==r.f))
  setTimeout(()=>{qplay(r.s,r.a);AP.rt=r.t||0;AP.res=1},400)}
 /* ---- الوسائط: إشعار التحكم (مثل مشغّل الـ MP3) ---- */
 function msSet(title,artist,h){try{if(!("mediaSession" in navigator))return;let aw=[];try{const b=new URL("icon-512.png",location.href).href;aw=[{src:b,sizes:"512x512",type:"image/png"}]}catch(e){}navigator.mediaSession.metadata=new MediaMetadata({title,artist,album:"زاد المسلم",artwork:aw});[["play",h.play],["pause",h.pause],["previoustrack",h.prev],["nexttrack",h.next],["stop",h.stop],["seekbackward",h.sb],["seekforward",h.sf],["seekto",h.st]].forEach(([a,f])=>{try{navigator.mediaSession.setActionHandler(a,f||null)}catch(e){}})}catch(e){}}
-function msPos(){try{if("mediaSession" in navigator&&navigator.mediaSession.setPositionState&&isFinite(AU.duration)&&AU.duration>0)navigator.mediaSession.setPositionState({duration:AU.duration,playbackRate:AU.playbackRate||1,position:Math.min(AU.currentTime,AU.duration)})}catch(e){}}
+/* شريط الستارة لكل السورة (وليس لكل آية): الآيات تُعامل كأجزاء من مسار واحد طوله السورة */
+const mxW=(s,a)=>{try{return QD.text[s-1][a-1].replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640\s]/g,"").length+3}catch(e){return 20}};
+let MX={k:"",o:{}};
+function mxLine(){const f=S.qrec||RLD[0],s=AP.s,n=QD.text[s-1].length,key=f+"|"+s;
+ if(MX.k!==key)MX={k:key,o:{}};
+ const ids=(s!=1&&s!=9)?["b"]:[];for(let i=1;i<=n;i++)ids.push(i);
+ const w=u=>u==="b"?mxW(1,1):mxW(s,u);let sd=0,sw=0;
+ ids.forEach(u=>{if(MX.o[u]>0){sd+=MX.o[u];sw+=w(u)}});
+ const k=sw?sd/sw:0,t=ids.map(u=>MX.o[u]>0?MX.o[u]:k*w(u));
+ return{ids,t,tot:t.reduce((x,y)=>x+y,0)}}
+function mxPD(){const d=AU.duration;if(!isFinite(d)||d<=0)return null;
+ if(SUD[S.qrec||RLD[0]])return{pos:Math.min(AU.currentTime,d),dur:d};
+ mxLine();const id=AP.bs?"b":AP.a;MX.o[id]=d;
+ const L=mxLine(),ix=L.ids.indexOf(id);let pos=0;for(let i=0;i<ix;i++)pos+=L.t[i];
+ pos+=AU.currentTime;return{pos:Math.min(pos,L.tot),dur:L.tot}}
+function msPos(){try{if(!("mediaSession" in navigator)||!navigator.mediaSession.setPositionState||!AP||!AP.on)return;
+ const x=mxPD();if(!x)return;
+ navigator.mediaSession.setPositionState({duration:x.dur,playbackRate:AU.playbackRate||1,position:Math.max(0,x.pos)})}catch(e){}}
+function mxSeek(T){try{if(SUD[S.qrec||RLD[0]]){AU.currentTime=T;return}
+ const L=mxLine();let acc=0,ix=L.ids.length-1,off=0;
+ for(let i=0;i<L.ids.length;i++){if(T<acc+L.t[i]||i==L.ids.length-1){ix=i;off=Math.max(0,T-acc);break}acc+=L.t[i]}
+ const id=L.ids[ix],cur=AP.bs?"b":AP.a;
+ if(id===cur){AU.currentTime=Math.max(0,Math.min(off,(AU.duration||off)-.2));return}
+ AP.bs=id==="b"?1:0;AP.a=id==="b"?1:id;const s=AP.s,a=AP.a,b=AP.bs;
+ AU.addEventListener("loadedmetadata",()=>{try{if(AP.s==s&&AP.a==a&&AP.bs==b)AU.currentTime=Math.max(0,Math.min(off,AU.duration-.2))}catch(e){}},{once:true});
+ aload()}catch(e){}}
+function mxBy(d){const x=mxPD();if(x)mxSeek(Math.max(0,Math.min(x.dur,x.pos+d)))}
+function mxNext(){if(!AP.on)return;if(AP.s>=114)return;AP.s++;AP.a=1;AP.bs=AP.s!=9?1:0;AP.end=null;aload()}
+function mxPrev(){if(!AP.on)return;const x=mxPD();if(x&&x.pos>4||AP.s<=1){AP.a=1;AP.bs=(AP.s!=1&&AP.s!=9)?1:0;aload();return}AP.s--;AP.a=1;AP.bs=(AP.s!=1&&AP.s!=9)?1:0;AP.end=null;aload()}
 setInterval(()=>{try{if(AP&&AP.on&&!AU.paused){if("mediaSession" in navigator&&!navigator.mediaSession.metadata)qms();msPS(AU);msPos()}}catch(e){}},3000);
 function msPS(a){try{if("mediaSession" in navigator)navigator.mediaSession.playbackState=a.paused?"paused":"playing"}catch(e){}}
 function msClear(){try{if("mediaSession" in navigator){navigator.mediaSession.metadata=null;navigator.mediaSession.playbackState="none"}}catch(e){}}
-function qms(){if(!AP.on)return;msSet("سورة "+QD.names[AP.s-1]+" · آية "+AD(AP.a),recname(),{play:()=>AU.play(),pause:()=>AU.pause(),prev:aprev,next:anext,stop:qstop,sb:()=>{try{AU.currentTime=Math.max(0,AU.currentTime-10)}catch(e){}},sf:()=>{try{AU.currentTime=Math.min(AU.duration||1e9,AU.currentTime+10)}catch(e){}},st:d=>{try{if(d&&d.seekTime!=null)AU.currentTime=d.seekTime}catch(e){}}})}
+function qms(){if(!AP.on)return;const t="سورة "+QD.names[AP.s-1],r=recname(),sud=!!SUD[S.qrec||RLD[0]];
+ try{const m=navigator.mediaSession.metadata;if(m&&m.title===t&&m.artist===r)return}catch(e){}
+ msSet(t,r,{play:()=>AU.play(),pause:()=>AU.pause(),prev:sud?aprev:mxPrev,next:sud?anext:mxNext,stop:qstop,sb:()=>mxBy(-10),sf:()=>mxBy(10),st:d=>{try{if(d&&d.seekTime!=null)mxSeek(d.seekTime)}catch(e){}}})}
 
 /* ---- صوت حصن المسلم: تسجيل لكل ذكر، وينتقل للذي بعده عند انتهائه ---- */
 const HAPI="https://www.hisnmuslim.com/api/ar/";
