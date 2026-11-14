@@ -563,6 +563,8 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) #ascb{background:#3a2d0c;color:#ffe08a}}
 :root[data-theme="dark"] #ascb{background:#3a2d0c;color:#ffe08a}
 #ascc{left:50%!important;transform:translateX(-50%);bottom:calc(58px + env(safe-area-inset-bottom,0px))!important;align-items:center;gap:6px;padding:5px 8px!important;border-radius:26px!important;background:var(--card)!important;border:1.5px solid var(--ac)!important;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:1!important;white-space:nowrap}
+#ascc{position:relative;overflow:hidden}#ascc::after{content:"";position:absolute;right:0;bottom:0;height:3px;width:calc(var(--p,0)*100%);background:var(--ac)}
+#ascc{transition:opacity .35s}#qv.ascHide #ascc{opacity:0!important;pointer-events:none}
 #ascc span{font-size:14px;font-weight:700;color:var(--ac);padding:0 4px}
 #ascc button{min-width:40px;min-height:40px!important;padding:0 10px;border-radius:20px;font-size:20px;font-weight:700;line-height:1}
 #ascc button.st{font-size:13px;background:var(--ac);color:#fff}
@@ -1304,6 +1306,7 @@ function qzoom(d){if(QST()=="read"){qrk(Math.max(.7,Math.min(1.6,(+S.qrk||1)+d*.
  S.qz=z;save();QL.sn=0;qlay();qzui();qtoast(["حجم المصحف الأصلي (١٥ سطرًا)","تكبير متوسط","تكبير كبير"][z])}
 function qrk(v){S.qrk=+v;save();try{QL.sn=0;qlay()}catch(e){}}
 function qlay(){
+ try{if(!ASC.keep)document.querySelectorAll("#qpg .asn").forEach(x=>x.remove())}catch(e){}
  const pg=$("#qpg"),tx=$("#qtx");if(!pg||!tx||!QL.b)return;
  tx.style.width="";const z=QZF(),pcs=getComputedStyle(pg),H=(pg.clientHeight-(parseFloat(pcs.paddingTop)||0)-(parseFloat(pcs.paddingBottom)||0))*z,W=tx.clientWidth*z;if(!H||!W)return;{const q0=$("#qv");if(q0)q0.classList.toggle("qrd",qrd())}
  const RDm=qrd(),LS=qsc();let lp=H/15;const n=QL.n,B=QL.b,sh=!RDm&&n<=2,N=15,fx=B.filter(b=>b.t!="r").length,T=N-fx,runs=B.filter(b=>b.t=="r"),all=[];
@@ -1358,15 +1361,15 @@ function qkash(tx){
 let pgf={on:0,busy:0};
 function pgcl(){const w=document.createElement("div");w.className="qsh";["#qh","#qpg","#qf"].forEach(k=>w.appendChild($(k).cloneNode(true)));const t=w.querySelector("#qtx");if(t)t.classList.remove("qw");return w}
 function pgHd(n){const ss=qSur(n);$("#qhr").textContent="الجزء "+JZ[qJuz(n)-1];$("#qhl").textContent=QD.names[ss[ss.length-1]-1]}
-function pgSnap(t){const o={n:qn,L:QL,f:$("#qf").className};
+function pgSnap(t){const pg0=$("#qpg"),st0=pg0?pg0.scrollTop:0;const o={n:qn,L:QL,f:$("#qf").className};
  qn=t;QL={n:t,b:qbuild(t),k:1};pgHd(t);qfoot();$("#qf").className=t%2?"o":"e";qlay();
  const w=pgcl();
- qn=o.n;QL=o.L;pgHd(qn);qfoot();$("#qf").className=o.f;qlay();if(QS)qsel();return w}
+ qn=o.n;QL=o.L;pgHd(qn);qfoot();$("#qf").className=o.f;qlay();if(QS)qsel();if(pg0)pg0.scrollTop=st0;return w}
 const PGC={};
 function pgSig(t){return innerWidth+"x"+innerHeight+"|"+Object.keys(S.qmk||{}).length+"|"+(S.qb||[]).length}
 function pgGet(t){const c=PGC[t],g=pgSig(t);if(c&&c.g==g)return c.n.cloneNode(true);return pgSnap(t)}
-function pgWarm(){Object.keys(PGC).forEach(k=>{if(Math.abs(k-qn)>2)delete PGC[k]});if(!$("#qv")||pgf.on||pgf.busy||QS)return;const L=[qn+1,qn-1].filter(t=>t>=1&&t<=604);
- L.forEach((t,i)=>setTimeout(()=>{if(!$("#qv")||pgf.on||pgf.busy||t!=qn+1&&t!=qn-1)return;const g=pgSig(t);if(PGC[t]&&PGC[t].g==g)return;try{PGC[t]={g,n:pgSnap(t)}}catch(e){}},i*120))}
+function pgWarm(){Object.keys(PGC).forEach(k=>{if(Math.abs(k-qn)>2)delete PGC[k]});if(!$("#qv")||pgf.on||pgf.busy||QS||ASC.on)return;const L=[qn+1,qn-1].filter(t=>t>=1&&t<=604);
+ L.forEach((t,i)=>setTimeout(()=>{if(!$("#qv")||pgf.on||pgf.busy||ASC.on||t!=qn+1&&t!=qn-1)return;const g=pgSig(t);if(PGC[t]&&PGC[t].g==g)return;try{PGC[t]={g,n:pgSnap(t)}}catch(e){}},i*120))}
 function pgStart(dir){
  if(pgf.on||pgf.busy||!$("#qv")||!$("#qtx"))return false;
  const t=qn+dir;if(t<1||t>604)return false;
@@ -1533,7 +1536,7 @@ let ASC={on:0,raf:0,t:0,pos:0,end:0};
 const ascSp=l=>.02*Math.pow(1.3,l-1);
 function ascLv(){const l=+S.ascl;return l>=1&&l<=10?l:4}
 function ascChip(){const v=$("#qv");if(!v)return;let c=$("#ascc");if(!c){c=document.createElement("div");c.id="ascc";v.appendChild(c)}
- c.innerHTML=`<button onclick="ascAdj(-1)" aria-label="أبطأ">−</button><span>تمرير ${AD(ascLv())}</span><button onclick="ascAdj(1)" aria-label="أسرع">+</button><button class="st" onclick="ascStop()" aria-label="إيقاف">⏸ إيقاف</button>`;v.classList.toggle("ascOn",!!ASC.on)}
+ c.innerHTML=`<button onclick="ascAdj(-1)" aria-label="أبطأ">−</button><span>تمرير ${AD(ascLv())}</span><button onclick="ascAdj(1)" aria-label="أسرع">+</button><button class="st" onclick="ascStop()" aria-label="إيقاف">⏸ إيقاف</button>`;v.classList.toggle("ascOn",!!ASC.on);ascShow()}
 function ascAdj(d){ascSet(Math.max(1,Math.min(10,ascLv()+d)))}
 function ascTick(ts){
  ASC.raf=0;if(!ASC.on)return;
@@ -1543,19 +1546,46 @@ function ascTick(ts){
  /* التلاوة الجارية تتولى التمرير بدقة؛ ولمس الشاشة يوقفه لحظات ثم يتابع */
  if(AP.on&&!AU.paused&&S.qfollow!==false)return;
  if(Date.now()-WF.u<2500||QS||document.querySelector("#qv .qo"))return;
- const mx=pg.scrollHeight-pg.clientHeight;
+ if(!qsc()&&ASC.z===undefined){try{ascFit()}catch(e){}return}
+ let mx=pg.scrollHeight-pg.clientHeight;
  if(Math.abs(pg.scrollTop-ASC.pos)>1.5)ASC.pos=pg.scrollTop;
+ /* تمرير متصل: الصفحة التالية تظهر أسفل الحالية مباشرة (في التمرير التلقائي فقط) */
+ try{
+  const b1=pg.querySelector(".asn"),tx0=$("#qtx");
+  if(b1&&tx0){const dl=b1.offsetTop-tx0.offsetTop;
+   if(ASC.pos>=dl-.5){const off=Math.max(0,ASC.pos-dl);qp(qn+1,1);const g=$("#qpg");if(g){g.scrollTop=off;ASC.pos=g.scrollTop}ASC.end=0;ASC.hold=Date.now()+350;return}}
+  if(qn<604&&Date.now()>(ASC.hold||0)&&mx-ASC.pos<pg.clientHeight*1.5){ascAppend();mx=pg.scrollHeight-pg.clientHeight}
+ }catch(e){}
  if(mx>2&&ASC.pos<mx-1){ASC.end=0;ASC.pos=Math.min(mx,ASC.pos+pg.clientHeight*ascSp(ascLv())*dt);pg.scrollTop=ASC.pos;return}
  /* نهاية الصفحة: وقفة قصيرة ثم الصفحة التالية */
  if(!ASC.end){ASC.end=Date.now();return}
- if(Date.now()-ASC.end>(mx>2?1400:Math.max(6000,60000*Math.pow(.78,ascLv()-1)))){ASC.end=0;ASC.pos=0;if(qn<604)qp(qn+1,1);else ascStop()}}
-function ascStart(){try{if(qm>0)qmenu(0)}catch(e){}ASC.on=1;ASC.t=0;ASC.end=0;const pg=$("#qpg");ASC.pos=pg?pg.scrollTop:0;ascChip();if(!ASC.raf)ASC.raf=requestAnimationFrame(ascTick);try{qplui()}catch(e){}}
-function ascStop(){ASC.on=0;if(ASC.raf){cancelAnimationFrame(ASC.raf);ASC.raf=0}const v=$("#qv");if(v)v.classList.remove("ascOn");try{qplui()}catch(e){}}
+ {const W=mx>2?600:Math.max(6000,60000*Math.pow(.78,ascLv()-1)),c=$("#ascc");if(c)c.style.setProperty("--p",Math.min(1,(Date.now()-ASC.end)/W).toFixed(3))}
+ if(Date.now()-ASC.end>(mx>2?600:Math.max(6000,60000*Math.pow(.78,ascLv()-1)))){ASC.end=0;ASC.pos=0;if(qn<604)qp(qn+1,1);else ascStop()}}
+function ascAppend(){
+ const pg=$("#qpg"),tx=$("#qtx");if(!pg||!tx||!QL.b)return;
+ const bs=pg.querySelectorAll(".asn"),lb=bs.length?bs[bs.length-1]:null;
+ if(lb&&(lb.offsetTop+lb.offsetHeight-bs[0].offsetTop>=pg.clientHeight*1.2||+lb.dataset.p>=604))return;
+ const t=(lb?+lb.dataset.p:qn)+1;if(t>604)return;
+ if(t>2&&!QLN[t]&&!(QLX[t]&&Date.now()-QLX[t]<20000)){qlnLoad(t);return}
+ const st=pg.scrollTop;let w;ASC.keep=1;try{w=pgSnap(t)}finally{ASC.keep=0}
+ const src=w&&w.querySelector("#qtx");if(!src)return;
+ const d=document.createElement("div");d.id="qtx";d.className=(src.className.replace(/\bqw\b/,"").trim()+" asn").trim();d.dataset.p=t;d.style.cssText=src.style.cssText;d.style.flex="none";d.innerHTML=src.innerHTML;
+ pg.appendChild(d);pg.scrollTop=st;ASC.pos=pg.scrollTop}
+function ascCommit(){
+ const pg=$("#qpg"),tx=$("#qtx"),b1=pg&&pg.querySelector(".asn");if(!pg||!tx||!b1)return;
+ const dl=b1.offsetTop-tx.offsetTop;
+ if(pg.scrollTop+pg.clientHeight/2>dl&&qn<604){const off=Math.max(0,pg.scrollTop-dl);qp(qn+1,1);const g=$("#qpg");if(g)g.scrollTop=off}
+ else pg.querySelectorAll(".asn").forEach(x=>x.remove())}
+function ascShow(){const v=$("#qv");if(!v)return;v.classList.remove("ascHide");clearTimeout(ASC.ht);if(ASC.on)ASC.ht=setTimeout(()=>{const w=$("#qv");if(w&&ASC.on)w.classList.add("ascHide")},4000)}
+document.addEventListener("pointerdown",e=>{try{if(ASC.on)ascShow()}catch(x){}},true);
+function ascFit(){if(!qsc()&&ASC.z===undefined){ASC.z=S.qz|0;S.qz=1;QL.sn=0;qlay();try{qzui()}catch(e){}}}
+function ascStart(){try{if(qm>0)qmenu(0)}catch(e){}try{if(QS){QS=null;qsel()}}catch(e){}try{if(document.querySelector("#qv #qo-asc"))qpop()}catch(e){}try{ascFit()}catch(e){}ASC.on=1;ASC.t=0;ASC.end=0;const pg=$("#qpg");ASC.pos=pg?pg.scrollTop:0;ascChip();if(!ASC.raf)ASC.raf=requestAnimationFrame(ascTick);try{qplui()}catch(e){}}
+function ascStop(){try{if(ASC.on)ascCommit()}catch(e){}ASC.on=0;clearTimeout(ASC.ht);try{const v0=$("#qv");if(v0)v0.classList.remove("ascHide")}catch(e){}try{if(ASC.z!==undefined){S.qz=ASC.z;ASC.z=undefined;save();if($("#qv")){QL.sn=0;qlay();qzui()}}}catch(e){}if(ASC.raf){cancelAnimationFrame(ASC.raf);ASC.raf=0}const v=$("#qv");if(v)v.classList.remove("ascOn");try{qplui()}catch(e){}}
 function ascToggle(){ASC.on?ascStop():ascStart()}
 function ascSet(l){S.ascl=l;save();const e=$("#ascv");if(e)e.textContent=AD(l);if(ASC.on)ascChip()}
 function ascOpen(){
  const l=ascLv();
- qshow("qo-asc","التمرير التلقائي",`<div class="card"><div class="mu" style="margin-bottom:8px">ينزل النص بسرعة ثابتة وينتقل للصفحة التالية عند نهايتها. يتوقف لحظات إذا لمست الشاشة. وعند تشغيل التلاوة تتبعها الشاشة بدقة بدل ذلك.</div><div class="set"><span>الدرجة: <b id="ascv">${AD(l)}</b> من ${AD(10)}</span></div><input type="range" min="1" max="10" step="1" value="${l}" oninput="ascSet(+this.value)" style="width:100%"><button class="p" style="width:100%;margin-top:10px" onclick="ascToggle()">${ASC.on?"⏸ إيقاف التمرير":"▶ بدء التمرير"}</button></div>`)}
+ qshow("qo-asc","التمرير التلقائي",`<div class="card"><div class="mu" style="margin-bottom:8px">ينزل النص بسرعة ثابتة وتظهر الصفحة التالية أسفل الحالية مباشرة بلا توقف. في الوضع الرأسي يُكبَّر المصحف قليلًا أثناء التمرير ثم يعود. يتوقف لحظات إذا لمست الشاشة. وعند تشغيل التلاوة تتبعها الشاشة بدقة بدل ذلك.</div><div class="set"><span>الدرجة: <b id="ascv">${AD(l)}</b> من ${AD(10)}</span></div><input type="range" min="1" max="10" step="1" value="${l}" oninput="ascSet(+this.value)" style="width:100%"><button class="p" style="width:100%;margin-top:10px" onclick="ascToggle()">${ASC.on?"⏸ إيقاف التمرير":"▶ بدء التمرير"}</button></div>`)}
 matchMedia("(orientation:landscape)").addEventListener("change",()=>{setTimeout(()=>{try{qplui()}catch(e){}},300)});
 
 function qhl(){
