@@ -2090,13 +2090,21 @@ function mxPrev(){if(!AP.on)return;
  if(AP.a>1){AP.a--;AP.end=null;aload();return}
  if(AP.s!=1&&AP.s!=9){AP.bs=1;aload();return}
  aload()}
+/* السابق/التالي في الستارة: ينقلان بين السور (كمشغّل الموسيقى) لا بين الآيات؛ من البقرة إلى آل عمران وهكذا */
+function msGoS(d){try{
+ if(!AP||!AP.on)return;
+ let n=AP.s+d;
+ if(n>114)return;
+ if(n<1)n=1;
+ qplay(n,1)
+}catch(e){}}
 setInterval(()=>{try{if(AP&&AP.on&&!AU.paused){if("mediaSession" in navigator&&!navigator.mediaSession.metadata)qms();msPS(AU);msPos()}}catch(e){}},3000);
 function msPS(a){try{if("mediaSession" in navigator)navigator.mediaSession.playbackState=a.paused?"paused":"playing"}catch(e){}}
 function msClear(){try{if("mediaSession" in navigator){navigator.mediaSession.metadata=null;navigator.mediaSession.playbackState="none"}}catch(e){}}
 function qms(){if(!AP.on)return;const sud=!!SUD[S.qrec||RLD[0]],n=QD.text[AP.s-1].length,
  t="سورة "+QD.names[AP.s-1]+(sud?"":(AP.bs?" · البسملة":" · آية "+AD(AP.a)+" من "+AD(n))),r=recname();
  try{const m=navigator.mediaSession.metadata;if(m&&m.title===t&&m.artist===r)return}catch(e){}
- msSet(t,r,{play:()=>AU.play(),pause:()=>AU.pause(),prev:sud?aprev:mxPrev,next:anext,stop:qstop,
+ msSet(t,r,{play:()=>AU.play(),pause:()=>AU.pause(),prev:()=>msGoS(-1),next:()=>msGoS(1),stop:qstop,
   sb:d=>mxBy(-((d&&d.seekOffset)||10)),sf:d=>mxBy((d&&d.seekOffset)||10),
   st:d=>{try{if(d&&d.seekTime!=null)mxSeek(d.seekTime)}catch(e){}}})}
 AU.addEventListener("loadedmetadata",()=>{try{msPos()}catch(e){}});AU.addEventListener("seeked",()=>{try{msPos()}catch(e){}});AU.addEventListener("pause",()=>{try{msPos()}catch(e){}});
