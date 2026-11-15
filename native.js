@@ -232,9 +232,34 @@
     /* ===== 4) التحكم الصوتي في الستارة (القرآن وحصن المسلم) عبر Media Session ===== */
     var MS=plug("MediaSession");
     if(MS)safe(function(){
-      var st={metadata:null,playbackState:"none"},handlers={},reg={},pt=null;
+      var st={metadata:null,playbackState:"none"},handlers={},reg={},pt=null,imm=0;
       if(typeof window.MediaMetadata==="undefined"){window.MediaMetadata=function(o){o=o||{};this.title=o.title||"";this.artist=o.artist||"";this.album=o.album||"";this.artwork=o.artwork||[]}}
       var call=function(n,a,b){try{var p=MS[n](a,b);if(p&&p.catch)p.catch(function(){})}catch(e){}};
+
+      /* ضمان الإيقاف/التشغيل من الستارة: بعد أن يستدعي التطبيق معالجه نتحقق من الصوت نفسه،
+         فإن بقي يعمل بعد «إيقاف» أوقفناه، وإن بقي متوقفًا بعد «تشغيل» أعدنا تشغيله. */
+      var live=function(n){try{
+        if(n==="AU")return typeof AU!=="undefined"?AU:null;
+        if(n==="HAU")return typeof HAU!=="undefined"?HAU:null;
+        if(n==="AP")return typeof AP!=="undefined"?AP:null;
+        if(n==="HP")return typeof HP!=="undefined"?HP:null
+      }catch(e){}return null};
+      var shadeFix=function(a){
+        if(a==="pause"){
+          setTimeout(function(){
+            safe(function(){var q=live("AU");if(q&&!q.paused)q.pause()});
+            safe(function(){var h=live("HAU");if(h&&!h.paused)h.pause()})
+          },150)}
+        else if(a==="play"){
+          setTimeout(function(){
+            safe(function(){
+              var q=live("AU"),h=live("HAU"),ap=live("AP"),hp=live("HP");
+              if((q&&!q.paused)||(h&&!h.paused))return;
+              if(ap&&ap.on&&q){var r=q.play();if(r&&r.catch)r.catch(function(){});return}
+              if(hp&&hp.on&&h){var r2=h.play();if(r2&&r2.catch)r2.catch(function(){})}
+            })
+          },400)}};
+
       var ms={
         get metadata(){return st.metadata},
         set metadata(m){
@@ -244,13 +269,15 @@
         set playbackState(v){
           v=v==="playing"||v==="paused"?v:"none";
           /* بين آية وآية يقفز التطبيق لحظة إلى «متوقف»؛ لو أرسلناها لأندرويد لأسقط الخدمة الأمامية
-             وتوقف الصوت في الخلفية، فنؤخر «متوقف» ثانيتين ونصف ونلغيها إن عاد التشغيل */
+             وتوقف الصوت في الخلفية، فنؤخر «متوقف» ثانيتين ونصف ونلغيها إن عاد التشغيل.
+             أما إن كان الإيقاف من زر الستارة نفسه فنرسله فورًا ليتغير الزر دون تأخير. */
           if(v==="playing"){
             clearTimeout(pt);
             if(st.playbackState!=="playing"){st.playbackState="playing";call("setPlaybackState",{playbackState:"playing"})}
             return}
           if(v==="paused"){
             if(st.playbackState!=="playing")return;
+            if(imm){imm=0;clearTimeout(pt);st.playbackState="paused";call("setPlaybackState",{playbackState:"paused"});return}
             clearTimeout(pt);
             pt=setTimeout(function(){st.playbackState="paused";call("setPlaybackState",{playbackState:"paused"})},2500);
             return}
@@ -260,7 +287,12 @@
           handlers[a]=f||null;
           if(f&&!reg[a]){
             reg[a]=1;
-            call("setActionHandler",{action:a},function(d){var h=handlers[a];if(h){try{h(d||{action:a})}catch(e){}}})}},
+            call("setActionHandler",{action:a},function(d){
+              if(a==="pause")imm=1;
+              var h=handlers[a];
+              if(h){try{h(d||{action:a})}catch(e){}}
+              shadeFix(a);
+              setTimeout(function(){imm=0},1500)})}},
         setPositionState:function(s){
           if(s&&isFinite(s.duration)&&s.duration>0)call("setPositionState",{duration:s.duration,playbackRate:s.playbackRate||1,position:Math.max(0,s.position||0)})}
       };
