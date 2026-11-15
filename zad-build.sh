@@ -29,7 +29,8 @@ rm -rf www && mv web_out www
 
 # ---- 2) packages ----
 npm install --no-audit --no-fund
-npm install --no-audit --no-fund @capacitor/status-bar@^6.0.1
+# @capacitor/app: required for the Android back button to work inside the app
+npm install --no-audit --no-fund @capacitor/status-bar@^6.0.1 @capacitor/app@^6.0.0
 
 if [ "$MODE" = "full" ]; then
   npm install --no-audit --no-fund \
@@ -57,6 +58,12 @@ test -f "$MA"
 F=$(find android/app/src/main/java -name MainActivity.java | head -n 1)
 cp "$MA" "$F"
 
+# native bridge for "silent during prayer" (Do Not Disturb) - registered in MainActivity
+AS=AndroidSilent.java
+if [ -f native/AndroidSilent.java ]; then AS=native/AndroidSilent.java; fi
+test -f "$AS"
+cp "$AS" "$(dirname "$F")/AndroidSilent.java"
+
 # ---- 4) permissions ----
 perm() {
   if ! grep -q "android.permission.$1\"" "$M"; then
@@ -66,6 +73,8 @@ perm() {
 perm ACCESS_FINE_LOCATION
 perm ACCESS_COARSE_LOCATION
 perm POST_NOTIFICATIONS
+# Do Not Disturb access (granted by the user from system settings; the app opens that screen)
+perm ACCESS_NOTIFICATION_POLICY
 if [ "$MODE" = "full" ]; then
   perm USE_EXACT_ALARM
   perm SCHEDULE_EXACT_ALARM

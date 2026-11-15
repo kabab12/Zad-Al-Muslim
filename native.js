@@ -85,6 +85,17 @@
     NS.status=function(){return Promise.resolve({native:true,ln:false,ms:!!plug("MediaSession"),geo:!!plug("Geolocation"),perm:"default",pending:0,next:""})};
 
     /* ===== 3) الإشعارات في ستارة الهاتف (تعمل والتطبيق مغلق) ===== */
+    /* زر الرجوع في الهاتف: يرجع داخل التطبيق، وعلى الرئيسية يطلب ضغطتين للخروج */
+    try{var APPP=plug("App"),lastBk=0;
+      if(APPP&&APPP.addListener)APPP.addListener("backButton",function(ev){
+        try{
+          if(ev&&ev.canGoBack){history.back();return}
+          if(typeof uiBack==="function"&&(cur!=="menu"||inQ||inR||SUBV||qst.length)){uiBack();return}
+        }catch(e){}
+        var t=Date.now();
+        if(t-lastBk<2000){try{APPP.exitApp()}catch(e){}return}
+        lastBk=t;try{qtoast("اضغط رجوع مرة أخرى للخروج")}catch(e){}
+      })}catch(e){}
     var LN=plug("LocalNotifications");
     if(LN)safe(function(){
       var perm="default",SCH={},busy=false,again=false,SIM=false,chanP=null,timer=null;
