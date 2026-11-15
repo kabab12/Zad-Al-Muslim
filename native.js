@@ -288,7 +288,7 @@
           if(f&&!reg[a]){
             reg[a]=1;
             call("setActionHandler",{action:a},function(d){
-              if(a==="pause")imm=1;
+              if(a==="pause")imm=1;try{window.__zadShade&&window.__zadShade(a)}catch(e){}
               var h=handlers[a];
               if(h){try{h(d||{action:a})}catch(e){}}
               shadeFix(a);
@@ -303,4 +303,29 @@
 
   boot();
   if(!done){document.addEventListener("DOMContentLoaded",boot);addEventListener("load",boot)}
+})();
+
+/* ===== الستارة: إيقاف كل مصادر الصوت + رسائل تشخيص ===== */
+(function(){
+  "use strict";
+  if(location.hostname!=="localhost")return;
+  var all=[],held=[];
+  var P=HTMLMediaElement.prototype,op=P.play;
+  P.play=function(){if(all.indexOf(this)<0)all.push(this);return op.apply(this,arguments)};
+  var toast=function(m){try{if(window.qtoast)window.qtoast(m,3500)}catch(e){}};
+  var playing=function(){return all.filter(function(e){return !e.paused&&!e.ended&&!e.loop})};
+  window.__zadShade=function(a){
+    if(a==="pause"){
+      var pl=playing();held=pl.slice();
+      pl.forEach(function(e){try{e.pause()}catch(x){}});
+      toast("الستارة: إيقاف — مصادر الصوت العاملة: "+pl.length);
+    }else if(a==="play"){
+      setTimeout(function(){
+        if(playing().length){toast("الستارة: تشغيل ✓");return}
+        held.forEach(function(e){try{var r=e.play();if(r&&r.catch)r.catch(function(){})}catch(x){}});
+        toast("الستارة: تشغيل — أُعيد "+held.length)
+      },400);
+    }else toast("الستارة: "+a);
+  };
+  setTimeout(function(){toast("طبقة الأندرويد جاهزة ✓")},6000);
 })();
