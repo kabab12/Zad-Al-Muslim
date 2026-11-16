@@ -260,11 +260,20 @@
             })
           },400)}};
 
+      /* تسجيل زرّي الإيقاف والتشغيل دائمًا حتى لو لم يسجّلهما التطبيق بنفسه */
+      var onAct=function(a){return function(d){
+        if(a==="pause")imm=1;try{window.__zadShade&&window.__zadShade(a)}catch(e){}
+        var h=handlers[a];
+        if(h){try{h(d||{action:a})}catch(e){}}
+        shadeFix(a);
+        setTimeout(function(){imm=0},1500)}};
+      var register=function(a){if(reg[a])return;reg[a]=1;call("setActionHandler",{action:a},onAct(a))};
+
       var ms={
         get metadata(){return st.metadata},
         set metadata(m){
           st.metadata=m||null;
-          if(m)call("setMetadata",{title:String(m.title||""),artist:String(m.artist||""),album:String(m.album||""),artwork:[]})},
+          if(m){call("setMetadata",{title:String(m.title||""),artist:String(m.artist||""),album:String(m.album||""),artwork:[]});register("play");register("pause")}},
         get playbackState(){return st.playbackState},
         set playbackState(v){
           v=v==="playing"||v==="paused"?v:"none";
@@ -285,14 +294,7 @@
           if(st.playbackState!=="none"){st.playbackState="none";call("setPlaybackState",{playbackState:"none"})}},
         setActionHandler:function(a,f){
           handlers[a]=f||null;
-          if(f&&!reg[a]){
-            reg[a]=1;
-            call("setActionHandler",{action:a},function(d){
-              if(a==="pause")imm=1;try{window.__zadShade&&window.__zadShade(a)}catch(e){}
-              var h=handlers[a];
-              if(h){try{h(d||{action:a})}catch(e){}}
-              shadeFix(a);
-              setTimeout(function(){imm=0},1500)})}},
+          if(f)register(a)},
         setPositionState:function(s){
           if(s&&isFinite(s.duration)&&s.duration>0)call("setPositionState",{duration:s.duration,playbackRate:s.playbackRate||1,position:Math.max(0,s.position||0)})}
       };
