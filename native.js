@@ -108,16 +108,24 @@
       var hash=function(str){var h=2166136261;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)%2000000000+1000};
       var zid=function(tag,min){return hash(String(tag)+"|"+min)};
       var ensureChannel=function(){
-        if(!chanP)chanP=LN.createChannel({id:"zad_reminders",name:"تذكيرات زاد المسلم",description:"الأذكار والصلاة على النبي والأذان والورد",importance:4,visibility:1,vibration:true,lights:true}).catch(function(){});
+        if(!chanP)chanP=Promise.all([LN.createChannel({id:"zad_reminders",name:"تذكيرات زاد المسلم",description:"الأذكار والصلاة على النبي والأذان والورد",importance:4,visibility:1,vibration:true,lights:true}).catch(function(){}),LN.createChannel({id:"zad_silent",name:"تذكيرات زاد المسلم (صامتة)",description:"التذكيرات بلا صوت ولا اهتزاز",importance:2,visibility:1,vibration:false,lights:false}).catch(function(){})]);
         return chanP};
       var clip=function(s,n){s=String(s||"");return s.length>n?s.slice(0,n-1).replace(/\s+\S*$/,"")+"…":s};
       var build=function(title,body,act,tag,atMs,id){
         return{id:id,title:String(title||"زاد المسلم"),body:clip(body,600),largeBody:String(body||""),summaryText:"زاد المسلم",
-          schedule:{at:new Date(atMs),allowWhileIdle:true},channelId:"zad_reminders",smallIcon:"ic_stat_zad",extra:{a:act||"nt",tag:String(tag||"")}}};
+          schedule:{at:new Date(atMs),allowWhileIdle:true},channelId:(typeof S!=="undefined"&&S.ntSnd===false)?"zad_silent":"zad_reminders",smallIcon:"ic_stat_zad",extra:{a:act||"nt",tag:String(tag||"")}}};
+      /* سجلّ ما أُرسل فعلًا: لا يتكرر التنبيه نفسه خلال دقيقة ونصف، حتى لو أُعيد فتح التطبيق */
+      var ledger=function(){try{var o=JSON.parse(localStorage.getItem("zadFired")||"{}"),t=Date.now();Object.keys(o).forEach(function(k){if(t-o[k]>864e5)delete o[k]});return o}catch(e){return{}}};
       var fireNow=function(title,opts){
         opts=opts||{};
-        var tag=opts.tag||"",m=Math.floor(Date.now()/6e4);
-        if(tag&&(SCH[zid(tag,m)]||SCH[zid(tag,m-1)]))return;
+        var tag=opts.tag||"",now=Date.now(),m=Math.floor(now/6e4);
+        if(tag){
+          /* مجدول أصليًا (النظام سيُرسله أو أرسله): لا نرسل نسخة ثانية */
+          if(SCH[zid(tag,m-1)]||SCH[zid(tag,m)]||SCH[zid(tag,m+1)])return;
+          var L=ledger();
+          if(L[tag]&&now-L[tag]<90000)return;
+          L[tag]=now;try{localStorage.setItem("zadFired",JSON.stringify(L))}catch(e){}
+        }
         var act=opts.data&&opts.data.a;
         ensureChannel().then(function(){
           return LN.schedule({notifications:[build(title,opts.body,act,tag,Date.now()+700,hash(tag+"|"+Date.now()+Math.random()))]})
@@ -149,24 +157,34 @@
           SIM=false}
         return out};
 
-      var schedule=function(){
+      /* توقيع إعدادات التنبيهات: لا نعيد الجدولة إلا إذا تغيّر شيء مؤثّر (نتجاهل ما يتغير باستمرار كموضع التلاوة) */
+      var VOL={qres:1,ql:1,qp:1,qn:1,ntl:1,adl:1,nlog:1,ntI:1,silOn:1,silWarn:1,lastOpen:1};
+      var sigNow=function(){try{return JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
+      var lastSig=(function(){try{return localStorage.getItem("zadSchedSig")||""}catch(e){return""}})(),lastAt=0;
+      var schedule=function(force){
         if(busy){again=true;return}
         if(perm!=="granted"||typeof S==="undefined"||typeof ntTick!=="function")return;
+        var sg=sigNow(),t0=Date.now(),full=(sg!==lastSig);
+        if(force===true)full=true;
+        else if(!full&&t0-lastAt<3*36e5)return;
         busy=true;
         var plan=[];try{plan=simulate(3,15)}catch(e){plan=[]}
         var now=Date.now(),seen={},items=[];
         plan.filter(function(x){return x.at>now+4000}).sort(function(a,b){return a.at-b.at}).forEach(function(x){
           var m=Math.floor(x.at/6e4),id=zid(x.tag,m);
-          if(seen[id])return;seen[id]=1;
-          if(items.length<240)items.push(build(x.title,x.body,x.act,x.tag,x.at,id))});
+          if(seen[id]||items.length>=240)return;
+          seen[id]=1;items.push(build(x.title,x.body,x.act,x.tag,x.at,id))});
         ensureChannel().then(function(){return LN.getPending()}).then(function(r){
-          var p=(r&&r.notifications)||[];
-          return p.length?LN.cancel({notifications:p.map(function(n){return{id:n.id}})}):0
-        }).then(function(){
+          var p=(r&&r.notifications)||[],have={};
+          p.forEach(function(n){have[n.id]=1});
+          /* تغيّرت الإعدادات: نبني من جديد. وإلا فنُكمل الناقص ونحذف الزائد فقط (بلا إلغاء شامل) */
+          var drop=p.filter(function(n){return full||!seen[n.id]});
+          var add=items.filter(function(x){return full||!have[x.id]});
           var ch=Promise.resolve();
-          for(var i=0;i<items.length;i+=40)(function(part){ch=ch.then(function(){return LN.schedule({notifications:part})})})(items.slice(i,i+40));
+          if(drop.length)ch=ch.then(function(){return LN.cancel({notifications:drop.map(function(n){return{id:n.id}})})});
+          for(var i=0;i<add.length;i+=40)(function(part){ch=ch.then(function(){return LN.schedule({notifications:part})})})(add.slice(i,i+40));
           return ch
-        }).then(function(){SCH=seen}).catch(function(){}).then(function(){busy=false;if(again){again=false;setTimeout(schedule,2500)}})};
+        }).then(function(){SCH=seen;lastSig=sg;lastAt=Date.now();try{localStorage.setItem("zadSchedSig",sg)}catch(e){}}).catch(function(){}).then(function(){busy=false;if(again){again=false;setTimeout(function(){schedule()},2500)}})};
 
       /* واجهة Notification القياسية التي يستعملها التطبيق: تتحول إلى إشعار أصلي */
       var ZN=function(title,opts){this.title=title;this.body=(opts&&opts.body)||"";this.tag=(opts&&opts.tag)||"";this.onclick=null;this.close=function(){};fireNow(title,opts)};
@@ -220,13 +238,7 @@
             return LN.schedule({notifications:[build("زاد المسلم 🔔","اختبار الإشعار: إن رأيته في الستارة فالتنبيهات تعمل ✓","nt","test",Date.now()+5000,hash("test|"+Date.now()))]})
           }).then(function(){try{window.qtoast("سيصل إشعار بعد 5 ثوانٍ — اسحب الستارة",5000)}catch(e){}})
         }).catch(function(){})};
-      /* طلب الإذن مرة واحدة تلقائيًا عند أول تشغيل (على أندرويد 13+ يلزمه إشعار الصوت أيضًا) */
-      safe(function(){
-        var k="zadNtAsk",asked=false;try{asked=!!localStorage.getItem(k)}catch(e){}
-        var go=function(){refreshPerm().then(function(p){
-          if(p==="default"&&!asked){try{localStorage.setItem(k,"1")}catch(e){}setTimeout(ask,1500)}
-          else if(p==="denied"){try{window.qtoast("الإشعارات متوقفة: فعّلها من إعدادات الهاتف ← التطبيقات ← زاد المسلم ← الإشعارات",6000)}catch(e){}}})};
-        if(document.readyState==="complete")setTimeout(go,4500);else addEventListener("load",function(){setTimeout(go,4500)})});
+      /* إذن الإشعارات يُطلب من «نافذة الأذونات» في أول تشغيل فقط (pmGate) ولا يُعاد طلبه عند كل دخول */
     });
 
     /* ===== 4) التحكم الصوتي في الستارة (القرآن وحصن المسلم) عبر Media Session ===== */
@@ -235,51 +247,16 @@
       var st={metadata:null,playbackState:"none"},handlers={},reg={},pt=null,imm=0;
       if(typeof window.MediaMetadata==="undefined"){window.MediaMetadata=function(o){o=o||{};this.title=o.title||"";this.artist=o.artist||"";this.album=o.album||"";this.artwork=o.artwork||[]}}
       var call=function(n,a,b){try{var p=MS[n](a,b);if(p&&p.catch)p.catch(function(){})}catch(e){}};
-
-      /* ضمان الإيقاف/التشغيل من الستارة: بعد أن يستدعي التطبيق معالجه نتحقق من الصوت نفسه،
-         فإن بقي يعمل بعد «إيقاف» أوقفناه، وإن بقي متوقفًا بعد «تشغيل» أعدنا تشغيله. */
-      var live=function(n){try{
-        if(n==="AU")return typeof AU!=="undefined"?AU:null;
-        if(n==="HAU")return typeof HAU!=="undefined"?HAU:null;
-        if(n==="AP")return typeof AP!=="undefined"?AP:null;
-        if(n==="HP")return typeof HP!=="undefined"?HP:null
-      }catch(e){}return null};
-      var shadeFix=function(a){
-        if(a==="pause"){
-          setTimeout(function(){
-            safe(function(){var q=live("AU");if(q&&!q.paused)q.pause()});
-            safe(function(){var h=live("HAU");if(h&&!h.paused)h.pause()})
-          },150)}
-        else if(a==="play"){
-          setTimeout(function(){
-            safe(function(){
-              var q=live("AU"),h=live("HAU"),ap=live("AP"),hp=live("HP");
-              if((q&&!q.paused)||(h&&!h.paused))return;
-              if(ap&&ap.on&&q){var r=q.play();if(r&&r.catch)r.catch(function(){});return}
-              if(hp&&hp.on&&h){var r2=h.play();if(r2&&r2.catch)r2.catch(function(){})}
-            })
-          },400)}};
-
-      /* تسجيل زرّي الإيقاف والتشغيل دائمًا حتى لو لم يسجّلهما التطبيق بنفسه */
-      var onAct=function(a){return function(d){
-        if(a==="pause")imm=1;try{window.__zadShade&&window.__zadShade(a)}catch(e){}
-        var h=handlers[a];
-        if(h){try{h(d||{action:a})}catch(e){}}
-        shadeFix(a);
-        setTimeout(function(){imm=0},1500)}};
-      var register=function(a){if(reg[a])return;reg[a]=1;call("setActionHandler",{action:a},onAct(a))};
-
       var ms={
         get metadata(){return st.metadata},
         set metadata(m){
           st.metadata=m||null;
-          if(m){call("setMetadata",{title:String(m.title||""),artist:String(m.artist||""),album:String(m.album||""),artwork:[]});register("play");register("pause")}},
+          if(m)call("setMetadata",{title:String(m.title||""),artist:String(m.artist||""),album:String(m.album||""),artwork:[]})},
         get playbackState(){return st.playbackState},
         set playbackState(v){
           v=v==="playing"||v==="paused"?v:"none";
           /* بين آية وآية يقفز التطبيق لحظة إلى «متوقف»؛ لو أرسلناها لأندرويد لأسقط الخدمة الأمامية
-             وتوقف الصوت في الخلفية، فنؤخر «متوقف» ثانيتين ونصف ونلغيها إن عاد التشغيل.
-             أما إن كان الإيقاف من زر الستارة نفسه فنرسله فورًا ليتغير الزر دون تأخير. */
+             وتوقف الصوت في الخلفية، فنؤخر «متوقف» ثانيتين ونصف ونلغيها إن عاد التشغيل */
           if(v==="playing"){
             clearTimeout(pt);
             if(st.playbackState!=="playing"){st.playbackState="playing";call("setPlaybackState",{playbackState:"playing"})}
@@ -294,7 +271,9 @@
           if(st.playbackState!=="none"){st.playbackState="none";call("setPlaybackState",{playbackState:"none"})}},
         setActionHandler:function(a,f){
           handlers[a]=f||null;
-          if(f)register(a)},
+          if(f&&!reg[a]){
+            reg[a]=1;
+            call("setActionHandler",{action:a},function(d){var h=handlers[a];if(a==="pause"||a==="stop")imm=1;if(h){try{h(d||{action:a})}catch(e){}}if(a==="stop"){try{window.__zadStopAll&&window.__zadStopAll()}catch(e){}}setTimeout(function(){imm=0},1500)})}},
         setPositionState:function(s){
           if(s&&isFinite(s.duration)&&s.duration>0)call("setPositionState",{duration:s.duration,playbackRate:s.playbackRate||1,position:Math.max(0,s.position||0)})}
       };
@@ -307,27 +286,33 @@
   if(!done){document.addEventListener("DOMContentLoaded",boot);addEventListener("load",boot)}
 })();
 
-/* ===== الستارة: إيقاف كل مصادر الصوت + رسائل تشخيص ===== */
+/* ===== الستارة: زر «إيقاف» حقيقي للقرآن وحصن المسلم، يعمل دون فتح التطبيق ===== */
 (function(){
   "use strict";
   if(location.hostname!=="localhost")return;
-  var all=[],held=[];
-  var P=HTMLMediaElement.prototype,op=P.play;
-  P.play=function(){if(all.indexOf(this)<0)all.push(this);return op.apply(this,arguments)};
-  var toast=function(m){try{if(window.qtoast)window.qtoast(m,3500)}catch(e){}};
-  var playing=function(){return all.filter(function(e){return !e.paused&&!e.ended&&!e.loop})};
-  window.__zadShade=function(a){
-    if(a==="pause"){
-      var pl=playing();held=pl.slice();
-      pl.forEach(function(e){try{e.pause()}catch(x){}});
-      toast("الستارة: إيقاف — مصادر الصوت العاملة: "+pl.length);
-    }else if(a==="play"){
-      setTimeout(function(){
-        if(playing().length){toast("الستارة: تشغيل ✓");return}
-        held.forEach(function(e){try{var r=e.play();if(r&&r.catch)r.catch(function(){})}catch(x){}});
-        toast("الستارة: تشغيل — أُعيد "+held.length)
-      },400);
-    }else toast("الستارة: "+a);
-  };
-  setTimeout(function(){toast("طبقة الأندرويد جاهزة ✓")},6000);
+  var shown=false,lastT="";
+  var ref=function(f){try{return f()}catch(e){return null}};
+  /* يوقف كل صوت ويزيل إشعارَي الوسائط والإيقاف. يستدعيه زر «إيقاف» (أصليًا) ومعالج stop */
+  window.__zadStopAll=function(){
+    ref(function(){if(typeof AP!=="undefined"&&AP.on)qstop()});
+    ref(function(){if(typeof HP!=="undefined"&&HP.on)hstop()});
+    ref(function(){if(typeof AU!=="undefined")AU.pause()});
+    ref(function(){if(typeof HAU!=="undefined")HAU.pause()});
+    ref(function(){if(typeof KA!=="undefined")KA.pause()});
+    ref(function(){if(typeof msClear==="function")msClear()});
+    ref(function(){if(window.ZadShade)ZadShade.hide()});
+    shown=false;lastT="";return 1};
+  var title=function(){return ref(function(){
+    if(typeof AP!=="undefined"&&AP.on&&typeof QD!=="undefined"&&QD&&QD.names)return"سورة "+QD.names[AP.s-1];
+    if(typeof HP!=="undefined"&&HP.on)return"حصن المسلم";
+    return""})||""};
+  var active=function(){return !!ref(function(){return(typeof AP!=="undefined"&&AP.on)||(typeof HP!=="undefined"&&HP.on)})};
+  var sync=function(){
+    if(!window.ZadShade)return;
+    if(active()){
+      var t=title();
+      if(!shown||t!==lastT){shown=true;lastT=t;ref(function(){ZadShade.show(t||"زاد المسلم")})}
+    }else if(shown){shown=false;lastT="";ref(function(){ZadShade.hide()})}};
+  setInterval(sync,1500);
+  document.addEventListener("visibilitychange",sync);
 })();

@@ -64,6 +64,14 @@ if [ -f native/AndroidSilent.java ]; then AS=native/AndroidSilent.java; fi
 test -f "$AS"
 cp "$AS" "$(dirname "$F")/AndroidSilent.java"
 
+# native: scheduled silent-mode receiver + notification-shade "stop" button for Quran/Hisn audio
+for J in SilentReceiver AudioShade AudioStopReceiver; do
+  JS_SRC="$J.java"
+  if [ -f "native/$J.java" ]; then JS_SRC="native/$J.java"; fi
+  test -f "$JS_SRC"
+  cp "$JS_SRC" "$(dirname "$F")/$J.java"
+done
+
 # ---- 4) permissions ----
 perm() {
   if ! grep -q "android.permission.$1\"" "$M"; then
@@ -75,15 +83,42 @@ perm ACCESS_COARSE_LOCATION
 perm POST_NOTIFICATIONS
 # Do Not Disturb access (granted by the user from system settings; the app opens that screen)
 perm ACCESS_NOTIFICATION_POLICY
+# exact alarms + boot: needed by the native prayer-silent scheduler in BOTH variants
+perm USE_EXACT_ALARM
+perm SCHEDULE_EXACT_ALARM
+perm RECEIVE_BOOT_COMPLETED
 if [ "$MODE" = "full" ]; then
-  perm USE_EXACT_ALARM
-  perm SCHEDULE_EXACT_ALARM
-  perm RECEIVE_BOOT_COMPLETED
   perm WAKE_LOCK
   perm FOREGROUND_SERVICE
   perm FOREGROUND_SERVICE_MEDIA_PLAYBACK
 fi
 grep -c "uses-permission" "$M" || true
+
+# receivers: prayer-silent alarms/boot + audio stop button
+python3 - "$M" <<'PY'
+import sys, io
+p = sys.argv[1]
+m = io.open(p, encoding="utf-8").read()
+add = ""
+if "SilentReceiver" not in m:
+    add += """        <receiver android:name=".SilentReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.zadalmuslim.app.SILENT_TICK" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+"""
+if "AudioStopReceiver" not in m:
+    add += '        <receiver android:name=".AudioStopReceiver" android:exported="false" />\n'
+if add:
+    assert "</application>" in m
+    m = m.replace("</application>", add + "    </application>", 1)
+io.open(p, "w", encoding="utf-8").write(m)
+PY
+grep -c "Receiver" "$M" || true
 
 # ---- 5) icons ----
 sudo apt-get update -y >/dev/null

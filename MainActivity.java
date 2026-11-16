@@ -17,12 +17,29 @@ import com.getcapacitor.BridgeActivity;
  *  - AdhanNative.setPlaying(): الصفحة تخبرنا أن الأذان يعمل.
  *  - أثناء الأذان: زر الصوت، أو سحب شريط الحالة، أو فقدان التركيز ← إيقاف الأذان (window.adStopNative).
  *  - OrientNative.setSensor(): تدوير القرآن. صار يتبع إعداد «التدوير التلقائي» في الهاتف.
- *  - AndroidSilent: وضع الصامت أثناء الصلاة (جديد).
+ *  - AndroidSilent: وضع الصامت أثناء الصلاة، بجدولة أصلية (منبّه دقيق + مصالحة) لا تعتمد على الصفحة.
+ *  - AudioShade: إشعار «إيقاف» في الستارة يوقف القرآن/الأذكار دون فتح التطبيق.
  */
 public class MainActivity extends BridgeActivity {
     private volatile boolean adhanPlaying = false;
     private boolean swallowVolume = false;
     private boolean statusBarVisible = false;
+    private static MainActivity sInst;
+
+    /** يُستدعى من زر «إيقاف» في الستارة: يأمر الصفحة بإيقاف كل صوت. */
+    static void stopAudioFromShade() {
+        final MainActivity a = sInst;
+        if (a == null) return;
+        a.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    a.getBridge().getWebView().evaluateJavascript(
+                            "window.__zadStopAll&&window.__zadStopAll()", null);
+                } catch (Throwable ignored) { }
+            }
+        });
+    }
 
     private class AdhanBridge {
         @JavascriptInterface
@@ -52,11 +69,15 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        sInst = this;
         try {
             getBridge().getWebView().addJavascriptInterface(new AdhanBridge(), "AdhanNative");
             getBridge().getWebView().addJavascriptInterface(new OrientBridge(), "OrientNative");
             getBridge().getWebView().addJavascriptInterface(new AndroidSilent(this), "AndroidSilent");
+            getBridge().getWebView().addJavascriptInterface(new AudioShade(this), "ZadShade");
         } catch (Throwable ignored) { }
+        // مصالحة الصامت عند كل تشغيل: تصلح أي حالة عالقة وتعيد ضبط المنبّه التالي
+        try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
 
         // ظهور شريط الحالة (سحب الستارة) يوقف الأذان
         ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, insets) -> {
@@ -70,6 +91,19 @@ public class MainActivity extends BridgeActivity {
                 if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) stopAdhan();
             });
         }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
+    }
+
+    @Override
+    public void onDestroy() {
+        if (sInst == this) sInst = null;
+        try { if (isFinishing()) AudioShade.cancel(getApplicationContext()); } catch (Throwable ignored) { }
+        super.onDestroy();
     }
 
     private void stopAdhan() {

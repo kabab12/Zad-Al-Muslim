@@ -139,10 +139,21 @@ function menu(){
 
  </div>`;
  const u=()=>{const n=new Date();let s=Math.max(0,Math.floor((P.next-n)/1e3));const p=x=>String(x).padStart(2,"0");const e=document.getElementById("hmc");if(e)e.textContent=`${p(s/3600|0)}:${p(s%3600/60|0)}:${p(s%60)}`;const g=document.getElementById("hmp2");if(g){const tot=P.next-P.prev,f=tot>0?Math.min(1,Math.max(0,(n-P.prev)/tot)):0;g.style.width=(f*100).toFixed(1)+"%"}};u();tick=setInterval(u,1e3)}
+/* عدّاد رمضان التنازلي: يظهر قبل رمضان بـ٩٠ يومًا (ثلاثة أشهر) حسب التقويم الهجري في التطبيق */
+function ramCard(){try{
+ const n=new Date(),tt=Date.UTC(n.getFullYear(),n.getMonth(),n.getDate(),12),[hy,hm,hd]=todayH();
+ if(hm==9)return `<div class="card" style="text-align:center"><div class="mu">🌙 رمضان مبارك</div><div class="big">اليوم ${AD(hd)} من ${AD(mlen(hy,9))}</div></div>`;
+ const Y=hm>9?hy+1:hy,start=mstart(Y,9),df=Math.round((start-tt)/DAY);
+ if(df<0||df>90)return"";
+ const pct=Math.max(0,Math.min(100,Math.round((90-df)/90*100)));
+ const gd=new Intl.DateTimeFormat("ar",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(start);
+ const lbl=df==0?"رمضان يبدأ اليوم 🌙":df==1?"بقي يوم واحد على رمضان":df==2?"بقي يومان على رمضان":"بقي "+AD(df)+(df<=10?" أيام":" يومًا")+" على رمضان";
+ return `<div class="card" style="text-align:center"><div class="mu">🌙 العدّ التنازلي لرمضان ${AD(Y)} هـ</div><div class="big">${lbl}</div><div class="khbar" style="margin:8px 0"><i style="width:${pct}%"></i></div><div class="mu">يبدأ تقريبًا ${gd} (حسب التقويم، ويتبع تعديل رؤية الهلال)</div></div>`
+}catch(e){return""}}
 function home(){
  const t=times(new Date()),[ni]=nextP();
  $("#m").innerHTML=`<div class="cp">${needLoc()}<div class="card"><div class="set" style="margin:0"><span style="display:flex;align-items:center;gap:10px">${LOGO(40)}<h1 style="margin:0">زاد المسلم</h1></span><span><button class="gdl" onclick="pcal()">🕌 تقويم المواقيت</button> <button class="gdl" onclick="hcal()">📅 التقويم</button></span></div><div>${hijri()}</div><div class="mu">${greg()}</div></div>
- <div class="card"><div class="mu">القادمة: ${NAMES[ni]} — ${S.city}</div><div class="big" id="cd"></div></div>
+ ${ramCard()}<div class="card"><div class="mu">القادمة: ${NAMES[ni]} — ${S.city}</div><div class="big" id="cd"></div></div>
  <div class="card">${t.map((x,i)=>`<div class="row ${i==ni?"next":""}"><span>${NAMES[i]}</span><span>${fmt(x)}</span></div>`).join("")}</div>`+adBody()+`</div>`;
  const u=()=>{const[,n]=nextP();let s=Math.max(0,Math.floor((n-new Date())/1e3));const p=x=>String(x).padStart(2,"0");$("#cd").textContent=`${p(s/3600|0)}:${p(s%3600/60|0)}:${p(s%60)}`};u();tick=setInterval(u,1e3)}
 let hd=null,cmpOn=false;
@@ -1245,7 +1256,7 @@ const PMI={n:["🔔","الإشعارات","تذكير الأذكار والصل�
 async function pmGate(force){
  if(document.getElementById("pmg"))return;
  const st=await pmState(),need=Object.keys(PMI).filter(k=>st[k]=="prompt"||st[k]=="denied");
- if(!need.length&&!force)return;if(PMS&&!force)return;
+ if(!need.length&&!force)return;if(PMS&&!force)return;if(!force){try{localStorage.setItem("zadPmAsked","1")}catch(e){}}
  const d=document.createElement("div");d.id="pmg";
  d.style.cssText="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl";
  d.innerHTML='<div class="card" style="max-width:420px;width:100%;margin:0;max-height:92%;overflow:auto"><h1 style="margin-top:0">أذونات التطبيق</h1><div class="mu" style="margin-bottom:8px">يحتاج «زاد المسلم» هذه الأذونات ليعمل كاملًا من أول مرة.</div><div id="pmr"></div><button class="gdl" id="pmall" style="width:100%;margin-top:10px" onclick="pmAll()">السماح بكل الأذونات</button><button id="pmlt" style="width:100%;margin-top:8px" onclick="pmClose(1)">لاحقًا</button><div class="mu" id="pmmsg" style="margin-top:8px;font-size:.85em"></div></div>';
@@ -1948,7 +1959,7 @@ const SLP=[[15,25],[10,20],[10,20],[1,15],[15,25]];
 const slS=()=>{let c=S.sil=S.sil||{};if(c.v!==2&&c.v!==3){const o=c,g={w:"a",m:Math.max(1,o.after!=null?o.after:5),d:o.dur||20};S.sil={v:3,on:o.on||0,mode:o.all===0?"each":"all",auto:1,fr:{on:1,m:1,d:90},g,pr:[0,1,2,3,4].map(i=>({on:o.pr?o.pr[i]:1,w:"a",m:SLP[i][0],d:SLP[i][1]}))};c=S.sil}else if(c.v===2){c.v=3;c.auto=1;c.fr={on:1,m:1,d:90}}return c};
 const slB=()=>window.AndroidSilent||null;
 const SLD=[[10,"قليل"],[20,"وسط"],[40,"كثير"]];
-function slWin(){const dt=new Date(),t=times(dt),c=slS(),fri=dt.getDay()==5;return SLN.map((p,i)=>{const jm=fri&&i==1&&(c.mode=="all"||c.fr.on),q=jm?c.fr:c.mode=="all"?(c.auto?{m:SLP[i][0],d:SLP[i][1]}:c.g):c.pr[i],s=new Date(+t[p[0]]+Math.max(1,q.m)*6e4);return{n:jm?"الجمعة":p[1],s,e:new Date(+s+Math.max(jm?90:1,q.d)*6e4),on:c.mode=="all"||jm?1:q.on}})}
+function slWin(dt0){const dt=dt0||new Date(),t=times(dt),c=slS(),fri=dt.getDay()==5;return SLN.map((p,i)=>{const jm=fri&&i==1&&(c.mode=="all"||c.fr.on),q=jm?c.fr:c.mode=="all"?(c.auto?{m:SLP[i][0],d:SLP[i][1]}:c.g):c.pr[i],s=new Date(+t[p[0]]+Math.max(1,q.m)*6e4);return{n:jm?"الجمعة":p[1],s,e:new Date(+s+Math.max(jm?90:1,q.d)*6e4),on:c.mode=="all"||jm?1:q.on}})}
 function slGo(st,w){const b=slB();
  if(b){let ok=false;try{ok=st?b.start():b.end()}catch(e){}
   if(!ok)ntFire(st?"تعذّر تفعيل الوضع الصامت":"تعذّرت استعادة وضع الهاتف",st?"امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.":"أعد وضع الهاتف يدويًا من الإعدادات.","sil","nt");
@@ -1968,18 +1979,45 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="
 setTimeout(()=>{try{const b=slB();if(!b)return;let h=false;try{h=b.has()}catch(e){}
  if(h||localStorage.getItem("zadDndAsk"))return;localStorage.setItem("zadDndAsk","1");
  if(confirm("لتفعيل الصامت تلقائيًا وقت الصلاة يحتاج التطبيق إذن «عدم الإزعاج». سيُفتح لك إعداد النظام لمنح الإذن. هل تريد المتابعة؟")){window.__slAsked=1;b.ask()}}catch(e){}},16000);
-function slTick(){const c=slS(),n=new Date(),w=c.on?slWin().find(x=>x.on&&n>=x.s&&n<x.e):null;
+/* نوافذ الصمت لعدة أيام قادمة (مع أمس لأن العشاء قد يمتد بعد منتصف الليل) كقائمة [بداية، نهاية، اسم] */
+function slAll(days){const out=[],b=new Date(),now=Date.now();
+ for(let k=-1;k<=days;k++){const d=new Date(b.getFullYear(),b.getMonth(),b.getDate()+k,12,0,0);
+  try{slWin(d).forEach(w=>{if(w.on&&+w.e>now-6e4)out.push([+w.s,+w.e,w.n])})}catch(e){}}
+ out.sort((x,y)=>x[0]-y[0]);return out.slice(0,40)}
+let SLSIG="";
+/* يرسل النوافذ إلى الجزء الأصلي الذي يضبط منبّهات دقيقة للبداية والنهاية فتعمل والتطبيق مغلق */
+function slPush(force){const b=slB();if(!b||typeof b.schedule!=="function")return false;
+ const w=slS().on?slAll(4):[],sig=JSON.stringify(w);
+ if(!force&&sig===SLSIG)return true;
+ try{if(b.schedule(sig)!==false){SLSIG=sig;return true}}catch(e){}
+ return false}
+function slSync(){setTimeout(()=>{try{slTick()}catch(e){}},60)}
+function slTick(){const b=slB();
+ if(b&&typeof b.schedule==="function"){
+  /* النسخة الأصلية هي المرجع: هي التي تفعّل الصمت وتفكّه في وقته ولو كان التطبيق مغلقًا */
+  const c=slS();slPush();try{b.reconcile()}catch(e){}
+  if(c.on){let h=false;try{h=b.has()}catch(e){}
+   if(!h){const n=Date.now(),w=slAll(0).find(x=>n>=x[0]&&n<x[1]);
+    if(w&&S.silWarn!==w[0]){S.silWarn=w[0];save();ntFire("تعذّر تفعيل الوضع الصامت","امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.","sil","nt")}}}
+  return}
+ const c=slS(),n=new Date(),w=c.on?slWin().find(x=>x.on&&n>=x.s&&n<x.e):null;
  if(w&&!S.silOn){S.silOn=1;save();slGo(1,w)}else if(!w&&S.silOn){S.silOn=0;save();slGo(0)}}
 setInterval(slTick,20000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")slTick()});
-function slSet(f,v,r){const c=slS();c[f]=v;save();if(f=="on"){if(v){const b=slB();if(b){let h=false;try{h=b.has()}catch(e){}if(!h&&confirm("لتفعيل الصامت تلقائيًا يحتاج التطبيق إذن «الوصول إلى عدم الإزعاج». سيُفتح لك إعداد النظام لمنح الإذن. وإن رفضتَه فلن يغيّر التطبيق وضع الهاتف. هل تريد المتابعة؟"))try{b.ask()}catch(e){}}}else if(S.silOn){S.silOn=0;save();slGo(0)}}if(r)sl()}
-function slG(f,v){slS().g[f]=v;save();sl()}
-function slP(i,f,v){slS().pr[i][f]=v;save();sl()}
-function slF(f,v){slS().fr[f]=v;save();sl()}
+function slSet(f,v,r){const c=slS();c[f]=v;save();slSync();if(f=="on"){if(v){const b=slB();if(b){let h=false;try{h=b.has()}catch(e){}if(!h&&confirm("لتفعيل الصامت تلقائيًا يحتاج التطبيق إذن «الوصول إلى عدم الإزعاج». سيُفتح لك إعداد النظام لمنح الإذن. وإن رفضتَه فلن يغيّر التطبيق وضع الهاتف. هل تريد المتابعة؟"))try{b.ask()}catch(e){}}}else if(S.silOn){S.silOn=0;save();slGo(0)}}if(r)sl()}
+function slG(f,v){slS().g[f]=v;save();slSync();sl()}
+function slP(i,f,v){slS().pr[i][f]=v;save();slSync();sl()}
+function slF(f,v){slS().fr[f]=v;save();slSync();sl()}
 function slMo(q,fn){return `<div class="set"><span>يبدأ الصمت بعد الأذان بـ</span><select onchange="${fn}('m',+this.value)">${[1,2,3,5,10,15,20,30,45,60].map(m=>`<option value="${m}" ${Math.max(1,q.m)==m?"selected":""}>${m==1?"دقيقة":m+" دقيقة"}</option>`).join("")}</select></div>`}
 function slCtl(q,fn){return slMo(q,fn)+`
  <div class="set"><span>مدة الصمت</span><span>${SLD.map(d=>`<button class="gdl" style="${q.d==d[0]?"":"opacity:.45"}" onclick="${fn}('d',${d[0]})">${d[1]}</button>`).join(" ")}</span></div>
  <div class="set"><span>أو حدّد المدة بدقة</span><select onchange="${fn}('d',+this.value)">${[...new Set([5,10,15,20,25,30,40,45,60,90,q.d])].sort((a,b)=>a-b).map(m=>`<option value="${m}" ${q.d==m?"selected":""}>${m} دقيقة</option>`).join("")}</select></div>`}
 function slFc(q){return slMo(q,"slF")+`<div class="set"><span>مدة الصمت (ساعة ونصف على الأقل)</span><select onchange="slF('d',+this.value)">${[90,105,120,150,180].map(m=>`<option value="${m}" ${Math.max(90,q.d)==m?"selected":""}>${m==90?"ساعة ونصف":m==120?"ساعتان":m==150?"ساعتان ونصف":m==180?"ثلاث ساعات":m+" دقيقة"}</option>`).join("")}</select></div>`}
+/* شرح مبسّط لمنح إذن «عدم الإزعاج»: يظهر فقط حين لا يكون الإذن ممنوحًا */
+function slGuide(){return `<div class="card"><div class="lh">🔓 كيف أمنح الإذن؟ (مرة واحدة فقط)</div>
+ <div class="mu" style="line-height:2">لا يسمح أندرويد لأي تطبيق بتغيير وضع الصمت إلا بعد أن تسمح له أنت، ولا يمكن تجاوز ذلك. والتطبيق لا يستخدم الإذن لشيء آخر.</div>
+ <div style="line-height:2.1;margin:6px 0">١) اضغط الزر الأخضر أدناه.<br>٢) ستفتح قائمة «الوصول إلى عدم الإزعاج».<br>٣) ابحث عن <b>زاد المسلم</b> واضغط عليه.<br>٤) فعّل المفتاح، ثم اضغط «السماح».<br>٥) ارجع إلى التطبيق، وسيظهر لك ✓ ممنوح.</div>
+ <button class="p" style="width:100%" onclick="slAsk()">افتح الإعدادات لمنح الإذن</button>
+ <div class="mu" style="margin-top:8px;line-height:1.9">لو لم تجد القائمة: افتح إعدادات الهاتف واكتب في البحث «عدم الإزعاج»، ثم ادخل على «التطبيقات» أو «الوصول إلى عدم الإزعاج» وفعّل زاد المسلم.<br>بعض الهواتف (شاومي/أوبو) تحتاج أيضًا السماح للتطبيق بالتشغيل التلقائي وإزالة قيود البطارية.</div></div>`}
 function sl(){
  cur="set";SUBV="set";nav();const c=slS(),b=slB();let h=false;try{h=b&&b.has()}catch(e){}
  const md=(k,l)=>`<button class="gdl" style="${c.mode==k?"":"opacity:.45"}" onclick="slSet('mode','${k}',1)">${l}</button>`;
@@ -1987,6 +2025,7 @@ function sl(){
  $("#m").innerHTML=`<div class="card"><h1>الوضع الصامت أثناء الصلاة</h1>
  <div class="set"><span>تفعيل (معطّل افتراضيًا)</span><input type="checkbox" ${c.on?"checked":""} onchange="slSet('on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
  <div class="mu">${b?(h?"✓ إذن «عدم الإزعاج» ممنوح؛ سيغيّر التطبيق وضع الهاتف تلقائيًا ويعيده بعد المدة. وإن كنتَ مفعّلًا لعدم الإزعاج يدويًا فلن يغيّره.":"⚠ إذن «عدم الإزعاج» غير ممنوح؛ لن يغيّر التطبيق وضع الهاتف، وسيذكّرك بتفعيله يدويًا."):"⚠ هذه النسخة لا تستطيع تغيير وضع الهاتف بنفسها؛ ستصلك تنبيهات عند بدء وقت الصمت وانتهائه لتفعّله يدويًا. التفعيل التلقائي يعمل في تطبيق Android المغلّف (APK) فقط، ولا يتوفر على iPhone."}</div></div>
+ ${b&&!h?slGuide():""}
  <div class="card"><div class="lh">نوع الضبط</div><div class="set"><span>${md("all","كلي — لكل الصلوات")} ${md("each","جزئي — لكل صلاة على حدة")}</span></div></div>
  ${c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة (افتراضي)</span><input type="checkbox" ${c.auto?"checked":""} onchange="slSet('auto',this.checked?1:0,1)" style="width:24px;height:24px"></div>${c.auto?au+`<div class="mu">المغرب يبدأ بعد الأذان مباشرة، والظهر والعصر أطول منه، والعشاء والفجر أطول منهما.</div>`:slCtl(c.g,"slG")}</div>`:SLN.map((p,i)=>{const q=c.pr[i];return`<div class="card"><div class="set"><span class="lh">${p[1]}</span><input type="checkbox" ${q.on?"checked":""} onchange="slP(${i},'on',this.checked?1:0)" style="width:24px;height:24px"></div>${q.on?slCtl(q,"slP.bind(null,"+i+")"):""}</div>`}).join("")}
  <div class="card"><div class="set"><span class="lh">الجمعة (بدل الظهر يوم الجمعة)</span>${c.mode=="each"?`<input type="checkbox" ${c.fr.on?"checked":""} onchange="slF('on',this.checked?1:0)" style="width:24px;height:24px">`:""}</div>${c.mode=="all"||c.fr.on?slFc(c.fr):""}</div>
@@ -2038,7 +2077,7 @@ function slCompat(){
  return `<div class="card"><div class="lh">التوافق مع جهازك</div><div class="mu">${st}</div><div class="mu" style="margin-top:6px">${alt}</div>${and&&vt[v]?`<div class="mu" style="margin-top:6px">لضمان وصول التذكيرات في الخلفية — ${vt[v]}</div>`:""}<div class="mu" style="margin-top:6px">حالة الاختبار: هذه الخاصية لم تُختبر بعد على أجهزة Android حقيقية (Samsung وHuawei وXiaomi وRedmi وHonor وغيرها) ولا على إصدارات Android المختلفة، فلا تُعدّ مكتملة. التذكير اليدوي هو المضمون على كل الأجهزة.</div></div>`}
 
 try{if(S.city==="موقعي الحالي"&&S.chosen&&S.lat!=null){S.gps=1;const n=locName(S.lat,S.lng);if(n!=="موقعي الحالي"){S.city=n;save()}}}catch(e){}
-apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();setTimeout(locAuto,1500);setTimeout(()=>{try{pmGate()}catch(e){}},900);
+apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();setTimeout(locAuto,1500);setTimeout(()=>{try{if(!localStorage.getItem("zadPmAsked"))pmGate()}catch(e){}},900);
 
 /* ---- حفظ مكان التلاوة ومتابعتها ---- */
 function saveRes(){try{if(!AP||!AP.s||!QD||!QD.names)return;if(!AP.on&&!AP.res)return;const f=S.qrec||RLD[0],sur=!!SUD[f];S.qres={s:AP.s,a:AP.a,f,t:sur&&AU.currentTime>1?Math.floor(AU.currentTime):0,u:Date.now()};if(AP.on)S.ql={s:AP.s,a:AP.a,p:qPageOf(AP.s,AP.a),u:Date.now()};save()}catch(e){}}
@@ -2050,7 +2089,7 @@ function qresume(){const r=resInfo();if(!r)return;if(r.f&&RC.find(x=>x[0]==r.f))
  if(!document.getElementById("qv")){try{qopen(qPageOf(r.s,r.a))}catch(e){}}
  setTimeout(()=>{qplay(r.s,r.a);AP.rt=r.t||0;AP.res=1},400)}
 /* ---- الوسائط: إشعار التحكم (مثل مشغّل الـ MP3) ---- */
-function msSet(title,artist,h){try{if(!("mediaSession" in navigator))return;let aw=[];try{const b=new URL("icon-512.png",location.href).href;aw=[{src:b,sizes:"512x512",type:"image/png"}]}catch(e){}const W=f=>f?d=>{try{const r=f(d);if(r&&r.catch)r.catch(()=>{})}catch(e){}}:null;[["play",h.play],["pause",h.pause],["previoustrack",h.prev],["nexttrack",h.next],["seekto",h.st]].forEach(([a,f])=>{try{navigator.mediaSession.setActionHandler(a,W(f))}catch(e){}});navigator.mediaSession.metadata=new MediaMetadata({title,artist,album:"زاد المسلم",artwork:aw})}catch(e){}}
+function msSet(title,artist,h){try{if(!("mediaSession" in navigator))return;let aw=[];try{const b=new URL("icon-512.png",location.href).href;aw=[{src:b,sizes:"512x512",type:"image/png"}]}catch(e){}const W=f=>f?d=>{try{const r=f(d);if(r&&r.catch)r.catch(()=>{})}catch(e){}}:null;[["play",h.play],["pause",h.pause],["previoustrack",h.prev],["nexttrack",h.next],["seekto",h.st],["stop",h.stop]].forEach(([a,f])=>{try{navigator.mediaSession.setActionHandler(a,W(f))}catch(e){}});navigator.mediaSession.metadata=new MediaMetadata({title,artist,album:"زاد المسلم",artwork:aw})}catch(e){}}
 /* ===== ستارة الإشعارات: شريط واحد للسورة كاملة، وعدّاد آية آية، وسابق/تالي/إيقاف/تقديم/تأخير ===== */
 /* كل آية ملف صوتي مستقل، فنعامل السورة كمسار واحد: مجموع مدد الآيات. المدة الحقيقية تُتعلَّم أثناء التشغيل وتُحفظ
    (للقارئ والسورة) فتصير الدقة كاملة في المرات التالية؛ وما لم يُعرف بعد يُقدَّر بطول نص الآية. */
