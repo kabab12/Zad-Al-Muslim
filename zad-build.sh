@@ -44,6 +44,9 @@ if [ "$MODE" = "full" ]; then
       sed -i 's#<service #<service android:foregroundServiceType="mediaPlayback" #' "$PM"
     fi
   fi
+
+  # إصلاح زر تشغيل/إيقاف في إشعار الوسائط: الإضافة تمرّر قيمة مركّبة (516/514) فيصبح الـ PendingIntent null
+  python3 fix-media-buttons.py
 fi
 
 # ---- 3) android project ----
