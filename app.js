@@ -2143,7 +2143,7 @@ function msClear(){try{if("mediaSession" in navigator){navigator.mediaSession.me
 function qms(){if(!AP.on)return;const sud=!!SUD[S.qrec||RLD[0]],n=QD.text[AP.s-1].length,
  t="سورة "+QD.names[AP.s-1]+(sud?"":(AP.bs?" · البسملة":" · آية "+AD(AP.a)+" من "+AD(n))),r=recname();
  try{const m=navigator.mediaSession.metadata;if(m&&m.title===t&&m.artist===r)return}catch(e){}
- msSet(t,r,{play:()=>AU.play(),pause:()=>AU.pause(),prev:()=>msGoS(-1),next:()=>msGoS(1),stop:qstop,
+ msSet(t,r,{play:(()=>{const p=AU.play();if(p&&p.catch)p.catch(()=>setTimeout(()=>{try{AU.play().catch(()=>{})}catch(e){}},400))}),pause:()=>{try{AU.pause()}catch(e){}},prev:()=>msGoS(-1),next:()=>msGoS(1),stop:qstop,
   sb:d=>mxBy(-((d&&d.seekOffset)||10)),sf:d=>mxBy((d&&d.seekOffset)||10),
   st:d=>{try{if(d&&d.seekTime!=null)mxSeek(d.seekTime)}catch(e){}}})}
 AU.addEventListener("loadedmetadata",()=>{try{msPos()}catch(e){}});AU.addEventListener("seeked",()=>{try{msPos()}catch(e){}});AU.addEventListener("pause",()=>{try{msPos()}catch(e){}});
@@ -2173,7 +2173,7 @@ async function hplay(c,i){
  if(!u){if(i<HD[c].length-1){hshow(c,i+1);return hplay(c,i+1)}const a=HP.any;hstop();qtoast(a?"انتهى الباب":"لا يتوفر تسجيل صوتي لهذا الباب",3500);return}
  HP.any=1;HAU.src=u.replace(/^http:/,"https:");HAU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر الاستماع لبدء التشغيل")});
  hms();hui()}
-function hms(){if(!HP.on)return;msSet(CHN(HP.c),"حصن المسلم · "+AD(HP.i+1)+" / "+AD(HD[HP.c].length),{play:()=>HAU.play(),pause:()=>HAU.pause(),prev:()=>{if(HP.i>0){hshow(HP.c,HP.i-1);hplay(HP.c,HP.i-1)}},next:hnext,stop:hstop})}
+function hms(){if(!HP.on)return;msSet(CHN(HP.c),"حصن المسلم · "+AD(HP.i+1)+" / "+AD(HD[HP.c].length),{play:(()=>{const p=HAU.play();if(p&&p.catch)p.catch(()=>setTimeout(()=>{try{HAU.play().catch(()=>{})}catch(e){}},400))}),pause:()=>{try{HAU.pause()}catch(e){}},prev:()=>{if(HP.i>0){hshow(HP.c,HP.i-1);hplay(HP.c,HP.i-1)}},next:hnext,stop:hstop})}
 function hnext(){if(!HP.on)return;if(HP.i<HD[HP.c].length-1){hshow(HP.c,HP.i+1);hplay(HP.c,HP.i+1)}else{hstop();qtoast("انتهى الباب",3000)}}
 function hstop(){const w=HP.on;HP.on=0;kaOff();HP.t=0;try{HAU.pause();HAU.removeAttribute("src");HAU.load()}catch(e){}hui();if(w&&!AP.on)msClear()}
 function hpt(){if(HP.on&&HP.c==cc&&HP.i==ci){HAU.paused?HAU.play():HAU.pause()}else hplay(cc,ci)}

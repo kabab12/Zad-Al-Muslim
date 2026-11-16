@@ -246,9 +246,22 @@
     /* ===== 4) التحكم الصوتي في الستارة (القرآن وحصن المسلم) عبر Media Session ===== */
     var MS=plug("MediaSession");
     if(MS)safe(function(){
-      var st={metadata:null,playbackState:"none"},handlers={},reg={},pt=null,imm=0;
+      var st={metadata:null,playbackState:"none"},handlers={},reg={},pt=null,lastAct=0;
       if(typeof window.MediaMetadata==="undefined"){window.MediaMetadata=function(o){o=o||{};this.title=o.title||"";this.artist=o.artist||"";this.album=o.album||"";this.artwork=o.artwork||[]}}
       var call=function(n,a,b){try{var p=MS[n](a,b);if(p&&p.catch)p.catch(function(){})}catch(e){}};
+      var send=function(v){clearTimeout(pt);pt=null;if(st.playbackState!==v){st.playbackState=v;call("setPlaybackState",{playbackState:v})}};
+      /* هل هناك جلسة صوت نشطة؟ وهل الصوت يعمل فعلًا؟ — نقرأ ذلك من عناصر الصوت نفسها لا من نسخة مخزّنة */
+      var active=function(){try{return !!((typeof AP!=="undefined"&&AP.on)||(typeof HP!=="undefined"&&HP.on)||(typeof KA!=="undefined"&&!KA.paused))}catch(e){return false}};
+      var real=function(){try{
+        if(typeof AP!=="undefined"&&AP.on)return !AU.paused;
+        if(typeof HP!=="undefined"&&HP.on)return !HAU.paused;
+        return typeof KA!=="undefined"&&!KA.paused}catch(e){return false}};
+      /* مزامنة أيقونة الإشعار مع الحالة الفعلية. force=true بعد ضغطة زر الستارة: نُرسل فورًا دون تأخير */
+      var sync=function(force){
+        if(!active())return;
+        if(real()){send("playing");return}
+        if(force||Date.now()-lastAct<2000){send("paused");return}
+        if(!pt)pt=setTimeout(function(){pt=null;if(active()&&!real())send("paused")},2500)};
       var ms={
         get metadata(){return st.metadata},
         set metadata(m){
@@ -257,29 +270,33 @@
         get playbackState(){return st.playbackState},
         set playbackState(v){
           v=v==="playing"||v==="paused"?v:"none";
-          /* بين آية وآية يقفز التطبيق لحظة إلى «متوقف»؛ لو أرسلناها لأندرويد لأسقط الخدمة الأمامية
-             وتوقف الصوت في الخلفية، فنؤخر «متوقف» ثانيتين ونصف ونلغيها إن عاد التشغيل */
-          if(v==="playing"){
-            clearTimeout(pt);
-            if(st.playbackState!=="playing"){st.playbackState="playing";call("setPlaybackState",{playbackState:"playing"})}
-            return}
+          if(v==="playing"){send("playing");return}
           if(v==="paused"){
-            if(st.playbackState!=="playing")return;
-            if(imm){imm=0;clearTimeout(pt);st.playbackState="paused";call("setPlaybackState",{playbackState:"paused"});return}
+            /* بين آية وآية يقفز التطبيق لحظة إلى «متوقف»؛ لو أرسلناها فورًا لأسقط أندرويد الخدمة الأمامية،
+               فنؤخرها ثانيتين ونصف ونلغيها إن عاد التشغيل — إلا إذا كان الإيقاف من ضغطة المستخدم فنُرسلها فورًا */
+            if(st.playbackState==="none"){return}
+            if(Date.now()-lastAct<2000){send("paused");return}
             clearTimeout(pt);
-            pt=setTimeout(function(){st.playbackState="paused";call("setPlaybackState",{playbackState:"paused"})},2500);
+            pt=setTimeout(function(){pt=null;if(!active()||!real())send("paused")},2500);
             return}
-          clearTimeout(pt);
-          if(st.playbackState!=="none"){st.playbackState="none";call("setPlaybackState",{playbackState:"none"})}},
+          send("none")},
         setActionHandler:function(a,f){
           handlers[a]=f||null;
           if(f&&!reg[a]){
             reg[a]=1;
-            call("setActionHandler",{action:a},function(d){var h=handlers[a];if(a==="pause"||a==="stop")imm=1;if(h){try{h(d||{action:a})}catch(e){}}if(a==="stop"){try{window.__zadStopAll&&window.__zadStopAll()}catch(e){}}setTimeout(function(){imm=0},1500)})}},
+            call("setActionHandler",{action:a},function(d){
+              lastAct=Date.now();
+              var h=handlers[a];
+              if(h){try{h(d||{action:a})}catch(e){}}
+              if(a==="stop"){try{window.__zadStopAll&&window.__zadStopAll()}catch(e){}}
+              /* بعد التشغيل/الإيقاف نُعيد مزامنة الأيقونة مع الحالة الحقيقية عدة مرات، فلا يبقى الزر «ميتًا» أبدًا */
+              if(a==="play"||a==="pause"||a==="stop"){[40,300,900,2200].forEach(function(t){setTimeout(function(){sync(true)},t)})}})}},
         setPositionState:function(s){
           if(s&&isFinite(s.duration)&&s.duration>0)call("setPositionState",{duration:s.duration,playbackRate:s.playbackRate||1,position:Math.max(0,s.position||0)})}
       };
       try{Object.defineProperty(navigator,"mediaSession",{value:ms,configurable:true})}catch(e){}
+      /* حارس دوري: كل ثانية يُصحّح أيقونة الإشعار إن اختلفت عن الواقع */
+      setInterval(function(){try{sync(false)}catch(e){}},1000);
       window.__zadNative=window.__zadNative||{};window.__zadNative.media=ms;
     });
   }
@@ -2795,7 +2812,7 @@ function msClear(){try{if("mediaSession" in navigator){navigator.mediaSession.me
 function qms(){if(!AP.on)return;const sud=!!SUD[S.qrec||RLD[0]],n=QD.text[AP.s-1].length,
  t="سورة "+QD.names[AP.s-1]+(sud?"":(AP.bs?" · البسملة":" · آية "+AD(AP.a)+" من "+AD(n))),r=recname();
  try{const m=navigator.mediaSession.metadata;if(m&&m.title===t&&m.artist===r)return}catch(e){}
- msSet(t,r,{play:()=>AU.play(),pause:()=>AU.pause(),prev:()=>msGoS(-1),next:()=>msGoS(1),stop:qstop,
+ msSet(t,r,{play:(()=>{const p=AU.play();if(p&&p.catch)p.catch(()=>setTimeout(()=>{try{AU.play().catch(()=>{})}catch(e){}},400))}),pause:()=>{try{AU.pause()}catch(e){}},prev:()=>msGoS(-1),next:()=>msGoS(1),stop:qstop,
   sb:d=>mxBy(-((d&&d.seekOffset)||10)),sf:d=>mxBy((d&&d.seekOffset)||10),
   st:d=>{try{if(d&&d.seekTime!=null)mxSeek(d.seekTime)}catch(e){}}})}
 AU.addEventListener("loadedmetadata",()=>{try{msPos()}catch(e){}});AU.addEventListener("seeked",()=>{try{msPos()}catch(e){}});AU.addEventListener("pause",()=>{try{msPos()}catch(e){}});
@@ -2825,7 +2842,7 @@ async function hplay(c,i){
  if(!u){if(i<HD[c].length-1){hshow(c,i+1);return hplay(c,i+1)}const a=HP.any;hstop();qtoast(a?"انتهى الباب":"لا يتوفر تسجيل صوتي لهذا الباب",3500);return}
  HP.any=1;HAU.src=u.replace(/^http:/,"https:");HAU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر الاستماع لبدء التشغيل")});
  hms();hui()}
-function hms(){if(!HP.on)return;msSet(CHN(HP.c),"حصن المسلم · "+AD(HP.i+1)+" / "+AD(HD[HP.c].length),{play:()=>HAU.play(),pause:()=>HAU.pause(),prev:()=>{if(HP.i>0){hshow(HP.c,HP.i-1);hplay(HP.c,HP.i-1)}},next:hnext,stop:hstop})}
+function hms(){if(!HP.on)return;msSet(CHN(HP.c),"حصن المسلم · "+AD(HP.i+1)+" / "+AD(HD[HP.c].length),{play:(()=>{const p=HAU.play();if(p&&p.catch)p.catch(()=>setTimeout(()=>{try{HAU.play().catch(()=>{})}catch(e){}},400))}),pause:()=>{try{HAU.pause()}catch(e){}},prev:()=>{if(HP.i>0){hshow(HP.c,HP.i-1);hplay(HP.c,HP.i-1)}},next:hnext,stop:hstop})}
 function hnext(){if(!HP.on)return;if(HP.i<HD[HP.c].length-1){hshow(HP.c,HP.i+1);hplay(HP.c,HP.i+1)}else{hstop();qtoast("انتهى الباب",3000)}}
 function hstop(){const w=HP.on;HP.on=0;kaOff();HP.t=0;try{HAU.pause();HAU.removeAttribute("src");HAU.load()}catch(e){}hui();if(w&&!AP.on)msClear()}
 function hpt(){if(HP.on&&HP.c==cc&&HP.i==ci){HAU.paused?HAU.play():HAU.pause()}else hplay(cc,ci)}

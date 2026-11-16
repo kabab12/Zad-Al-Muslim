@@ -244,9 +244,22 @@
     /* ===== 4) التحكم الصوتي في الستارة (القرآن وحصن المسلم) عبر Media Session ===== */
     var MS=plug("MediaSession");
     if(MS)safe(function(){
-      var st={metadata:null,playbackState:"none"},handlers={},reg={},pt=null,imm=0;
+      var st={metadata:null,playbackState:"none"},handlers={},reg={},pt=null,lastAct=0;
       if(typeof window.MediaMetadata==="undefined"){window.MediaMetadata=function(o){o=o||{};this.title=o.title||"";this.artist=o.artist||"";this.album=o.album||"";this.artwork=o.artwork||[]}}
       var call=function(n,a,b){try{var p=MS[n](a,b);if(p&&p.catch)p.catch(function(){})}catch(e){}};
+      var send=function(v){clearTimeout(pt);pt=null;if(st.playbackState!==v){st.playbackState=v;call("setPlaybackState",{playbackState:v})}};
+      /* هل هناك جلسة صوت نشطة؟ وهل الصوت يعمل فعلًا؟ — نقرأ ذلك من عناصر الصوت نفسها لا من نسخة مخزّنة */
+      var active=function(){try{return !!((typeof AP!=="undefined"&&AP.on)||(typeof HP!=="undefined"&&HP.on)||(typeof KA!=="undefined"&&!KA.paused))}catch(e){return false}};
+      var real=function(){try{
+        if(typeof AP!=="undefined"&&AP.on)return !AU.paused;
+        if(typeof HP!=="undefined"&&HP.on)return !HAU.paused;
+        return typeof KA!=="undefined"&&!KA.paused}catch(e){return false}};
+      /* مزامنة أيقونة الإشعار مع الحالة الفعلية. force=true بعد ضغطة زر الستارة: نُرسل فورًا دون تأخير */
+      var sync=function(force){
+        if(!active())return;
+        if(real()){send("playing");return}
+        if(force||Date.now()-lastAct<2000){send("paused");return}
+        if(!pt)pt=setTimeout(function(){pt=null;if(active()&&!real())send("paused")},2500)};
       var ms={
         get metadata(){return st.metadata},
         set metadata(m){
@@ -255,29 +268,33 @@
         get playbackState(){return st.playbackState},
         set playbackState(v){
           v=v==="playing"||v==="paused"?v:"none";
-          /* بين آية وآية يقفز التطبيق لحظة إلى «متوقف»؛ لو أرسلناها لأندرويد لأسقط الخدمة الأمامية
-             وتوقف الصوت في الخلفية، فنؤخر «متوقف» ثانيتين ونصف ونلغيها إن عاد التشغيل */
-          if(v==="playing"){
-            clearTimeout(pt);
-            if(st.playbackState!=="playing"){st.playbackState="playing";call("setPlaybackState",{playbackState:"playing"})}
-            return}
+          if(v==="playing"){send("playing");return}
           if(v==="paused"){
-            if(st.playbackState!=="playing")return;
-            if(imm){imm=0;clearTimeout(pt);st.playbackState="paused";call("setPlaybackState",{playbackState:"paused"});return}
+            /* بين آية وآية يقفز التطبيق لحظة إلى «متوقف»؛ لو أرسلناها فورًا لأسقط أندرويد الخدمة الأمامية،
+               فنؤخرها ثانيتين ونصف ونلغيها إن عاد التشغيل — إلا إذا كان الإيقاف من ضغطة المستخدم فنُرسلها فورًا */
+            if(st.playbackState==="none"){return}
+            if(Date.now()-lastAct<2000){send("paused");return}
             clearTimeout(pt);
-            pt=setTimeout(function(){st.playbackState="paused";call("setPlaybackState",{playbackState:"paused"})},2500);
+            pt=setTimeout(function(){pt=null;if(!active()||!real())send("paused")},2500);
             return}
-          clearTimeout(pt);
-          if(st.playbackState!=="none"){st.playbackState="none";call("setPlaybackState",{playbackState:"none"})}},
+          send("none")},
         setActionHandler:function(a,f){
           handlers[a]=f||null;
           if(f&&!reg[a]){
             reg[a]=1;
-            call("setActionHandler",{action:a},function(d){var h=handlers[a];if(a==="pause"||a==="stop")imm=1;if(h){try{h(d||{action:a})}catch(e){}}if(a==="stop"){try{window.__zadStopAll&&window.__zadStopAll()}catch(e){}}setTimeout(function(){imm=0},1500)})}},
+            call("setActionHandler",{action:a},function(d){
+              lastAct=Date.now();
+              var h=handlers[a];
+              if(h){try{h(d||{action:a})}catch(e){}}
+              if(a==="stop"){try{window.__zadStopAll&&window.__zadStopAll()}catch(e){}}
+              /* بعد التشغيل/الإيقاف نُعيد مزامنة الأيقونة مع الحالة الحقيقية عدة مرات، فلا يبقى الزر «ميتًا» أبدًا */
+              if(a==="play"||a==="pause"||a==="stop"){[40,300,900,2200].forEach(function(t){setTimeout(function(){sync(true)},t)})}})}},
         setPositionState:function(s){
           if(s&&isFinite(s.duration)&&s.duration>0)call("setPositionState",{duration:s.duration,playbackRate:s.playbackRate||1,position:Math.max(0,s.position||0)})}
       };
       try{Object.defineProperty(navigator,"mediaSession",{value:ms,configurable:true})}catch(e){}
+      /* حارس دوري: كل ثانية يُصحّح أيقونة الإشعار إن اختلفت عن الواقع */
+      setInterval(function(){try{sync(false)}catch(e){}},1000);
       window.__zadNative=window.__zadNative||{};window.__zadNative.media=ms;
     });
   }
