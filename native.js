@@ -159,7 +159,7 @@
 
       /* توقيع إعدادات التنبيهات: لا نعيد الجدولة إلا إذا تغيّر شيء مؤثّر (نتجاهل ما يتغير باستمرار كموضع التلاوة) */
       var VOL={qres:1,ql:1,qp:1,qn:1,ntl:1,adl:1,nlog:1,ntI:1,silOn:1,silWarn:1,lastOpen:1};
-      var sigNow=function(){try{return JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
+      var sigNow=function(){try{return "nx2|"+JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
       var lastSig=(function(){try{return localStorage.getItem("zadSchedSig")||""}catch(e){return""}})(),lastAt=0;
       var schedule=function(force){
         if(busy){again=true;return}
@@ -295,7 +295,7 @@
       try{Object.defineProperty(navigator,"mediaSession",{value:ms,configurable:true})}catch(e){}
       /* حارس دوري: كل ثانية يُصحّح أيقونة الإشعار إن اختلفت عن الواقع */
       setInterval(function(){try{sync(false)}catch(e){}},1000);
-      window.__zadNative=window.__zadNative||{};window.__zadNative.media=ms;
+      ms.lastAct=function(){return lastAct};window.__zadNative=window.__zadNative||{};window.__zadNative.media=ms;
     });
   }
 
@@ -324,12 +324,98 @@
     if(typeof HP!=="undefined"&&HP.on)return"حصن المسلم";
     return""})||""};
   var active=function(){return !!ref(function(){return(typeof AP!=="undefined"&&AP.on)||(typeof HP!=="undefined"&&HP.on)})};
+  /* قفل CPU جزئي أثناء التشغيل الفعلي فقط (الـ WebView لا يمسك قفلًا بنفسه، فقد ينام المعالج والشاشة مطفأة).
+     يُترك 30 ثانية بعد الإيقاف المؤقت ثم يُفلَت لئلا يستنزف البطارية */
+  var pz=0,wl=false;
+  var hold=function(){
+    if(!active()){pz=0;return false}
+    var r=ref(function(){return(typeof AU!=="undefined"&&AP.on&&!AU.paused)||(typeof HAU!=="undefined"&&HP.on&&!HAU.paused)});
+    if(r){pz=0;return true}
+    if(!pz)pz=Date.now();
+    return Date.now()-pz<30000};
   var sync=function(){
     if(!window.ZadShade)return;
+    try{var hd=hold();if(hd!==wl){wl=hd;if(ZadShade.setPlaying)ZadShade.setPlaying(hd);if(window.__zlog)window.__zlog("wakelock "+(hd?"on":"off"))}}catch(e){}
     if(active()){
       var t=title();
       if(!shown||t!==lastT){shown=true;lastT=t;ref(function(){ZadShade.show(t||"زاد المسلم")})}
     }else if(shown){shown=false;lastT="";ref(function(){ZadShade.hide()})}};
   setInterval(sync,1500);
   document.addEventListener("visibilitychange",sync);
+})();
+
+/* ===== سجل تشخيص الصوت (يُعرض من: إعدادات القرآن ← اختبار الإشعارات ← سجل الصوت) ===== */
+(function(){
+  "use strict";
+  var KEY="zadlog",buf=[];
+  try{buf=JSON.parse(localStorage.getItem(KEY)||"[]");if(!Array.isArray(buf))buf=[]}catch(e){buf=[]}
+  var p2=function(x){return(x<10?"0":"")+x};
+  var ts=function(){var d=new Date();return p2(d.getMonth()+1)+"-"+p2(d.getDate())+" "+p2(d.getHours())+":"+p2(d.getMinutes())+":"+p2(d.getSeconds())};
+  var log=function(m){try{buf.push(ts()+" "+m);if(buf.length>600)buf=buf.slice(-450);localStorage.setItem(KEY,JSON.stringify(buf))}catch(e){}};
+  window.__zlog=log;
+  window.__zlogGet=function(n){return buf.slice(-(n||150)).join("\n")};
+  window.__zlogClear=function(){buf=[];try{localStorage.removeItem(KEY)}catch(e){}};
+  var lastUser=0;
+  ["touchstart","mousedown","keydown"].forEach(function(e){document.addEventListener(e,function(){lastUser=Date.now()},true)});
+  var lastActOf=function(){try{var m=window.__zadNative&&window.__zadNative.media;return(m&&m.lastAct)?m.lastAct():0}catch(e){return 0}};
+  var st=function(){try{return"AP="+((typeof AP!=="undefined"&&AP.on)?AP.s+":"+AP.a:"-")+" HP="+((typeof HP!=="undefined"&&HP.on)?1:0)+" vis="+document.visibilityState}catch(e){return"?"}};
+  var as=function(a){try{return"t="+(a.currentTime||0).toFixed(1)+" rs="+a.readyState+" ns="+a.networkState+" pz="+(a.paused?1:0)+" en="+(a.ended?1:0)}catch(e){return"?"}};
+  var userAgo=function(){var t=Math.max(lastUser,lastActOf());return t?Math.round((Date.now()-t)/1000):-1};
+
+  log("START "+st());
+  try{if(window.ZadDiag){String(ZadDiag.info()).split("\n").forEach(function(l){if(l)log("NATIVE "+l)})}}catch(e){}
+
+  ["visibilitychange","pagehide","pageshow","freeze","resume","online","offline"].forEach(function(e){
+    (e==="visibilitychange"?document:window).addEventListener(e,function(){log("EVT "+e+" "+st())},true)});
+
+  var hooked=false;
+  var hook=function(){
+    if(hooked)return;
+    if(typeof AU==="undefined"||typeof HAU==="undefined"||typeof KA==="undefined"||typeof qstop!=="function"||typeof hstop!=="function"||typeof msClear!=="function")return;
+    hooked=true;
+    [["AU",AU],["HAU",HAU],["KA",KA]].forEach(function(x){
+      var k=x[0],a=x[1];
+      ["pause","ended","error","stalled","waiting","emptied"].forEach(function(e){
+        a.addEventListener(e,function(){
+          try{
+            if(e==="pause"&&a.ended)return;
+            var extra="";
+            if(e==="error"){extra=" code="+((a.error&&a.error.code)||0)}
+            if(e==="pause"&&k!=="KA"){extra=" userAgo="+userAgo()+"s"}
+            log(k+" "+e+extra+" "+as(a)+" "+st())
+          }catch(_){}
+        })})});
+    ["qstop","hstop","msClear"].forEach(function(n){
+      var o=window[n];if(typeof o!=="function"||o.__zw)return;
+      var w=function(){var c="";try{c=(new Error().stack||"").split("\n").slice(2,4).join("|").replace(/\s+/g," ").slice(0,200)}catch(e){}
+        log("CALL "+n+" "+st()+" @"+c);return o.apply(this,arguments)};
+      w.__zw=1;window[n]=w});
+    log("hooked");
+  };
+  var hk=setInterval(function(){hook();if(hooked)clearInterval(hk)},400);
+
+  /* حارس: إن بقي العنصر في حالة «انتهى» دون أن ينتقل للآية التالية أكثر من 3.5 ثوانٍ نُكمل يدويًا */
+  var eq=0,eh=0,hb=0;
+  setInterval(function(){
+    try{
+      if(!hooked)return;
+      if(AP.on&&AU.ended){if(!eq)eq=Date.now();else if(Date.now()-eq>3500){eq=0;log("stuck-ended Q -> anext");anext()}}else eq=0;
+      if(HP.on&&HAU.ended){if(!eh)eh=Date.now();else if(Date.now()-eh>3500){eh=0;log("stuck-ended H -> hnext");hnext()}}else eh=0;
+      if((AP.on||HP.on)&&++hb>=60){hb=0;log("HB "+(AP.on?"AU "+as(AU):"HAU "+as(HAU))+" KA "+as(KA)+" "+st())}
+      if(!(AP.on||HP.on))hb=0;
+    }catch(e){}
+  },1000);
+
+  /* شاشة عرض السجل */
+  window.zlogShow=function(){
+    try{
+      qshow("qo-zl","سجل الصوت",'<div class="card"><div class="mu" style="font-size:.8em;margin-bottom:8px">بعد أن يتوقف الصوت: افتح هذه الصفحة، اضغط «نسخ السجل» ثم الصقه في المحادثة.</div><textarea id="zlt" readonly style="width:100%;height:50vh;direction:ltr;text-align:left;font-size:11px;font-family:monospace"></textarea><button class="gdl" style="width:100%;margin-top:8px" onclick="zlogCopy()">📋 نسخ السجل</button><button class="gdl" style="width:100%;margin-top:8px" onclick="__zlogClear();zlogShow()">🗑 مسح السجل</button></div>');
+      var ta=document.getElementById("zlt");if(ta){ta.value=window.__zlogGet(150);ta.scrollTop=ta.scrollHeight}
+    }catch(e){}
+  };
+  window.zlogCopy=function(){
+    try{var ta=document.getElementById("zlt");ta.focus();ta.select();ta.setSelectionRange(0,9999999);
+      var ok=document.execCommand("copy");
+      if(typeof qtoast==="function")qtoast(ok?"تم نسخ السجل":"حدّد النص يدويًا ثم انسخه")}catch(e){}
+  };
 })();

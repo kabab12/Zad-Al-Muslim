@@ -1,1 +1,6 @@
 #qv.qrd #qpg{justify-content:flex-start!important;overflow-y:auto!important}#qtoast{white-space:pre-line}
+/* درجات التكبير ونمط «قراءة مثل آية» فقط (#qv.qrd) — الصفحة الكاملة ١٥ سطرًا لا تتأثر:
+   سمك حدّ الحرف يتناسب مع حجم الخط (كان 0.3px ثابتًا فيبدو الخط أنحف كلما كبّرته)،
+   ونمط القراءة يأخذ التمدّد الرأسي نفسه الذي في صفحة المصحف */
+#qv.qrd #qtx .v{-webkit-text-stroke:.0125em currentColor}
+#qv.qrd.qold #qtx .ml:not(.qb):not(.qbs){transform:scaleY(1.08)}

@@ -36,6 +36,31 @@ public class AudioShade {
         cancel(ctx);
     }
 
+    /** الصفحة تخبرنا أن الصوت يعمل فعلًا: نمسك قفل CPU جزئيًا (يمنع نوم المعالج والشاشة مطفأة)، ونفلته عند الإيقاف. */
+    @JavascriptInterface
+    public void setPlaying(boolean on) {
+        wake(ctx, on);
+    }
+
+    private static android.os.PowerManager.WakeLock sWl;
+
+    static synchronized void wake(Context c, boolean on) {
+        try {
+            if (on) {
+                if (sWl == null) {
+                    android.os.PowerManager pm = (android.os.PowerManager) c.getSystemService(Context.POWER_SERVICE);
+                    if (pm == null) return;
+                    sWl = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "zad:audio");
+                    sWl.setReferenceCounted(false);
+                }
+                if (!sWl.isHeld()) sWl.acquire(6L * 60L * 60L * 1000L);
+            } else if (sWl != null && sWl.isHeld()) {
+                sWl.release();
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     static void post(Context c, String title) {
         try {
             NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -79,6 +104,7 @@ public class AudioShade {
     }
 
     static void cancel(Context c) {
+        wake(c, false);
         try {
             NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.cancel(NID);

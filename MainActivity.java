@@ -48,6 +48,50 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    /** تشخيص: أسباب إنهاء العملية السابقة (ApplicationExitInfo) وآخر تنبيهات نقص الذاكرة. تقرؤها الصفحة في سجل الصوت. */
+    private class DiagBridge {
+        @JavascriptInterface
+        public String info() {
+            StringBuilder sb = new StringBuilder();
+            try {
+                android.content.SharedPreferences sp = getSharedPreferences("zad_diag", MODE_PRIVATE);
+                sb.append("trim=").append(sp.getString("trim", "-")).append("\n");
+                if (Build.VERSION.SDK_INT >= 30) {
+                    android.app.ActivityManager am = (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+                    java.util.List<android.app.ApplicationExitInfo> l =
+                            am.getHistoricalProcessExitReasons(getPackageName(), 0, 4);
+                    java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US);
+                    for (android.app.ApplicationExitInfo e : l) {
+                        sb.append("exit ").append(f.format(new java.util.Date(e.getTimestamp())))
+                                .append(" reason=").append(e.getReason())
+                                .append(" imp=").append(e.getImportance())
+                                .append(" ").append(String.valueOf(e.getDescription())).append("\n");
+                    }
+                }
+            } catch (Throwable t) {
+                sb.append("diag-err ").append(t).append("\n");
+            }
+            sb.append("sdk=").append(Build.VERSION.SDK_INT).append(" ")
+                    .append(Build.MANUFACTURER).append(" ").append(Build.MODEL);
+            return sb.toString();
+        }
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        try {
+            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US);
+            android.content.SharedPreferences sp = getSharedPreferences("zad_diag", MODE_PRIVATE);
+            String old = sp.getString("trim", "");
+            String[] parts = old.length() == 0 ? new String[0] : old.split(" \\| ");
+            StringBuilder nb = new StringBuilder();
+            for (int i = Math.max(0, parts.length - 5); i < parts.length; i++) nb.append(parts[i]).append(" | ");
+            nb.append(f.format(new java.util.Date())).append(" lvl=").append(level);
+            sp.edit().putString("trim", nb.toString()).apply();
+        } catch (Throwable ignored) { }
+    }
+
     private class OrientBridge {
         @JavascriptInterface
         public void setSensor(final boolean on) {
@@ -75,6 +119,7 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().addJavascriptInterface(new OrientBridge(), "OrientNative");
             getBridge().getWebView().addJavascriptInterface(new AndroidSilent(this), "AndroidSilent");
             getBridge().getWebView().addJavascriptInterface(new AudioShade(this), "ZadShade");
+            getBridge().getWebView().addJavascriptInterface(new DiagBridge(), "ZadDiag");
         } catch (Throwable ignored) { }
         // مصالحة الصامت عند كل تشغيل: تصلح أي حالة عالقة وتعيد ضبط المنبّه التالي
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
