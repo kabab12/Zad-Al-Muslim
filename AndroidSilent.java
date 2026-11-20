@@ -1,6 +1,7 @@
 package com.zadalmuslim.app;
 
 import android.app.AlarmManager;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -9,6 +10,8 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.provider.Settings;
 import android.webkit.JavascriptInterface;
+
+import androidx.core.app.NotificationCompat;
 
 import org.json.JSONArray;
 
@@ -36,6 +39,30 @@ public class AndroidSilent {
     static final String K_LASTWS = "lastws";    // بداية آخر نافذة فعّلناها (لا نعيد تفعيلها إن ألغاها المستخدم يدويًا)
     static final String ACTION_TICK = "com.zadalmuslim.app.SILENT_TICK";
     static final int REQ_TICK = 7301;
+    static final String CH_MSG = "zad_silent_msg";   // قناة رسالة بدء الصمت وانتهائه (هادئة بلا صوت)
+    static final int NID_MSG = 7311;
+
+    /** آيات وأحاديث في فضل الصلاة: {النص، المصدر}. تُعرض مع إشعار تفعيل الصمت وفكّه */
+    private static final String[][] MSG_GEN = {
+        {"إِنَّ الصَّلَاةَ تَنْهَىٰ عَنِ الْفَحْشَاءِ وَالْمُنكَرِ", "سورة العنكبوت: 45"},
+        {"حَافِظُوا عَلَى الصَّلَوَاتِ وَالصَّلَاةِ الْوُسْطَىٰ وَقُومُوا لِلَّهِ قَانِتِينَ", "سورة البقرة: 238"},
+        {"قَدْ أَفْلَحَ الْمُؤْمِنُونَ * الَّذِينَ هُمْ فِي صَلَاتِهِمْ خَاشِعُونَ", "سورة المؤمنون: 1-2"},
+        {"إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوْقُوتًا", "سورة النساء: 103"},
+        {"وَاسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى الْخَاشِعِينَ", "سورة البقرة: 45"},
+        {"وَأَقِمِ الصَّلَاةَ لِذِكْرِي", "سورة طه: 14"},
+        {"وَأْمُرْ أَهْلَكَ بِالصَّلَاةِ وَاصْطَبِرْ عَلَيْهَا", "سورة طه: 132"},
+        {"أَرَأَيْتُمْ لَوْ أَنَّ نَهَرًا بِبَابِ أَحَدِكُمْ يَغْتَسِلُ فِيهِ كُلَّ يَوْمٍ خَمْسًا، مَا تَقُولُ ذَلِكَ يُبْقِي مِنْ دَرَنِهِ؟ قَالُوا: لَا يُبْقِي مِنْ دَرَنِهِ شَيْئًا. قَالَ: فَذَلِكَ مَثَلُ الصَّلَوَاتِ الْخَمْسِ، يَمْحُو اللَّهُ بِهِنَّ الْخَطَايَا", "متفق عليه"},
+        {"الصَّلَوَاتُ الْخَمْسُ، وَالْجُمُعَةُ إِلَى الْجُمُعَةِ، وَرَمَضَانُ إِلَى رَمَضَانَ، مُكَفِّرَاتٌ مَا بَيْنَهُنَّ إِذَا اجْتَنَبَ الْكَبَائِرَ", "رواه مسلم"},
+        {"أَقْرَبُ مَا يَكُونُ الْعَبْدُ مِنْ رَبِّهِ وَهُوَ سَاجِدٌ، فَأَكْثِرُوا الدُّعَاءَ", "رواه مسلم"},
+        {"إِنَّ أَوَّلَ مَا يُحَاسَبُ بِهِ الْعَبْدُ يَوْمَ الْقِيَامَةِ مِنْ عَمَلِهِ صَلَاتُهُ، فَإِنْ صَلُحَتْ فَقَدْ أَفْلَحَ وَأَنْجَحَ", "رواه الترمذي والنسائي"},
+        {"الصَّلَاةُ نُورٌ", "رواه مسلم"},
+        {"جُعِلَتْ قُرَّةُ عَيْنِي فِي الصَّلَاةِ", "رواه النسائي وأحمد"},
+        {"سُئِلَ النَّبِيُّ ﷺ: أَيُّ الْعَمَلِ أَحَبُّ إِلَى اللَّهِ؟ قَالَ: الصَّلَاةُ عَلَى وَقْتِهَا", "متفق عليه"}
+    };
+    private static final String[] M_FAJR1 = {"رَكْعَتَا الْفَجْرِ خَيْرٌ مِنَ الدُّنْيَا وَمَا فِيهَا", "رواه مسلم"};
+    private static final String[] M_FAJR2 = {"مَنْ صَلَّى الصُّبْحَ فَهُوَ فِي ذِمَّةِ اللَّهِ", "رواه مسلم"};
+    private static final String[] M_BURDAYN = {"مَنْ صَلَّى الْبَرْدَيْنِ دَخَلَ الْجَنَّةَ", "متفق عليه"};
+    private static final String[] M_JUMUA = {"يَا أَيُّهَا الَّذِينَ آمَنُوا إِذَا نُودِيَ لِلصَّلَاةِ مِن يَوْمِ الْجُمُعَةِ فَاسْعَوْا إِلَىٰ ذِكْرِ اللَّهِ وَذَرُوا الْبَيْعَ", "سورة الجمعة: 9"};
 
     private final Context ctx;
 
@@ -110,6 +137,86 @@ public class AndroidSilent {
         return PendingIntent.getBroadcast(c, REQ_TICK, i, fl);
     }
 
+    /* ---------------- رسالة بدء الصمت وانتهائه ---------------- */
+
+    /** اسم النافذة التي بدأت عند ws (الفجر/الظهر/…/الجمعة) أو «الصلاة» إن لم تُوجد */
+    private static String windowName(SharedPreferences sp, long ws) {
+        try {
+            JSONArray a = windows(sp);
+            for (int i = 0; i < a.length(); i++) {
+                JSONArray w = a.optJSONArray(i);
+                if (w != null && w.optLong(0, 0L) == ws) {
+                    String n = w.optString(2, "");
+                    if (n.length() > 0) return n;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return "الصلاة";
+    }
+
+    /** يختار آية أو حديثًا بالتناوب (يتغيّر بتغيّر وقت الصلاة)، وللفجر والعصر والجمعة نصوص تخصّها */
+    private static String[] pick(String name, long ws, int shift) {
+        java.util.ArrayList<String[]> l = new java.util.ArrayList<String[]>();
+        for (String[] x : MSG_GEN) l.add(x);
+        if ("الفجر".equals(name)) {
+            l.add(M_FAJR1);
+            l.add(M_FAJR2);
+            l.add(M_BURDAYN);
+        } else if ("العصر".equals(name)) {
+            l.add(M_BURDAYN);
+        } else if ("الجمعة".equals(name)) {
+            l.add(M_JUMUA);
+        }
+        int n = l.size();
+        int idx = (int) (((ws / 60000L) + shift) % n);
+        if (idx < 0) idx += n;
+        return l.get(idx);
+    }
+
+    /** إشعار هادئ (بلا صوت): عند التفعيل «تم تفعيل الوضع الصامت لأداء صلاة …» وعند الفك «انتهى وقت الصمت»، مع آية أو حديث في فضل الصلاة */
+    private static void announce(Context c, SharedPreferences sp, long ws, boolean start, boolean foreign) {
+        try {
+            NotificationManager m = nm(c);
+            if (m == null) return;
+            String name = windowName(sp, ws);
+            String[] q = pick(name, ws, start ? 0 : 1);
+            String title;
+            if (start) {
+                title = foreign ? ("حان وقت صلاة " + name + " — هاتفك صامت أصلًا")
+                        : ("تم تفعيل الوضع الصامت لأداء صلاة " + name);
+            } else {
+                title = foreign ? ("انتهى وقت صلاة " + name + " — تقبّل الله طاعتك")
+                        : "انتهى وقت الصمت وعاد هاتفك لوضعه — تقبّل الله صلاتك";
+            }
+            String body = q[0] + "\n— " + q[1];
+            if (Build.VERSION.SDK_INT >= 26 && m.getNotificationChannel(CH_MSG) == null) {
+                NotificationChannel ch = new NotificationChannel(CH_MSG, "رسالة الوضع الصامت للصلاة",
+                        NotificationManager.IMPORTANCE_LOW);
+                ch.setShowBadge(false);
+                ch.setSound(null, null);
+                m.createNotificationChannel(ch);
+            }
+            int icon = c.getResources().getIdentifier("ic_stat_zad", "drawable", c.getPackageName());
+            if (icon == 0) icon = android.R.drawable.ic_lock_silent_mode;
+            int fl = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 23) fl |= PendingIntent.FLAG_IMMUTABLE;
+            NotificationCompat.Builder b = new NotificationCompat.Builder(c, CH_MSG)
+                    .setSmallIcon(icon)
+                    .setContentTitle(title)
+                    .setContentText(q[0])
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(body))
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .setAutoCancel(true)
+                    .setOnlyAlertOnce(true)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+            Intent open = c.getPackageManager().getLaunchIntentForPackage(c.getPackageName());
+            if (open != null) b.setContentIntent(PendingIntent.getActivity(c, REQ_TICK + 2, open, fl));
+            m.notify(NID_MSG, b.build());   // المعرّف نفسه: رسالة الفك تحلّ محل رسالة البدء
+        } catch (Throwable ignored) {
+        }
+    }
+
     /* ---------------- التفعيل والفك ---------------- */
 
     static boolean startNow(Context c) {
@@ -129,25 +236,34 @@ public class AndroidSilent {
             s.edit().putInt(K_OURS, ours).apply();
             if (s.getBoolean(K_FOREIGN, false)) return true;
             if (cur != ours) m.setInterruptionFilter(ours);
-            return m.getCurrentInterruptionFilter() == ours;
+            // بعض الهواتف (شاومي/سامسونج) تُرجع قيمة مختلفة عند القراءة بعد الضبط، فلا نعتمد عليها:
+            // يكفي أن الأمر نُفّذ بلا استثناء، ونحتفظ بالحالة لنفكّها في وقتها (كان اشتراط التطابق يجعلنا ننسى الفك)
+            return true;
         } catch (Throwable t) {
             return false;
         }
     }
 
     static boolean endNow(Context c) {
-        try {
-            SharedPreferences s = prefs(c);
-            int prev = s.getInt(K_PREV, -1);
-            int ours = s.getInt(K_OURS, -1);
-            boolean foreign = s.getBoolean(K_FOREIGN, false);
-            // نمسح الحالة أولًا حتى لا نعلق أبدًا، حتى لو فشلت الاستعادة
+        SharedPreferences s = prefs(c);
+        int prev = s.getInt(K_PREV, -1);
+        boolean foreign = s.getBoolean(K_FOREIGN, false);
+        if (prev == -1 || foreign) {
             s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).apply();
-            if (prev == -1 || foreign) return true;
-            if (!hasAccess(c)) return false;
+            return true;
+        }
+        try {
+            if (!hasAccess(c)) {
+                // لا إذن فلا فائدة من إعادة المحاولة؛ نمسح الحالة حتى لا ندور للأبد
+                s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).apply();
+                return false;
+            }
             NotificationManager m = nm(c);
-            // إن غيّر المستخدم الوضع بنفسه أثناء الصلاة فلا نتدخل
-            if (m.getCurrentInterruptionFilter() == ours) m.setInterruptionFilter(prev);
+            // كنا نستعيد فقط إن كانت القراءة مساوية لما ضبطناه، فيعلق الهاتف في الصمت إن أرجع النظام قيمة أخرى.
+            // الآن نستعيد دائمًا ما لم يكن الوضع الحالي هو الأصلي نفسه.
+            if (m.getCurrentInterruptionFilter() != prev) m.setInterruptionFilter(prev);
+            // نمسح الحالة بعد نجاح الاستعادة فقط؛ وإن فشلت نُبقيها لتُعاد المحاولة
+            s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).apply();
             return true;
         } catch (Throwable t) {
             return false;
@@ -162,21 +278,40 @@ public class AndroidSilent {
         long now = System.currentTimeMillis();
         long[] w = current(sp, now);
         boolean active = sp.getBoolean(K_ACTIVE, false);
+        boolean stale = sp.getInt(K_PREV, -1) != -1;   // حالة محفوظة لم تُفكّ (مثلًا بعد فشل سابق)
+        boolean retry = false;
         if (w != null) {
             // داخل نافذة: نفعّل مرة واحدة فقط لكل نافذة (فإن ألغاه المستخدم يدويًا لا نعيده)
             if (!active && sp.getLong(K_LASTWS, -1L) != w[0]) {
                 if (startNow(c)) {
                     sp.edit().putBoolean(K_ACTIVE, true).putLong(K_LASTWS, w[0]).apply();
+                    announce(c, sp, w[0], true, sp.getBoolean(K_FOREIGN, false));
+                } else {
+                    retry = hasAccess(c);   // فشل عابر: نعيد المحاولة بعد قليل داخل النافذة نفسها
                 }
             }
-        } else if (active) {
-            endNow(c);
-            sp.edit().putBoolean(K_ACTIVE, false).apply();
+        } else if (active || stale) {
+            // خارج أي نافذة: نفكّ، ولو لم يكن «نشطًا» لكن بقيت حالة محفوظة (كان هذا سبب بقاء الهاتف صامتًا)
+            boolean foreignNow = sp.getBoolean(K_FOREIGN, false);
+            long lastWs = sp.getLong(K_LASTWS, -1L);
+            if (endNow(c)) {
+                sp.edit().putBoolean(K_ACTIVE, false).apply();
+                if (active) announce(c, sp, lastWs, false, foreignNow);
+            } else {
+                retry = hasAccess(c);
+            }
         }
-        arm(c, sp, now);
+        arm(c, sp, now, retry);
     }
 
-    private static void arm(Context c, SharedPreferences sp, long now) {
+    private static PendingIntent showIntent(Context c) {
+        Intent i = new Intent(c, MainActivity.class);
+        int fl = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 23) fl |= PendingIntent.FLAG_IMMUTABLE;
+        return PendingIntent.getActivity(c, REQ_TICK + 1, i, fl);
+    }
+
+    private static void arm(Context c, SharedPreferences sp, long now, boolean retry) {
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;
         PendingIntent pi = tickIntent(c);
@@ -185,11 +320,17 @@ public class AndroidSilent {
         } catch (Throwable ignored) {
         }
         long next = nextBoundary(sp, now);
-        if (next <= 0) return;
-        long at = next + 1500L; // بعد الحدّ بقليل ليكون now >= الحدّ عند الاستيقاظ
+        long at = next > 0 ? next + 300L : -1L; // بعد الحدّ بجزء من الثانية ليكون now >= الحدّ عند الاستيقاظ
+        if (retry) {
+            long r = now + 30000L;
+            if (at < 0 || r < at) at = r;
+        }
+        if (at <= 0) return;
         try {
             if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+                // بلا إذن «المنبّهات والتذكيرات» كان المنبّه غير دقيق ويتأخر دقائق في Doze.
+                // منبّه الساعة مستثنى من Doze ويعمل بالدقة نفسها دون إذن.
+                am.setAlarmClock(new AlarmManager.AlarmClockInfo(at, showIntent(c)), pi);
             } else if (Build.VERSION.SDK_INT >= 23) {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
             } else {
@@ -240,6 +381,43 @@ public class AndroidSilent {
             reconcile(ctx);
         } catch (Throwable ignored) {
         }
+    }
+
+    /** «فك الصمت الآن»: يعيد الصوت فورًا ويمسح أي حالة عالقة (للطوارئ إن علق الهاتف في الصمت) */
+    @JavascriptInterface
+    public boolean release() {
+        try {
+            prefs(ctx).edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).putBoolean(K_ACTIVE, false).apply();
+            if (!hasAccess(ctx)) return false;
+            nm(ctx).setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL);
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** نص تشخيصي عن حالة الجدولة */
+    @JavascriptInterface
+    public String status() {
+        StringBuilder sb = new StringBuilder();
+        try {
+            SharedPreferences sp = prefs(ctx);
+            long now = System.currentTimeMillis();
+            java.text.SimpleDateFormat f = new java.text.SimpleDateFormat("MM-dd HH:mm:ss", java.util.Locale.US);
+            AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+            boolean exact = Build.VERSION.SDK_INT < 31 || (am != null && am.canScheduleExactAlarms());
+            sb.append("إذن عدم الإزعاج: ").append(hasAccess(ctx) ? "ممنوح" : "غير ممنوح").append("\n");
+            sb.append("المنبّهات الدقيقة: ").append(exact ? "مسموحة" : "غير مسموحة (نستعمل منبّه الساعة)").append("\n");
+            sb.append("وضع الهاتف الآن (رقم): ").append(hasAccess(ctx) ? nm(ctx).getCurrentInterruptionFilter() : -1).append("\n");
+            sb.append("نشط: ").append(sp.getBoolean(K_ACTIVE, false)).append(" | محفوظ سابقًا: ").append(sp.getInt(K_PREV, -1)).append("\n");
+            sb.append("عدد نوافذ الصمت المجدولة: ").append(windows(sp).length()).append("\n");
+            long nb = nextBoundary(sp, now);
+            sb.append("أقرب حدّ قادم: ").append(nb > 0 ? f.format(new java.util.Date(nb)) : "لا يوجد").append("\n");
+            sb.append("الآن: ").append(f.format(new java.util.Date(now)));
+        } catch (Throwable t) {
+            sb.append("خطأ: ").append(t);
+        }
+        return sb.toString();
     }
 
     /** للتجربة اليدوية فقط (زر «جرّب») */

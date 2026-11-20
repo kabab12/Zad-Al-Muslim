@@ -507,9 +507,9 @@ function mv(d){const n=ci-d;if(n<0||n>=HD[cc].length)return;ci=n;rd();if(HP.on&&
 if(!S.vi){S.vib=true;S.vi=1;save()}
 const RF=[16,20,26];
 function rd(){const L=HD[cc],x=L[ci],k="h"+cc+"-"+ci,d=S.tas[k]||0,rem=Math.max(0,x[1]-d),rf=S.rf||0;
- $("#m").innerHTML=`<div style="display:flex;flex-direction:column;height:100%;gap:8px"><div class="set" style="margin:0"><button onclick="bk()" aria-label="رجوع إلى الفهرس" style="font-size:1.1em;font-weight:bold;min-width:40px;min-height:36px;padding:2px 10px">→</button><button id="hpb" class="hpb" onclick="hpt()" aria-label="استماع">${hico()}</button><span style="display:flex;align-items:center;gap:6px"><span class="mu">حجم الخط</span><button onclick="fz(-1)" style="min-width:48px;font-size:1.2em">−</button><button onclick="fz(1)" style="min-width:48px;font-size:1.2em">+</button></span></div>
- <div id="rc" style="flex:1;overflow:auto;line-height:2.1;font-size:${RF[rf]}px;padding:4px 2px"><div class="mu" style="margin-bottom:6px">${CHN(cc)} · ${AD(ci+1)}/${AD(L.length)}</div><p style="margin:0 0 12px">${x[0]}</p><div class="mu" style="font-size:.8em">${x[2]}</div></div>
- <button class="tas" id="tb" onclick="hc()" style="width:112px;height:112px;margin:0 auto 8px;font-size:2.2em;flex:none"><span id="tn"></span></button></div>`;tnU(d,x[1]);
+ $("#m").innerHTML=`<div class="hz"><div class="set hzb" style="margin:0"><button onclick="bk()" aria-label="رجوع إلى الفهرس" style="font-size:1.1em;font-weight:bold;min-width:40px;min-height:36px;padding:2px 10px">→</button><button id="hpb" class="hpb" onclick="hpt()" aria-label="استماع">${hico()}</button><span style="display:flex;align-items:center;gap:6px"><span class="mu">حجم الخط</span><button onclick="fz(-1)" style="min-width:48px;font-size:1.2em">−</button><button onclick="fz(1)" style="min-width:48px;font-size:1.2em">+</button></span></div>
+ <div id="rc" style="flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;line-height:2.1;font-size:${RF[rf]}px;padding:4px 2px"><div class="mu" style="margin-bottom:6px">${CHN(cc)} · ${AD(ci+1)}/${AD(L.length)}</div><p style="margin:0 0 12px">${x[0]}</p><div class="mu" style="font-size:.8em">${x[2]}</div></div>
+ <button class="tas hzt" id="tb" onclick="hc()" style="width:112px;height:112px;margin:0 auto 8px;font-size:2.2em;flex:none"><span id="tn"></span></button></div>`;tnU(d,x[1]);
  let sx=0;const e=$("#rc");e.ontouchstart=t=>sx=t.touches[0].clientX;e.ontouchend=t=>{const dx=t.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)mv(dx>0?-1:1)}}
 function tnU(d,n){const tn=$("#tn"),tb=$("#tb");if(!tn)return;const done=d>=n;tn.innerHTML=done?`<b style="font-size:1em">✓</b><small style="display:block;font-size:.3em;opacity:.9;line-height:1">تم · التالي</small>`:`<b style="font-size:1em;line-height:1">${AD(d)}</b><small style="display:block;font-size:.34em;opacity:.9;line-height:1.3">من ${AD(n)}</small>`;if(tb){const pc=Math.min(100,Math.round(100*d/n));tb.style.backgroundImage=`linear-gradient(to top,rgba(255,255,255,.28) ${pc}%,transparent ${pc}%)`}}
 function th(v){S.theme=v;apply();save();set()}
@@ -767,9 +767,9 @@ function qlay(){
  tx.className=ok?"fx":"";tx.innerHTML=h;if(RDm)qlaf(tx);if(!LS&&z<=1)pg.scrollTop=0;else if(QL.sn!==n){pg.scrollTop=0;pg.scrollLeft=0;QL.sn=n}
  if(QL.k>.7&&[...tx.querySelectorAll(".ml")].some(e=>e.scrollWidth>e.clientWidth+1)){QL.k*=.97;return qlay()}
  qkash(tx);qsel();qhl()}
-/* درجات التكبير ونمط القراءة فقط: لا نترك اللام والألف يندمجان في رسم الخط المدمج (يبدو غريبًا عند التكبير)،
-   بل نفصلهما بمدّة واحدة كما تظهر «لَـا» في صفحة المصحف. الصفحة الكاملة لا تمرّ من هنا */
-function qlaf(tx){try{tx.querySelectorAll(".v:not(.vn)").forEach(e=>{const t=e.textContent,r=t.replace(/(\u0644[\u064B-\u065F\u0670\u06D6-\u06ED]*)(?=\u0627)/g,"$1\u0640");if(r!==t)e.textContent=r})}catch(x){}}
+/* درجات التكبير ونمط القراءة فقط: «لا» (اللام الابتدائية + الألف) تُرسم بخط النظام العربي بالشكل المعتاد
+   بدل الرسم المدمج للخط المضمّن. تُستثنى اللام المتصلة بما قبلها لئلا ينقطع الاتصال. الصفحة الكاملة لا تمرّ من هنا */
+function qlaf(tx){try{const R=/(^|[\u0621-\u0625\u0627\u062F\u0630\u0631\u0632\u0648\u0671][\u064B-\u065F\u0670\u06D6-\u06ED]*)(\u0644[\u064B-\u065F\u0670\u06D6-\u06ED]*\u0627)/g;tx.querySelectorAll(".v:not(.vn)").forEach(e=>{if(e.children.length)return;const t=e.textContent;if(t.indexOf("\u0644")<0)return;const r=t.replace(R,'$1<span class="lg">$2</span>');if(r!==t)e.innerHTML=r})}catch(x){}}
 /* مدّ الحروف (كشيدة) في كل سطور الصفحة لتملأ عرضها كما في مصحف المدينة */
 function qkash(tx){
  const J=/[بتثجحخسشصضطظعغفقكلمنهيئى]/,M=/[\u064B-\u065F\u0670\u06D6-\u06ED]/,L=/[\u0621-\u064A\u0671]/;
@@ -782,7 +782,7 @@ function qkash(tx){
   if(!tw||!ws.length)return;
   const sum=()=>[...ln.children].reduce((s,c)=>s+c.getBoundingClientRect().width,0);
   const want=tw-(ln.children.length-1)*f*.24,need=want-sum();if(need<wt*.7)return;
-  const W=ws.map(e=>{const o=e.textContent,sp=[],nk=o.replace(new RegExp(M.source,"g"),"")=="ولا";for(let i=0;i<o.length&&!nk;i++){if(J.test(o[i])){let j=i+1;while(j<o.length&&M.test(o[j]))j++;if(j<o.length&&L.test(o[j]))sp.push(j)}}return{e,o,sp,c:sp.map(()=>0)}});
+  const W=ws.map(e=>{const o=e.textContent,sp=[],nk=!!e.querySelector(".lg")||o.replace(new RegExp(M.source,"g"),"")=="ولا";for(let i=0;i<o.length&&!nk;i++){if(J.test(o[i])){let j=i+1;while(j<o.length&&M.test(o[j]))j++;if(j<o.length&&L.test(o[j]))sp.push(j)}}return{e,o,sp,c:sp.map(()=>0)}});
   const put=w=>{let r="";for(let i=0;i<w.o.length;i++){const k=w.sp.indexOf(i);if(k>=0)r+="\u0640".repeat(w.c[k]);r+=w.o[i]}w.e.textContent=r};
   const order=[];for(let r=0;r<9;r++)W.forEach((w,wi)=>{if(w.sp.length)order.push([wi,r%w.sp.length])});
   let k=Math.min(Math.floor(need/wt+.3),order.length);const ch=new Set(),log=[];
@@ -1976,6 +1976,9 @@ function slTest(){const b=slB();if(!b){qtoast("هذه النسخة لا تستط
  qtoast("تم تفعيل الصامت ١٥ ثانية: افحص الهاتف الآن (اسحب الستارة وانظر وضع عدم الإزعاج)",8000);
  setTimeout(()=>{let r=false;try{r=b.end()}catch(e){}qtoast(r?"عاد وضع الهاتف كما كان ✓":"تعذّرت الاستعادة؛ أعد الوضع يدويًا",6000)},15000)}
 function slAsk(){const b=slB();if(!b)return;window.__slAsked=2;try{b.ask()}catch(e){}}
+/* فك الصمت فورًا (للطوارئ إن علق الهاتف) + عرض حالة الجدولة الأصلية */
+function slRel(){const b=slB();if(!b||typeof b.release!=="function"){qtoast("غير متاح في هذه النسخة",4000);return}let r=false;try{r=b.release()}catch(e){}qtoast(r?"تم فك الصمت وإعادة الصوت ✓":"تعذّر الفك؛ تأكد من منح إذن «عدم الإزعاج»",5000)}
+function slSt(){const b=slB();if(!b||typeof b.status!=="function"){qtoast("غير متاح في هذه النسخة",4000);return}let s="";try{s=b.status()}catch(e){s=String(e)}alert(s)}
 /* عند العودة من شاشة إعدادات النظام نحدّث حالة الإذن */
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible"&&window.__slAsked){const f=window.__slAsked==2;window.__slAsked=0;if(f)setTimeout(()=>{try{sl()}catch(e){}},400)}});
 /* أول تشغيل: نطلب إذن «عدم الإزعاج» مرة واحدة (إذن خاص لا يظهر له مربع حوار؛ يُمنح من إعدادات النظام) */
@@ -1986,11 +1989,11 @@ setTimeout(()=>{try{const b=slB();if(!b)return;let h=false;try{h=b.has()}catch(e
 function slAll(days){const out=[],b=new Date(),now=Date.now();
  for(let k=-1;k<=days;k++){const d=new Date(b.getFullYear(),b.getMonth(),b.getDate()+k,12,0,0);
   try{slWin(d).forEach(w=>{if(w.on&&+w.e>now-6e4)out.push([+w.s,+w.e,w.n])})}catch(e){}}
- out.sort((x,y)=>x[0]-y[0]);return out.slice(0,40)}
+ out.sort((x,y)=>x[0]-y[0]);return out.slice(0,80)}
 let SLSIG="";
 /* يرسل النوافذ إلى الجزء الأصلي الذي يضبط منبّهات دقيقة للبداية والنهاية فتعمل والتطبيق مغلق */
 function slPush(force){const b=slB();if(!b||typeof b.schedule!=="function")return false;
- const w=slS().on?slAll(4):[],sig=JSON.stringify(w);
+ const w=slS().on?slAll(10):[],sig=JSON.stringify(w);
  if(!force&&sig===SLSIG)return true;
  try{if(b.schedule(sig)!==false){SLSIG=sig;return true}}catch(e){}
  return false}
@@ -2028,7 +2031,7 @@ function sl(){
  $("#m").innerHTML=`<div class="card"><h1>الوضع الصامت أثناء الصلاة</h1>
  <div class="set"><span>تفعيل (معطّل افتراضيًا)</span><input type="checkbox" ${c.on?"checked":""} onchange="slSet('on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
  <div class="mu">${b?(h?"✓ إذن «عدم الإزعاج» ممنوح؛ سيغيّر التطبيق وضع الهاتف تلقائيًا ويعيده بعد المدة. وإن كنتَ مفعّلًا لعدم الإزعاج يدويًا فلن يغيّره.":"⚠ إذن «عدم الإزعاج» غير ممنوح؛ لن يغيّر التطبيق وضع الهاتف، وسيذكّرك بتفعيله يدويًا."):"⚠ هذه النسخة لا تستطيع تغيير وضع الهاتف بنفسها؛ ستصلك تنبيهات عند بدء وقت الصمت وانتهائه لتفعّله يدويًا. التفعيل التلقائي يعمل في تطبيق Android المغلّف (APK) فقط، ولا يتوفر على iPhone."}</div></div>
- ${b&&!h?slGuide():""}
+ ${b&&typeof b.release==="function"?`<div class="card"><div class="set"><span><button class="gdl" onclick="slRel()">🔓 فك الصمت الآن</button> <button class="gdl" onclick="slSt()">ℹ حالة الجدولة</button></span></div><div class="mu">إن بقي هاتفك صامتًا بعد وقت الصلاة اضغط «فك الصمت الآن». وزر «حالة الجدولة» يعرض ما جُدول وإذن المنبّهات.</div></div>`:""}${b&&!h?slGuide():""}
  <div class="card"><div class="lh">نوع الضبط</div><div class="set"><span>${md("all","كلي — لكل الصلوات")} ${md("each","جزئي — لكل صلاة على حدة")}</span></div></div>
  ${c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة (افتراضي)</span><input type="checkbox" ${c.auto?"checked":""} onchange="slSet('auto',this.checked?1:0,1)" style="width:24px;height:24px"></div>${c.auto?au+`<div class="mu">المغرب يبدأ بعد الأذان مباشرة، والظهر والعصر أطول منه، والعشاء والفجر أطول منهما.</div>`:slCtl(c.g,"slG")}</div>`:SLN.map((p,i)=>{const q=c.pr[i];return`<div class="card"><div class="set"><span class="lh">${p[1]}</span><input type="checkbox" ${q.on?"checked":""} onchange="slP(${i},'on',this.checked?1:0)" style="width:24px;height:24px"></div>${q.on?slCtl(q,"slP.bind(null,"+i+")"):""}</div>`}).join("")}
  <div class="card"><div class="set"><span class="lh">الجمعة (بدل الظهر يوم الجمعة)</span>${c.mode=="each"?`<input type="checkbox" ${c.fr.on?"checked":""} onchange="slF('on',this.checked?1:0)" style="width:24px;height:24px">`:""}</div>${c.mode=="all"||c.fr.on?slFc(c.fr):""}</div>
