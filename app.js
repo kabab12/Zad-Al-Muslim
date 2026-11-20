@@ -1475,10 +1475,11 @@ async function wakeOn(){if(S.wake===false||!$("#qv")||WL)return;try{if(navigator
 function wakeOff(){try{WL&&WL.release()}catch(e){}WL=null}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible"){if($("#qv"))wakeOn();snReset();ntTick()}});
 /* ---- التنبيهات والعبادات ---- */
-const NTD=[["wake","أذكار الاستيقاظ من النوم","05:00",1,"adhkar"],["morning","أذكار الصباح","06:00",1,"adhkar"],["evening","أذكار المساء","17:00",1,"adhkar"],["sleep","أذكار النوم","22:30",1,"adhkar"],["kahf","سورة الكهف يوم الجمعة","10:00",0,"q18"],["mulk","سورة الملك يوميًا","21:00",0,"q67"],["mon","صيام الاثنين (تذكير مساء الأحد)","20:00",0,"fast"],["thu","صيام الخميس (تذكير مساء الأربعاء)","20:00",0,"fast"],["ghusl","الغسل والتطيب للجمعة","07:30",1,"nl"],["tabkeer","التبكير إلى الجمعة","10:30",1,"nl"]];
+const NTD=[["wake","أذكار الاستيقاظ من النوم","05:00",1,"adhkar"],["morning","أذكار الصباح","06:00",1,"adhkar"],["evening","أذكار المساء","17:00",1,"adhkar"],["sleep","أذكار النوم","22:30",1,"adhkar"],["kahf","سورة الكهف يوم الجمعة","10:00",1,"q18"],["mulk","سورة الملك يوميًا","21:00",1,"q67"],["mon","صيام الاثنين (تذكير مساء الأحد)","20:00",1,"fast"],["thu","صيام الخميس (تذكير مساء الأربعاء)","20:00",1,"fast"],["ghusl","الغسل والتطيب للجمعة","07:30",1,"nl"],["tabkeer","التبكير إلى الجمعة","10:30",1,"nl"]];
 const NTM={adhkar:["حان وقت أذكارك، فاجعل لسانك رطبًا بذكر الله.","لحظات قليلة مع الذكر تُطمئن القلب. ابدأ الآن.","ذكّر قلبك بربه، فأذكارك في انتظارك.","هيّا إلى أذكارك، وليكن يومك عامرًا بالذكر.","وقت الأذكار قد حان، فلا تدعه يفوتك."],q18:["يوم الجمعة مباركٌ، فاقرأ سورة الكهف.","لا تنسَ سورة الكهف في جمعتك."],q67:["موعدك مع سورة الملك، اقرأها بتدبّر.","اجعل لك وردًا من سورة الملك اليوم."],fast:["غدًا يوم صيام، فانوِ من الليل إن شاء الله.","تذكير لطيف: غدًا الاثنين أو الخميس، يوم صيامٍ مستحب."],salat:["اللهم صلِّ وسلّم على نبينا محمد ﷺ","صلِّ على النبي ﷺ"]};
 const ntMsg=k=>{const a=NTM[k]||NTM.adhkar;return a[Math.floor(Math.random()*a.length)]};
-function ntS(k){S.nt=S.nt||{};if(!S.nt[k]){const d=NTD.find(x=>x[0]==k);S.nt[k]=k=="salat"?{on:0,every:30,from:"08:00",to:"22:00"}:{on:d?d[3]:0,t:d?d[2]:"08:00"}}const c=S.nt[k];if(k=="wake"&&c.rel===undefined)c.rel=c.t=="05:00"?15:0;return c}
+function ntS(k){S.nt=S.nt||{};if(!S.ntD3){S.ntD3=1;Object.keys(S.nt).forEach(x=>{const o=S.nt[x];if(o&&!o.u)o.on=1});try{save()}catch(e){}}
+ if(!S.nt[k]){const d=NTD.find(x=>x[0]==k);S.nt[k]=k=="salat"?{on:1,every:30,from:"08:00",to:"22:00"}:{on:1,t:d?d[2]:"08:00"}}const c=S.nt[k];if(k=="wake"&&c.rel===undefined)c.rel=c.t=="05:00"?15:0;return c}
 function ntEff(k,c,n){if(k=="wake"&&c.rel>0){try{const f=new Date(times(n)[0].getTime()-c.rel*6e4);return String(f.getHours()).padStart(2,"0")+":"+String(f.getMinutes()).padStart(2,"0")}catch(e){return null}}return c.t}
 const ntPerm=()=>typeof Notification=="undefined"?"unsupported":Notification.permission;
 async function ntAsk(){try{await Notification.requestPermission()}catch(e){}nt()}
@@ -1516,7 +1517,7 @@ async function ntFire(t,b,tag,act,silent){
  if(m){a=m.a||act;body=(m.keep&&b?b+"\n":"")+m.t+"\n— "+m.s+(m.x?"\n\n"+m.x.t+"\n— "+m.x.s:"");
   ntLog({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),ts:Date.now(),t,m:m.t,s:m.s,k:m.k,x:m.x,b:m.keep?b:"",a})}
  let played=false;
- if(silent!==true&&S.ntSnd!==false&&S.ntCs===1&&m&&m.snd)played=await ntSound(m.snd);
+ if(silent!==true&&S.ntSnd!==false&&S.ntCs!==0&&m&&m.snd)played=await ntSound(m.snd);
  if(document.visibilityState=="visible"){ntBanner(t,body,a);return}
  if(ntPerm()=="granted"){const o={body,tag,dir:"rtl",lang:"ar",silent:played?true:(silent!==undefined?silent:S.ntSnd===false),data:{a},renotify:true};
   try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r){await r.showNotification(t,o);return}}}catch(e){}
@@ -1924,7 +1925,7 @@ function nxCard(){
 
 try{localStorage.removeItem("zad_ag_key");if(S&&S.ag){delete S.ag;save()}}catch(e){}
 
-function ntSet(k,f,v,r){ntS(k)[f]=v;save();if(r)nt()}
+function ntSet(k,f,v,r){const o=ntS(k);o[f]=v;if(f=="on")o.u=1;save();if(r)nt()}
 function ntPrev(){const c=ntS("salat"),n=new Date(),m=n.getHours()*60+n.getMinutes(),o=[];for(let d=0;d<2&&o.length<3;d++)for(let x=ntm(c.from);x<=ntm(c.to)&&o.length<3;x+=+c.every)if(d||x>m)o.push((d?"غدًا ":"اليوم ")+String(Math.floor(x/60)).padStart(2,"0")+":"+String(x%60).padStart(2,"0"));return o.join(" · ")||"—"}
 function ntNextFast(){const n=new Date(),r=[];[[1,"الاثنين"],[4,"الخميس"]].forEach(([w,nm])=>{const d=new Date(n);d.setDate(n.getDate()+((w-n.getDay()+7)%7||7));r.push(nm+" "+d.toLocaleDateString("ar",{day:"numeric",month:"long"}))});return r.join(" · ")}
 const ntRow=d=>{const c=ntS(d[0]);
@@ -1938,12 +1939,12 @@ function nt(){
  ${p=="granted"?`<div class="mu">✓ إشعارات النظام مسموحة</div>`:p=="unsupported"?`<div class="mu">⚠ هذا المتصفح لا يدعم الإشعارات؛ ستظهر التنبيهات داخل التطبيق فقط.</div>`:`<div class="mu">⚠ الإشعارات غير مفعّلة بعد، فالتنبيهات لن تصلك كإشعارات قبل السماح بها.${p=="denied"?" فعّلها من إعدادات الموقع أو التطبيق في هاتفك.":""}</div>${p=="denied"?"":`<button class="gdl" style="margin-top:6px" onclick="ntAsk()">السماح بالإشعارات</button>`}`}
  <div class="mu" style="margin-top:6px">تعمل التنبيهات دون إنترنت ما دام التطبيق مفتوحًا أو في الخلفية. وصولها بعد إغلاقه تمامًا يحتاج تثبيته كتطبيق APK بجدولة إشعارات محلية.</div>
  <div class="set"><span>صوت التنبيهات</span><select onchange="S.ntSnd=this.value==='1';save()"><option value="1" ${S.ntSnd!==false?"selected":""}>صوت الهاتف الافتراضي</option><option value="0" ${S.ntSnd===false?"selected":""}>صامت</option></select></div>
- <div class="set"><span>أصوات خاصة بدل صوت الهاتف (عصافير الصباح والمساء · تلاوة «إن الله وملائكته») — تعمل والتطبيق مفتوح</span><input type="checkbox" ${S.ntCs===1?"checked":""} onchange="S.ntCs=this.checked?1:0;save()" style="width:24px;height:24px"></div>
+ <div class="set"><span>أصوات خاصة بدل صوت الهاتف (عصافير الصباح والمساء · تلاوة «إن الله وملائكته») — تعمل والتطبيق مفتوح</span><input type="checkbox" ${S.ntCs!==0?"checked":""} onchange="S.ntCs=this.checked?1:0;save()" style="width:24px;height:24px"></div>
  <div class="set"><span>تجربة التنبيه</span><span style="display:flex;gap:6px"><button onclick="ntFire('أذكار الصباح','','morning','adhkar')">الصباح</button><button onclick="ntFire('الصلاة على النبي ﷺ','','salat','nt')">الصلاة على النبي</button></span></div></div>
  ${snCard()}${nxCard()}
  <div class="card"><div class="lh">الأذكار اليومية (مفعّلة افتراضيًا)</div>${NTD.slice(0,4).map(ntRow).join("")}</div>
  <div class="card"><div class="lh">تنبيهات الجمعة (كل أسبوع)</div>${["ghusl","tabkeer","kahf"].map(k=>ntRow(NTD.find(d=>d[0]==k))).join("")}<div class="mu">الغسل والتطيب صباح الجمعة، والتبكير قبل الصلاة، والكهف في وقتها. وتصلك أيضًا ساعة الإجابة قبيل المغرب، والصلاة على النبي ﷺ ليلة الجمعة (من مساء الخميس) ويومها، من البطاقتين التاليتين.</div></div>
- <div class="card"><div class="lh">تنبيهات اختيارية (معطّلة افتراضيًا)</div>${NTD.slice(4).filter(d=>!["kahf","ghusl","tabkeer"].includes(d[0])).map(ntRow).join("")}<div class="mu">الأيام القادمة للصيام: ${ntNextFast()} — اليوم ${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</div></div>
+ <div class="card"><div class="lh">تنبيهات إضافية (مفعّلة افتراضيًا)</div>${NTD.slice(4).filter(d=>!["kahf","ghusl","tabkeer"].includes(d[0])).map(ntRow).join("")}<div class="mu">الأيام القادمة للصيام: ${ntNextFast()} — اليوم ${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</div></div>
  <div class="card"><div class="lh">الصلاة على النبي ﷺ</div>
  <div class="set"><span>تفعيل</span><input type="checkbox" ${sc.on?"checked":""} onchange="ntSet('salat','on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
  <div class="set"><span>كل</span><select onchange="ntSet('salat','every',+this.value,1)">${[[15,"١٥ دقيقة"],[30,"٣٠ دقيقة"],[60,"ساعة"],[120,"ساعتين"]].map(o=>`<option value="${o[0]}" ${sc.every==o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></div>
@@ -1959,7 +1960,8 @@ function ntAdd(){const n=$("#cn").value.trim();if(!n){qtoast("اكتب عنوا�
 /* ---- الوضع الصامت أثناء الصلاة ---- */
 const SLN=[[0,"الفجر"],[2,"الظهر"],[3,"العصر"],[4,"المغرب"],[5,"العشاء"]];
 const SLP=[[15,25],[10,20],[10,20],[1,15],[15,25]];
-const slS=()=>{let c=S.sil=S.sil||{};if(c.v!==2&&c.v!==3){const o=c,g={w:"a",m:Math.max(1,o.after!=null?o.after:5),d:o.dur||20};S.sil={v:3,on:o.on||0,mode:o.all===0?"each":"all",auto:1,fr:{on:1,m:1,d:90},g,pr:[0,1,2,3,4].map(i=>({on:o.pr?o.pr[i]:1,w:"a",m:SLP[i][0],d:SLP[i][1]}))};c=S.sil}else if(c.v===2){c.v=3;c.auto=1;c.fr={on:1,m:1,d:90}}return c};
+const slS=()=>{let c=S.sil=S.sil||{};if(c.v!==2&&c.v!==3){const o=c,g={w:"a",m:Math.max(1,o.after!=null?o.after:5),d:o.dur||20};S.sil={v:3,on:o.on||0,mode:o.all===0?"each":"all",auto:1,fr:{on:1,m:1,d:90},g,pr:[0,1,2,3,4].map(i=>({on:o.pr?o.pr[i]:1,w:"a",m:SLP[i][0],d:SLP[i][1]}))};c=S.sil}else if(c.v===2){c.v=3;c.auto=1;c.fr={on:1,m:1,d:90}}
+ if(!c.dm){c.dm=1;c.on=1;try{save()}catch(e){}}return c};
 const slB=()=>window.AndroidSilent||null;
 const SLD=[[10,"قليل"],[20,"وسط"],[40,"كثير"]];
 function slWin(dt0){const dt=dt0||new Date(),t=times(dt),c=slS(),fri=dt.getDay()==5;return SLN.map((p,i)=>{const jm=fri&&i==1&&(c.mode=="all"||c.fr.on),q=jm?c.fr:c.mode=="all"?(c.auto?{m:SLP[i][0],d:SLP[i][1]}:c.g):c.pr[i],s=new Date(+t[p[0]]+Math.max(1,q.m)*6e4);return{n:jm?"الجمعة":p[1],s,e:new Date(+s+Math.max(jm?90:1,q.d)*6e4),on:c.mode=="all"||jm?1:q.on}})}
@@ -2004,7 +2006,7 @@ function slTick(){const b=slB();
   const c=slS();slPush();try{b.reconcile()}catch(e){}
   if(c.on){let h=false;try{h=b.has()}catch(e){}
    if(!h){const n=Date.now(),w=slAll(0).find(x=>n>=x[0]&&n<x[1]);
-    if(w&&S.silWarn!==w[0]){S.silWarn=w[0];save();ntFire("تعذّر تفعيل الوضع الصامت","امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.","sil","nt")}}}
+    const dk=new Date().toDateString();if(w&&S.silWarn!==dk){S.silWarn=dk;save();ntFire("تعذّر تفعيل الوضع الصامت","امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.","sil","nt")}}}
   return}
  const c=slS(),n=new Date(),w=c.on?slWin().find(x=>x.on&&n>=x.s&&n<x.e):null;
  if(w&&!S.silOn){S.silOn=1;save();slGo(1,w)}else if(!w&&S.silOn){S.silOn=0;save();slGo(0)}}
@@ -2026,16 +2028,21 @@ function slGuide(){return `<div class="card"><div class="lh">🔓 كيف أمن�
  <div class="mu" style="margin-top:8px;line-height:1.9">لو لم تجد القائمة: افتح إعدادات الهاتف واكتب في البحث «عدم الإزعاج»، ثم ادخل على «التطبيقات» أو «الوصول إلى عدم الإزعاج» وفعّل زاد المسلم.<br>بعض الهواتف (شاومي/أوبو) تحتاج أيضًا السماح للتطبيق بالتشغيل التلقائي وإزالة قيود البطارية.</div></div>`}
 function sl(){
  cur="set";SUBV="set";nav();const c=slS(),b=slB();let h=false;try{h=b&&b.has()}catch(e){}
- const md=(k,l)=>`<button class="gdl" style="${c.mode==k?"":"opacity:.45"}" onclick="slSet('mode','${k}',1)">${l}</button>`;
- const au=c.auto?SLN.map((p,i)=>`<div class="row"><span>${p[1]}</span><span class="mu">بعد الأذان بـ${SLP[i][0]==1?"دقيقة":SLP[i][0]+" دقيقة"} ← صمت ${SLP[i][1]} دقيقة</span></div>`).join(""):"";
- $("#m").innerHTML=`<div class="card"><h1>الوضع الصامت أثناء الصلاة</h1>
- <div class="set"><span>تفعيل (معطّل افتراضيًا)</span><input type="checkbox" ${c.on?"checked":""} onchange="slSet('on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
- <div class="mu">${b?(h?"✓ إذن «عدم الإزعاج» ممنوح؛ سيغيّر التطبيق وضع الهاتف تلقائيًا ويعيده بعد المدة. وإن كنتَ مفعّلًا لعدم الإزعاج يدويًا فلن يغيّره.":"⚠ إذن «عدم الإزعاج» غير ممنوح؛ لن يغيّر التطبيق وضع الهاتف، وسيذكّرك بتفعيله يدويًا."):"⚠ هذه النسخة لا تستطيع تغيير وضع الهاتف بنفسها؛ ستصلك تنبيهات عند بدء وقت الصمت وانتهائه لتفعّله يدويًا. التفعيل التلقائي يعمل في تطبيق Android المغلّف (APK) فقط، ولا يتوفر على iPhone."}</div></div>
- ${b&&typeof b.release==="function"?`<div class="card"><div class="set"><span><button class="gdl" onclick="slRel()">🔓 فك الصمت الآن</button> <button class="gdl" onclick="slSt()">ℹ حالة الجدولة</button></span></div><div class="mu">إن بقي هاتفك صامتًا بعد وقت الصلاة اضغط «فك الصمت الآن». وزر «حالة الجدولة» يعرض ما جُدول وإذن المنبّهات.</div></div>`:""}${b&&!h?slGuide():""}
- <div class="card"><div class="lh">نوع الضبط</div><div class="set"><span>${md("all","كلي — لكل الصلوات")} ${md("each","جزئي — لكل صلاة على حدة")}</span></div></div>
- ${c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة (افتراضي)</span><input type="checkbox" ${c.auto?"checked":""} onchange="slSet('auto',this.checked?1:0,1)" style="width:24px;height:24px"></div>${c.auto?au+`<div class="mu">المغرب يبدأ بعد الأذان مباشرة، والظهر والعصر أطول منه، والعشاء والفجر أطول منهما.</div>`:slCtl(c.g,"slG")}</div>`:SLN.map((p,i)=>{const q=c.pr[i];return`<div class="card"><div class="set"><span class="lh">${p[1]}</span><input type="checkbox" ${q.on?"checked":""} onchange="slP(${i},'on',this.checked?1:0)" style="width:24px;height:24px"></div>${q.on?slCtl(q,"slP.bind(null,"+i+")"):""}</div>`}).join("")}
- <div class="card"><div class="set"><span class="lh">الجمعة (بدل الظهر يوم الجمعة)</span>${c.mode=="each"?`<input type="checkbox" ${c.fr.on?"checked":""} onchange="slF('on',this.checked?1:0)" style="width:24px;height:24px">`:""}</div>${c.mode=="all"||c.fr.on?slFc(c.fr):""}</div>
- <div class="card"><div class="lh">أوقات اليوم (للمدينة: ${S.city})</div>${slWin().map(x=>`<div class="row" style="${x.on?"":"opacity:.45"}"><span>${x.n}</span><span class="mu">${fmt(x.s)} – ${fmt(x.e)}</span></div>`).join("")}<div class="mu">تُحدَّث تلقائيًا عند تغيير المدينة أو طريقة الحساب.</div></div>${slCompat()}`}
+ const sw=(on,fn)=>`<input type="checkbox" class="slsw" ${on?"checked":""} onchange="${fn}">`;
+ const md=(k,l)=>`<button class="${c.mode==k?"on":""}" onclick="slSet('mode','${k}',1)">${l}</button>`;
+ const mn=m=>AD(m)+" د";
+ const chip=!b?`<span class="slc w">تذكير فقط</span>`:h?`<span class="slc g">✓ الإذن ممنوح</span>`:`<span class="slc w">⚠ الإذن غير ممنوح</span>`;
+ const head=`<div class="card slh${c.on?" on":""}"><div class="set" style="margin:0"><span class="slt1"><b>الصمت التلقائي وقت الصلاة</b><span class="mu">${c.on?"يعمل تلقائيًا بعد كل أذان، وتوقفه متى شئت":"متوقف — لن يغيّر التطبيق وضع هاتفك"}</span></span>${sw(c.on,"slSet('on',this.checked?1:0,1)")}</div>${c.on?`<div style="margin-top:8px">${chip}</div>`:""}</div>`;
+ if(!c.on){$("#m").innerHTML=`<div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}<div class="mu" style="padding:4px 10px;line-height:1.9">فعّل المفتاح ليُسكت التطبيق هاتفك بعد الأذان بدقائق، ثم يعيد وضعه الأصلي بعد انتهاء المدة.</div>`;return}
+ const au=c.auto?SLN.map((p,i)=>`<div class="slr"><b>${p[1]}</b><span>بعد الأذان بـ${mn(SLP[i][0])}</span><i>صمت ${mn(SLP[i][1])}</i></div>`).join(""):"";
+ const tools=b&&typeof b.release==="function"?`<div class="card"><div class="slbt"><button class="gdl" onclick="slRel()">🔓 فك الصمت الآن</button><button onclick="slSt()">ℹ حالة الجدولة</button></div><div class="mu" style="margin-top:6px">إن بقي هاتفك صامتًا بعد وقت الصلاة اضغط «فك الصمت الآن».</div></div>`:"";
+ const ps=c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة</span>${sw(c.auto,"slSet('auto',this.checked?1:0,1)")}</div>${c.auto?`<div class="slt">${au}</div><div class="mu" style="margin-top:6px">المغرب بعد الأذان مباشرة، والظهر والعصر أطول، والعشاء والفجر أطول منهما.</div>`:slCtl(c.g,"slG")}</div>`
+  :SLN.map((p,i)=>{const q=c.pr[i];return`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">${p[1]}</span>${sw(q.on,"slP("+i+",'on',this.checked?1:0)")}</div>${q.on?`<div style="margin-top:8px">${slCtl(q,"slP.bind(null,"+i+")")}</div>`:""}</div>`}).join("");
+ const fr=`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">الجمعة <span class="mu">(بدل الظهر)</span></span>${c.mode=="each"?sw(c.fr.on,"slF('on',this.checked?1:0)"):""}</div>${c.mode=="all"||c.fr.on?`<div style="margin-top:8px">${slFc(c.fr)}</div>`:""}</div>`;
+ const today=`<div class="card"><div class="lh">أوقات اليوم · ${S.city}</div><div class="slt">${slWin().map(x=>`<div class="slr${x.on?"":" off"}"><b>${x.n}</b><span>${fmt(x.s)} – ${fmt(x.e)}</span><i>${mn(Math.round((x.e-x.s)/6e4))}</i></div>`).join("")}</div><div class="mu" style="margin-top:6px">تُحدَّث تلقائيًا عند تغيير المدينة أو طريقة الحساب.</div></div>`;
+ $("#m").innerHTML=`<div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}${b&&!h?slGuide():""}
+ <div class="card"><div class="lh">نوع الضبط</div><div class="seg">${md("all","كلي · لكل الصلوات")}${md("each","جزئي · لكل صلاة")}</div></div>
+ ${ps}${fr}${today}${tools}${slCompat()}`}
 
 
 /* ---- الأذان ---- */

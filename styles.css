@@ -324,3 +324,21 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 .hm-grid button:active{transform:scale(.97);background:var(--ac2)}
 .hm-ps{gap:5px}.hm-pc{font-size:.74em!important;padding:9px 1px!important}
 .hm-wird,.hm-az{padding:14px 16px}.hm-wt b,.hm-at b{font-size:1.05em}.hm-wt span,.hm-at span{font-size:.8em}
+
+
+/* الوضع الصامت أثناء الصلاة */
+.slh{border-width:1.5px}.slh.on{border-color:var(--ac);background:linear-gradient(180deg,var(--ac2),var(--card) 70%)}
+.slt1{display:flex;flex-direction:column;gap:3px;flex:1}.slt1 b{font-size:1.02em}
+.slsw{-webkit-appearance:none;appearance:none;width:48px!important;height:28px!important;min-width:48px;border-radius:14px;background:#c4cbc7;position:relative;flex:none;border:0;outline:0;transition:background .2s;cursor:pointer}
+.slsw::after{content:"";position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.35);transition:transform .2s}
+.slsw:checked{background:var(--ac)}.slsw:checked::after{transform:translateX(-20px)}
+.slc{display:inline-block;font-size:.78em;font-weight:bold;padding:4px 10px;border-radius:999px}
+.slc.g{background:var(--ac2);color:var(--ac)}.slc.w{background:#fdecc8;color:#8a5a00}
+.seg{display:flex;gap:3px;background:var(--ac2);border-radius:12px;padding:3px}
+.seg button{flex:1;border:0!important;background:transparent!important;color:var(--ac)!important;border-radius:10px;padding:10px 6px;font-weight:bold;font-size:.9em;box-shadow:none}
+.seg button.on{background:var(--ac)!important;color:#fff!important}
+.slt{display:flex;flex-direction:column;gap:6px}
+.slr{display:grid;grid-template-columns:4.2em 1fr auto;align-items:center;gap:8px;padding:9px 12px;border-radius:12px;background:var(--ac2)}
+.slr b{color:var(--ac)}.slr span{color:var(--tx);font-size:.88em}.slr i{font-style:normal;font-size:.78em;color:var(--mu);white-space:nowrap}
+.slr.off{opacity:.45}
+.slbt{display:flex;gap:8px}.slbt button{flex:1}
