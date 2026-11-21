@@ -93,7 +93,7 @@ let ready=0,inR=0,SUBV=null;
 function tbar(){const e=$("#tbar");if(!e)return;const sh=cur!=="menu"&&!inQ&&!$("#qv");e.style.display=sh?"flex":"none";if(sh&&!e.firstChild)e.innerHTML='<button onclick="uiBack()" aria-label="رجوع">→ رجوع</button><span class="sp"></span><button onclick="goHome()" aria-label="القائمة الرئيسية">🏠 القائمة الرئيسية</button>'}
 function uiBack(){if(qst.length){qpop();return}if(inQ){qx();return}if(inR){bk();return}if(SUBV){const t=SUBV;SUBV=null;go(t);return}if(cur!=="menu")go("menu")}
 function goHome(){qst=[];if($("#qv"))qshut();go("menu")}
-function go(t){wakeOff();rotOff();SUBV=null;if(ready&&t!=="menu"&&!(history.state&&history.state.t)){try{history.pushState({t:1},"")}catch(e){}}inR=0;inQ=0;cur=t;nav();if(ready&&t==="menu")hClean();stopCmp();clearInterval(tick);({quran,adhkar,home,qibla,tasbih,set,menu}[t])();if(ready&&!S.chosen&&(t=="home"||t=="qibla"))askLoc()}
+function go(t){wdIn=0;qst=qst.filter(f=>f!==wdBack);wakeOff();rotOff();SUBV=null;if(ready&&t!=="menu"&&!(history.state&&history.state.t)){try{history.pushState({t:1},"")}catch(e){}}inR=0;inQ=0;cur=t;nav();if(ready&&t==="menu")hClean();stopCmp();clearInterval(tick);({quran,adhkar,home,qibla,tasbih,set,menu}[t])();if(ready&&!S.chosen&&(t=="home"||t=="qibla"))askLoc()}
 /* ======== الشاشة الرئيسية: لوحة أنيقة (تاريخ هجري، الصلاة القادمة، ورد اليوم، ذكر الوقت، اختصارات) ======== */
 const hmA=s=>String(s).replace(/\d/g,d=>"٠١٢٣٤٥٦٧٨٩"[d]);
 function hmGreet(){const h=new Date().getHours();return h<4?"طاب ليلك":h<11?"صباح الخير":h<15?"طاب يومك":h<18?"مساء الخير":"مساؤك طيّب"}
@@ -131,8 +131,10 @@ function menu(){
   <div class="hm-top"><div class="hm-gr"><small>${hmGreet()}</small><h2>${hmA(hijri().replace(/^[^ ]+ /,"").replace(/\s*هـ\s*$/,"")+" هـ")}</h2><span>${hmA(hijri().split(" ")[0]+" · "+greg().replace(/^[^،]+،\s*/,""))}${city?" · "+esc(city):""}</span></div><div class="hm-lg">${LOGO(54)}</div></div>
   <div class="hm-next"><div class="hm-nl"><small>الصلاة القادمة</small><b>${NAMES[P.ni]}</b><span>${fmt(P.next)}</span></div><div class="hm-cd" id="hmc"></div></div>
   <div class="hm-prog"><i id="hmp2"></i></div></section>
+ ${ramCard()}
  <div class="hm-grid">${[["quran","القرآن الكريم"],["adhkar","حصن المسلم"],["tasbih","المسبحة"],["qibla","القبلة"],["home","المواقيت والأذان"],["set","الإعدادات"]].map(a=>`<button onclick="go('${a[0]}')"><span class="hm-ic"><svg viewBox="0 0 24 24">${NI[a[0]]}</svg></span><b>${a[1]}</b></button>`).join("")}</div>
  <div class="hm-ps">${chips}</div>
+ ${wdCard(1)}
  ${hmWird()}
  <div class="hm-az" onclick="${az.c==0?"go('adhkar')":"ntOpen('c:"+az.c+"')"}"><div class="hm-ai">${az.i}</div><div class="hm-at"><small>ذكر هذا الوقت</small><b>${az.t}</b><span>${az.d}</span></div><div class="hm-go">‹</div></div>
  ${hmThought()}${hmNextSeason()}
@@ -142,52 +144,90 @@ function menu(){
 /* عدّاد رمضان التنازلي: يظهر قبل رمضان بـ٩٠ يومًا (ثلاثة أشهر) حسب التقويم الهجري في التطبيق */
 function ramCard(){try{
  const n=new Date(),tt=Date.UTC(n.getFullYear(),n.getMonth(),n.getDate(),12),[hy,hm,hd]=todayH();
- if(hm==9)return `<div class="card" style="text-align:center"><div class="mu">🌙 رمضان مبارك</div><div class="big">اليوم ${AD(hd)} من ${AD(mlen(hy,9))}</div></div>`;
+ const card=(top,num,sub,lbl,pct,foot)=>{const nz=String(num).length>2?34:String(num).length>1?42:50;
+  return `<div class="rmc"><div class="rmst"><i style="top:10%;right:9%;font-size:15px">✦</i><i style="top:34%;right:86%;font-size:10px;animation-delay:.7s">✦</i><i style="top:72%;right:12%;font-size:11px;animation-delay:1.2s">✦</i><i style="top:16%;right:66%;font-size:9px;animation-delay:1.8s">✦</i><i style="top:78%;right:84%;font-size:14px;animation-delay:.3s">✦</i><i style="top:50%;right:94%;font-size:8px;animation-delay:1.5s">✦</i></div>
+  <div class="rmt1">${top}</div>
+  <div class="rmm"><svg viewBox="0 0 160 160" width="176" height="176" aria-hidden="true"><defs><linearGradient id="rmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4b8"/><stop offset=".55" stop-color="#f4c542"/><stop offset="1" stop-color="#c98a16"/></linearGradient><mask id="rmk"><rect width="160" height="160" fill="#fff"/><circle cx="104" cy="68" r="50" fill="#000"/></mask></defs><circle cx="80" cy="80" r="64" fill="url(#rmg)" mask="url(#rmk)"/><circle cx="80" cy="80" r="70" fill="none" stroke="#f4c542" stroke-opacity=".22" stroke-dasharray="2 6" mask="url(#rmk)"/><text x="92" y="${num=="اليوم"?76:num.length>2?78:80}" text-anchor="middle" dominant-baseline="middle" font-size="${num=="اليوم"?26:nz}" font-weight="800" fill="#fff" style="paint-order:stroke;stroke:#a86f0a;stroke-width:1.5px">${num}</text><text x="92" y="${num=="اليوم"?100:104}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffe9a6">${sub}</text></svg></div>
+  <div class="rmb1">${lbl}</div>${pct==null?"":`<div class="rmbar"><i style="width:${pct}%"></i></div>`}<div class="rmf1">${foot}</div></div>`};
+ if(hm==9)return card("🌙 رمضان مبارك",AD(hd),"من "+AD(mlen(hy,9)),"اليوم "+AD(hd)+" من "+AD(mlen(hy,9)),Math.round(hd/mlen(hy,9)*100),"تقبّل الله صيامكم وقيامكم");
  const Y=hm>9?hy+1:hy,start=mstart(Y,9),df=Math.round((start-tt)/DAY);
  if(df<0||df>90)return"";
  const pct=Math.max(0,Math.min(100,Math.round((90-df)/90*100)));
  const gd=new Intl.DateTimeFormat("ar",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(start);
  const lbl=df==0?"رمضان يبدأ اليوم 🌙":df==1?"بقي يوم واحد على رمضان":df==2?"بقي يومان على رمضان":"بقي "+AD(df)+(df<=10?" أيام":" يومًا")+" على رمضان";
- return `<div class="card" style="text-align:center"><div class="mu">🌙 العدّ التنازلي لرمضان ${AD(Y)} هـ</div><div class="big">${lbl}</div><div class="khbar" style="margin:8px 0"><i style="width:${pct}%"></i></div><div class="mu">يبدأ تقريبًا ${gd} (حسب التقويم، ويتبع تعديل رؤية الهلال)</div></div>`
+ return card("🌙 العدّ التنازلي لرمضان "+AD(Y)+" هـ",df==0?"اليوم":AD(df),df==0?"رمضان":df==1?"يوم":df<=10?"أيام":"يومًا",lbl,pct,"يبدأ تقريبًا "+gd+" (حسب التقويم، ويتبع تعديل رؤية الهلال)")
 }catch(e){return""}}
 function home(){
  const t=times(new Date()),[ni]=nextP();
- $("#m").innerHTML=`<div class="cp">${needLoc()}<div class="card"><div class="set" style="margin:0"><span style="display:flex;align-items:center;gap:10px">${LOGO(40)}<h1 style="margin:0">زاد المسلم</h1></span><span><button class="gdl" onclick="pcal()">🕌 تقويم المواقيت</button> <button class="gdl" onclick="hcal()">📅 التقويم</button></span></div><div>${hijri()}</div><div class="mu">${greg()}</div></div>
- ${ramCard()}<div class="card"><div class="mu">القادمة: ${NAMES[ni]} — ${S.city}</div><div class="big" id="cd"></div></div>
+ $("#m").innerHTML=`<div class="cp"><div class="pbslot">${pbHtml()}</div><div class="card"><div class="set" style="margin:0"><span style="display:flex;align-items:center;gap:10px">${LOGO(40)}<h1 style="margin:0">زاد المسلم</h1></span><span><button class="gdl" onclick="pcal()">🕌 تقويم المواقيت</button> <button class="gdl" onclick="hcal()">📅 التقويم</button></span></div><div>${hijri()}</div><div class="mu">${greg()}</div></div>
+ ${wdCard()}<div class="card"><div class="mu">القادمة: ${NAMES[ni]} — ${S.city}</div><div class="big" id="cd"></div></div>
  <div class="card">${t.map((x,i)=>`<div class="row ${i==ni?"next":""}"><span>${NAMES[i]}</span><span>${fmt(x)}</span></div>`).join("")}</div>`+adBody()+`</div>`;
  const u=()=>{const[,n]=nextP();let s=Math.max(0,Math.floor((n-new Date())/1e3));const p=x=>String(x).padStart(2,"0");$("#cd").textContent=`${p(s/3600|0)}:${p(s%3600/60|0)}:${p(s%60)}`};u();tick=setInterval(u,1e3)}
 let hd=null,cmpOn=false;
 function bearing(){const a=21.4225,b=39.8262,dl=b-S.lng;return((Math.atan2(sin(dl),cos(S.lat)*tan(a)-sin(S.lat)*cos(dl))/R)+360)%360}
 function qdist(){const a=21.4225,b=39.8262,dl=b-S.lng,c=Math.acos(Math.max(-1,Math.min(1,sin(S.lat)*sin(a)+cos(S.lat)*cos(a)*cos(dl))));return Math.round(c*6371)}
 function qibla(){
- const q=bearing();
- $("#m").innerHTML=`${needLoc()}<div class="card" style="text-align:center"><h1 style="margin:0">القبلة</h1><div class="mu">${S.city} · ${Math.round(q).toLocaleString("ar")}° من الشمال · ${qdist().toLocaleString("ar")} كم</div>
+ const q=bearing(),dv=decl();
+ $("#m").innerHTML=`${needLoc()}<div class="card" style="text-align:center"><h1 style="margin:0">القبلة</h1><div class="mu">${S.city} · ${Math.round(q).toLocaleString("ar")}° من الشمال · ${qdist().toLocaleString("ar")} كم</div><div class="mu" style="font-size:.85em">الانحراف المغناطيسي هنا ${Math.abs(dv).toLocaleString("ar",{minimumFractionDigits:1,maximumFractionDigits:1})}° ${dv>=0?"شرقًا":"غربًا"} — يُصحَّح تلقائيًا</div>
  <div class="cmp" id="cmp"><div class="dl" id="dl"><span class="n">ش</span><div class="ka" style="transform:rotate(${q}deg)"><span id="kb">🕋</span></div></div><div class="pt"></div></div>
- <div id="st" class="mu" style="min-height:2.6em">أمسك الهاتف أفقيًا وحرّكه حتى يصل 🕋 إلى السهم الأعلى.</div><div class="set" style="justify-content:center;gap:10px"><span class="mu">تصحيح الاتجاه</span><button onclick="cmpAdj(-1)">−</button><b id="adj" style="min-width:3em;direction:ltr">${(S.cmpAdj||0).toLocaleString("ar")}°</b><button onclick="cmpAdj(1)">+</button></div><button class="p" onclick="startCmp()">تشغيل البوصلة</button></div>`;
+ <div id="st" class="mu" style="min-height:2.6em">أمسك الهاتف أفقيًا وحرّكه حتى يصل 🕋 إلى السهم الأعلى.</div><div id="cq" class="mu" style="font-size:.82em;min-height:1.4em;color:#c0392b"></div><div class="set" style="justify-content:center;gap:10px"><span class="mu">تصحيح الاتجاه</span><button onclick="cmpAdj(-1)">−</button><b id="adj" style="min-width:3em;direction:ltr">${(S.cmpAdj||0).toLocaleString("ar")}°</b><button onclick="cmpAdj(1)">+</button></div><button class="p" onclick="startCmp()">تشغيل البوصلة</button></div>`;
  if(!(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission))startCmp()}
 function tiltH(a,b,g){const cZ=cos(a),sZ=sin(a),cX=cos(b),sX=sin(b),cY=cos(g),sY=sin(g);let X,Y;
  if(Math.abs(cX*cY)>.7){X=-sZ*cX;Y=cZ*cX}else{X=-(cZ*sY+sZ*sX*cY);Y=-(sZ*sY-cZ*sX*cY)}
  return(Math.atan2(X,Y)/R+360)%360}
+/* انحراف الشمال المغناطيسي عن الجغرافي (نموذج WMM2025 الرسمي من NOAA/BGS، يعمل دون إنترنت): حساسات الهاتف تعطي الشمال المغناطيسي بينما القبلة محسوبة من الشمال الجغرافي */
+const WMMC=[-29351.8,0,12,0,-1410.8,4545.4,9.7,-21.5,-2556.6,0,-11.6,0,2951.1,-3133.6,-5.2,-27.7,1649.3,-815.1,-8,-12.1,1361,0,-1.3,0,-2404.1,-56.6,-4.2,4,1243.8,237.5,0.4,-0.3,453.6,-549.5,-15.6,-4.1,895,0,-1.6,0,799.5,278.6,-2.4,-1.1,55.7,-133.9,-6,4.1,-281.1,212,5.6,1.6,12.1,-375.6,-7,-4.4,-233.2,0,0.6,0,368.9,45.4,1.4,-0.5,187.2,220.2,0,2.2,-138.7,-122.9,0.6,0.4,-142,43,2.2,1.7,20.9,106.1,0.9,1.9,64.4,0,-0.2,0,63.8,-18.4,-0.4,0.3,76.9,16.8,0.9,-1.6,-115.7,48.8,1.2,-0.4,-40.9,-59.8,-0.9,0.9,14.9,10.9,0.3,0.7,-60.7,72.7,0.9,0.9,79.5,0,0,0,-77,-48.9,-0.1,0.6,-8.8,-14.4,-0.1,0.5,59.3,-1,0.5,-0.8,15.8,23.4,-0.1,0,2.5,-7.4,-0.8,-1,-11.1,-25.1,-0.8,0.6,14.2,-2.3,0.8,-0.2,23.2,0,-0.1,0,10.8,7.1,0.2,-0.2,-17.5,-12.6,0,0.5,2,11.4,0.5,-0.4,-21.7,-9.7,-0.1,0.4,16.9,12.7,0.3,-0.5,15,0.7,0.2,-0.6,-16.8,-5.2,0,0.3,0.9,3.9,0.2,0.2,4.6,0,0,0,7.8,-24.8,-0.1,-0.3,3,12.2,0.1,0.3,-0.2,8.3,0.3,-0.3,-2.5,-3.3,-0.3,0.3,-13.1,-5.2,0,0.2,2.4,7.2,0.3,-0.1,8.6,-0.6,-0.1,-0.2,-8.7,0.8,0.1,0.4,-12.9,10,-0.1,0.1,-1.3,0,0.1,0,-6.4,3.3,0,0,0.2,0,0.1,0,2,2.4,0.1,-0.2,-1,5.3,0,0.1,-0.6,-9.1,-0.3,-0.1,-0.9,0.4,0,0.1,1.5,-4.2,-0.1,0,0.9,-3.8,-0.1,-0.1,-2.7,0.9,0,0.2,-3.9,-9.1,0,0,2.9,0,0,0,-1.5,0,0,0,-2.5,2.9,0,0.1,2.4,-0.6,0,0,-0.6,0.2,0,0.1,-0.1,0.5,-0.1,0,-0.6,-0.3,0,0,-0.1,-1.2,0,0.1,1.1,-1.7,-0.1,0,-1,-2.9,-0.1,0,-0.2,-1.8,-0.1,0,2.6,-2.3,-0.1,0,-2,0,0,0,-0.2,-1.3,0,0,0.3,0.7,0,0,1.2,1,0,-0.1,-1.3,-1.4,0,0.1,0.6,0,0,0,0.6,0.6,0.1,0,0.5,-0.1,0,0,-0.1,0.8,0,0,-0.4,0.1,0,0,-0.2,-1,-0.1,0,-1.3,0.1,0,0,-0.7,0.2,-0.1,-0.1];
+function wmmDec(lat,lon,alt,yr){
+ const D=Math.PI/180,a=6378.137,f=1/298.257223563,e2=f*(2-f),re=6371.2,N=12;
+ const ph=lat*D,la=lon*D,sp=Math.sin(ph),cp=Math.cos(ph),Rc=a/Math.sqrt(1-e2*sp*sp);
+ const p=(Rc+alt)*cp,z=(Rc*(1-e2)+alt)*sp,r=Math.hypot(p,z),pc=Math.asin(z/r),x=Math.sin(pc),c=Math.cos(pc);
+ const dt=yr-2025,P=[],dP=[];
+ for(let n=0;n<=N;n++){P.push(new Array(n+1).fill(0));dP.push(new Array(n+1).fill(0))}
+ P[0][0]=1;
+ for(let n=1;n<=N;n++)for(let m=0;m<=n;m++){
+  if(n==m)P[n][n]=(n==1?1:Math.sqrt((2*n-1)/(2*n)))*c*P[n-1][n-1];
+  else P[n][m]=((2*n-1)*x*P[n-1][m]-(n-1>=m?Math.sqrt((n-1)*(n-1)-m*m)*(n>=2&&m<=n-2?P[n-2][m]:0):0))/Math.sqrt(n*n-m*m)}
+ for(let n=1;n<=N;n++)for(let m=0;m<=n;m++)dP[n][m]=((m<=n-1?Math.sqrt(n*n-m*m)*P[n-1][m]:0)-n*x*P[n][m])/c;
+ let X=0,Y=0,Z=0,k=0;
+ for(let n=1;n<=N;n++){const q=Math.pow(re/r,n+2);
+  for(let m=0;m<=n;m++,k++){
+   const g=WMMC[4*k]+WMMC[4*k+2]*dt,h=WMMC[4*k+1]+WMMC[4*k+3]*dt,cm=Math.cos(m*la),sm=Math.sin(m*la);
+   X-=q*(g*cm+h*sm)*dP[n][m];Y+=q*m*(g*sm-h*cm)*P[n][m]/c;Z-=q*(n+1)*(g*cm+h*sm)*P[n][m]}}
+ const ps=pc-ph,Xg=X*Math.cos(ps)-Z*Math.sin(ps),Zg=X*Math.sin(ps)+Z*Math.cos(ps);
+ return {d:Math.atan2(Y,Xg)/D,x:Xg,y:Y,z:Zg}}
+function decl(){try{if(Math.abs(S.lat)>85)return 0;const d=new Date(),y=d.getFullYear(),yr=y+(d-new Date(y,0,1))/(new Date(y+1,0,1)-new Date(y,0,1)),r=wmmDec(S.lat,S.lng,0,Math.max(2025,Math.min(2029.99,yr)));return isFinite(r.d)?r.d:0}catch(e){return 0}}
 async function startCmp(){
  const st=t=>{const e=$("#st");if(e)e.textContent=t};
  try{if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){if(await DeviceOrientationEvent.requestPermission()!="granted")throw 0}}catch(e){st("اسمح بالوصول للحركة والاتجاه ثم اضغط «تشغيل البوصلة» مرة أخرى.");return}
- stopCmp();const q=bearing();let got=false,abs=false,sm=null,last=0,wasOk=false,tp=0;
- hd=e=>{let h=null;const ia=e.type=="deviceorientationabsolute";if(ia)abs=true;
-  if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;
-  else if(e.alpha!=null&&(ia||(!abs&&e.absolute)))h=(e.beta!=null&&e.gamma!=null)?tiltH(e.alpha,e.beta,e.gamma):(360-e.alpha)%360;
+ stopCmp();const q=bearing(),dc=decl();let got=false,abs=false,sm=null,last=0,wasOk=false,tp=0,rel=null,rn=0,off=null,po=0,nz=0,lq=0;const t0=performance.now(),ad=(a,b)=>((a-b+540)%360)-180;
+ /* دقة أعلى: الاتجاه المغناطيسي (مطلق لكنه مضطرب) يُدمج مع اتجاه الجيروسكوب (ناعم لكنه نسبي): الجيروسكوب يتتبّع الحركة فورًا، والمغناطيسي يصحّح الإزاحة ببطء، فتُتجاهل قفزات التشويش اللحظية */
+ hd=e=>{let hA=null,hR=null;const ia=e.type=="deviceorientationabsolute";if(ia)abs=true;
+  if(e.webkitCompassHeading!=null)hA=e.webkitCompassHeading;
+  else if(e.alpha!=null){const hh=(e.beta!=null&&e.gamma!=null)?tiltH(e.alpha,e.beta,e.gamma):(360-e.alpha)%360;
+   if(ia||(!abs&&e.absolute))hA=hh;else if(!e.absolute)hR=hh}
+  if(hA==null&&hR==null)return;
+  const n=performance.now();
+  if(hR!=null){rel=hR;rn=n}
+  if(hA!=null&&rel!=null&&n-rn<400){const d=ad(hA,rel),dt=Math.min(200,po?n-po:16);po=n;
+   if(off==null)off=(d+360)%360;
+   else{const e1=ad(d,off),tau=Math.abs(e1)>25?5000:1500;off=(off+e1*(1-Math.exp(-dt/tau))+360)%360;nz+=(Math.abs(e1)-nz)*.02}}
+  let h=null;
+  if(off!=null&&rel!=null&&n-rn<400)h=(rel+off+720)%360;
+  else if(hA!=null)h=hA;
   if(h==null)return;
-  h=(h+((screen.orientation&&screen.orientation.angle)||0)+(S.cmpAdj||0)+720)%360;got=true;
-  const n=performance.now(),dt=Math.min(120,tp?n-tp:16);tp=n;
-  sm=sm==null?h:(sm+(((h-sm+540)%360)-180)*(1-Math.exp(-dt/110))+360)%360;
+  h=(h+((screen.orientation&&screen.orientation.angle)||0)+(S.cmpAdj||0)+dc+720)%360;got=true;
+  const dt2=Math.min(120,tp?n-tp:16);tp=n;
+  sm=sm==null?h:(sm+(((h-sm+540)%360)-180)*(1-Math.exp(-dt2/110))+360)%360;
   if(n-last<33)return;last=n;
   const dl=$("#dl"),kb=$("#kb"),cm=$("#cmp");if(!dl)return;
   dl.style.transform=`rotate(${-sm}deg)`;kb.style.transform=`rotate(${sm-q}deg)`;
-  const d=((q-sm+540)%360)-180,ok=Math.abs(d)<5;cm.classList.toggle("ok",ok);
+  const d=((q-sm+540)%360)-180,ok=Math.abs(d)<3;cm.classList.toggle("ok",ok);
   if(ok&&!wasOk&&navigator.vibrate){try{navigator.vibrate(60)}catch(_){}}wasOk=ok;
-  st((ok?"✓ هذا اتجاه القبلة":`حرّك الهاتف ${Math.round(Math.abs(d)).toLocaleString("ar")}° نحو ${d>0?"اليمين":"اليسار"}`)+` · اتجاهك ${Math.round(sm).toLocaleString("ar")}°`)};
+  st((ok?"✓ هذا اتجاه القبلة":`حرّك الهاتف ${Math.round(Math.abs(d)).toLocaleString("ar")}° نحو ${d>0?"اليمين":"اليسار"}`)+` · اتجاهك ${Math.round(sm).toLocaleString("ar")}°`);
+  if(n-lq>1000){lq=n;const c=$("#cq");if(c)c.textContent=(n-t0>4000&&nz>9)?"⚠ تشويش مغناطيسي: ابتعد عن المعادن والمغناطيس وحافظة الهاتف المغناطيسية، وحرّك الهاتف على شكل ٨ لمعايرته.":""}};
  addEventListener("deviceorientationabsolute",hd,true);addEventListener("deviceorientation",hd,true);cmpOn=true;
- setTimeout(()=>{if(!got)st("لا تصل بيانات من مستشعر الاتجاه. تأكد أن هاتفك فيه بوصلة (مستشعر مغناطيسي) وأن إذن الحركة والاتجاه غير مقيّد، ثم أعد فتح هذه الصفحة.")},2500);
- setTimeout(()=>{if(got&&!wasOk)st("لمعايرة أدق حرّك الهاتف على شكل ٨ وابتعد عن المعادن والمغناطيس.")},6000)}
+ setTimeout(()=>{if(!got)st("لا تصل بيانات من مستشعر الاتجاه. تأكد أن هاتفك فيه بوصلة (مستشعر مغناطيسي) وأن إذن الحركة والاتجاه غير مقيّد، ثم أعد فتح هذه الصفحة.")},2500)}
+if(!S.cmpDc){S.cmpDc=1;S.cmpAdj=0;save()}
 function cmpAdj(d){S.cmpAdj=Math.max(-30,Math.min(30,(S.cmpAdj||0)+d));save();const e=$("#adj");if(e)e.textContent=S.cmpAdj.toLocaleString("ar")+"°"}
 function stopCmp(){if(cmpOn){removeEventListener("deviceorientationabsolute",hd,true);removeEventListener("deviceorientation",hd,true);cmpOn=false}}
 function tasbih(){
@@ -507,17 +547,20 @@ function mv(d){const n=ci-d;if(n<0||n>=HD[cc].length)return;ci=n;rd();if(HP.on&&
 if(!S.vi){S.vib=true;S.vi=1;save()}
 const RF=[16,20,26];
 function rd(){const L=HD[cc],x=L[ci],k="h"+cc+"-"+ci,d=S.tas[k]||0,rem=Math.max(0,x[1]-d),rf=S.rf||0;
- $("#m").innerHTML=`<div class="hz"><div class="set hzb" style="margin:0"><button onclick="bk()" aria-label="رجوع إلى الفهرس" style="font-size:1.1em;font-weight:bold;min-width:40px;min-height:36px;padding:2px 10px">→</button><button id="hpb" class="hpb" onclick="hpt()" aria-label="استماع">${hico()}</button><span style="display:flex;align-items:center;gap:6px"><span class="mu">حجم الخط</span><button onclick="fz(-1)" style="min-width:48px;font-size:1.2em">−</button><button onclick="fz(1)" style="min-width:48px;font-size:1.2em">+</button></span></div>
+ $("#m").innerHTML=`<div class="hz"><div class="set hzb" style="margin:0"><button onclick="bk()" aria-label="رجوع إلى الفهرس" style="font-size:1.1em;font-weight:bold;min-width:40px;min-height:36px;padding:2px 10px">→</button><button id="hpb" class="hpb" onclick="hpt()" aria-label="استماع">${hico()}</button><button id="hvb" onclick="hzVibT()" aria-label="${S.vib?'الاهتزاز مفعّل — اضغط للإيقاف':'الاهتزاز متوقف — اضغط للتشغيل'}" style="min-width:44px;min-height:36px;font-size:1.1em;padding:2px 8px;opacity:${S.vib?1:.5}">${S.vib?"📳":"📴"}</button><span style="display:flex;align-items:center;gap:6px"><span class="mu">حجم الخط</span><button onclick="fz(-1)" style="min-width:48px;font-size:1.2em">−</button><button onclick="fz(1)" style="min-width:48px;font-size:1.2em">+</button></span></div>
  <div id="rc" style="flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;line-height:2.1;font-size:${RF[rf]}px;padding:4px 2px"><div class="mu" style="margin-bottom:6px">${CHN(cc)} · ${AD(ci+1)}/${AD(L.length)}</div><p style="margin:0 0 12px">${x[0]}</p><div class="mu" style="font-size:.8em">${x[2]}</div></div>
- <button class="tas hzt" id="tb" onclick="hc()" style="width:112px;height:112px;margin:0 auto 8px;font-size:2.2em;flex:none"><span id="tn"></span></button></div>`;tnU(d,x[1]);
+ <button class="tas hzt" id="tb" onpointerdown="hc()" onclick="if(!event.detail)hc()" aria-label="عدّ"><span id="tn"></span><small class="hzhint">اضغط في أي مكان هنا للعدّ</small></button></div>`;tnU(d,x[1]);
  let sx=0;const e=$("#rc");e.ontouchstart=t=>sx=t.touches[0].clientX;e.ontouchend=t=>{const dx=t.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)mv(dx>0?-1:1)}}
 function tnU(d,n){const tn=$("#tn"),tb=$("#tb");if(!tn)return;const done=d>=n;tn.innerHTML=done?`<b style="font-size:1em">✓</b><small style="display:block;font-size:.3em;opacity:.9;line-height:1">تم · التالي</small>`:`<b style="font-size:1em;line-height:1">${AD(d)}</b><small style="display:block;font-size:.34em;opacity:.9;line-height:1.3">من ${AD(n)}</small>`;if(tb){const pc=Math.min(100,Math.round(100*d/n));tb.style.backgroundImage=`linear-gradient(to top,rgba(255,255,255,.28) ${pc}%,transparent ${pc}%)`}}
 function th(v){S.theme=v;apply();save();set()}
 function fz(d){S.rf=Math.max(0,Math.min(2,(S.rf||0)+d));save();rd()}
+function hzVib(p){try{if(S.vib&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function hzVibT(){S.vib=!S.vib;save();const b=$("#hvb");if(b){b.textContent=S.vib?"📳":"📴";b.style.opacity=S.vib?"1":".5";b.setAttribute("aria-label",S.vib?"الاهتزاز مفعّل — اضغط للإيقاف":"الاهتزاز متوقف — اضغط للتشغيل")}if(S.vib)hzVib(30)}
 function hc(){const k="h"+cc+"-"+ci,x=HD[cc][ci],d=S.tas[k]||0;
- if(d>=x[1]){mv(-1);return}
+ if(d>=x[1]){hzVib(20);mv(-1);return}
  S.tas[k]=d+1;save();const rem=x[1]-d-1;tnU(d+1,x[1]);
- if(!rem){if(S.vib&&navigator.vibrate)navigator.vibrate(30);
+ hzVib(rem?20:[45,60,45,60,130]);
+ if(!rem){
   if(S.auto!==false&&ci<HD[cc].length-1){const c=cc,i=ci;setTimeout(()=>{if(cc==c&&ci==i&&$("#rc"))mv(-1)},500)}}}
 let locBusy=0,locT=0;
 function reqLoc(cb){
@@ -875,23 +918,43 @@ function kaOn(){try{if(KA.paused)KA.play().catch(()=>{})}catch(e){}}
 function kaOff(){try{if(!AP.on&&!HP.on)KA.pause()}catch(e){}}
 AU.addEventListener("playing",()=>{try{ZR.q&&(ZR.q.n=0);qms();msPS(AU);msPos()}catch(e){}});AU.onended=()=>anext();AU.onplay=AU.onpause=()=>{qplui();msPS(AU);if(!AU.paused)kaOn()};
 const ZR={};
-function zRetry(kind,key,fn){const r=ZR[kind]||(ZR[kind]={n:0,key:"",tm:0,h:null});if(r.key!==key){r.key=key;r.n=0}if(r.n>=5)return false;r.n++;const d=[1000,2500,5000,9000,15000][r.n-1];clearTimeout(r.tm);if(r.h){removeEventListener("online",r.h);r.h=null}const go=()=>{r.tm=0;try{fn()}catch(e){}};r.tm=setTimeout(()=>{if(navigator.onLine===false){r.h=()=>{removeEventListener("online",r.h);r.h=null;r.tm=setTimeout(go,800)};addEventListener("online",r.h);try{qtoast("لا يوجد اتصال… سيُستأنف التشغيل تلقائيًا عند عودة الإنترنت",4500)}catch(e){}}else go()},d);if(r.n==1)try{qtoast("ضعف في الشبكة… نعيد المحاولة",2500)}catch(e){}return true}
+function zRetry(kind,key,fn){const r=ZR[kind]||(ZR[kind]={n:0,key:"",tm:0,h:null,go:null});if(r.key!==key){r.key=key;r.n=0}r.n++;const d=[1000,2000,3500,6000,10000,15000][r.n-1]||20000;clearTimeout(r.tm);if(r.h){removeEventListener("online",r.h);r.h=null}
+ const go=()=>{clearTimeout(r.tm);r.tm=0;if(r.h){removeEventListener("online",r.h);r.h=null}r.go=null;try{fn()}catch(e){}};r.go=go;
+ r.tm=setTimeout(()=>{if(navigator.onLine===false){r.h=()=>go();addEventListener("online",r.h,{once:true});r.tm=setTimeout(go,20000);try{if(r.n<3)qtoast("لا يوجد اتصال… سيُستأنف التشغيل تلقائيًا عند عودة الإنترنت",4500)}catch(e){}}else go()},d);
+ try{if(r.n==1)qtoast("ضعف في الشبكة… نعيد المحاولة",2500);else if(r.n==8)qtoast("ما زلنا نحاول استئناف التشغيل… اضغط إيقاف إن أردت التوقف",5000)}catch(e){}return true}
+addEventListener("online",()=>{try{for(const k in ZR){const r=ZR[k];if(r&&r.tm&&r.go)r.go()}if(AP.on)apre();if(HP.on)hpre()}catch(e){}});
 AU.addEventListener("timeupdate",()=>{if(AP&&AU.currentTime>0)AP.pos=AU.currentTime});
-(function(){let n=0;setInterval(()=>{try{const q=AP.on&&!AU.paused&&!AU.ended&&AU.readyState<3,h=HP.on&&!HAU.paused&&!HAU.ended&&HAU.readyState<3;if(q||h){if(++n>=5){n=0;if(q)AU.onerror();else HAU.onerror()}}else n=0}catch(e){}},5000)})();
-AU.onerror=()=>{if(!AP.on)return;const f=S.qrec||RLD[0],s=AP.bs?1:AP.s,a=AP.bs?1:AP.a,code=(AU.error&&AU.error.code)||0,host=String(AU.currentSrc||AU.src||"").replace(/^[a-z]+:\/\/([^\/]*).*$/i,"$1");if(zRetry("q",f+"|"+s+"|"+a+"|"+(AP.k||0),()=>{if(!AP.on)return;if(SUD[f])AP.rt=AP.pos||0;aload(AP.k||0)}))return;if(!AP.k&&murl(f,s,a)&&!String(AU.src).startsWith("blob:")){aload(1);return}qstop();qtoast("تعذّر الوصول لملف الصوت (رمز "+code+" · "+(host||"؟")+")\nالقارئ: "+recname()+" · "+AD(s)+":"+AD(a)+"\nتأكد من الاتصال، وإن تكرر مع هذا القارئ فجرّب قارئًا آخر",9000)}
+(function(){let n=0,lp=-1;const pr=x=>x.currentTime+(x.buffered&&x.buffered.length?x.buffered.end(x.buffered.length-1):0);setInterval(()=>{try{const q=AP.on&&!AU.paused&&!AU.ended&&AU.readyState<3&&!(ZR.q&&ZR.q.tm),h=HP.on&&!HAU.paused&&!HAU.ended&&HAU.readyState<3&&!(ZR.h&&ZR.h.tm);if(q||h){const p=pr(q?AU:HAU);if(p!==lp){lp=p;n=0}else if(++n>=3){n=0;lp=-1;if(q)AU.onerror();else HAU.onerror()}}else{n=0;lp=-1}}catch(e){}},5000)})();
+AU.onerror=()=>{if(!AP.on)return;const f=S.qrec||RLD[0],s=AP.bs?1:AP.s,a=AP.bs?1:AP.a,key=f+"|"+s+"|"+a,rr=(ZR.q&&ZR.q.key===key)?ZR.q.n:0;zRetry("q",key,()=>{if(!AP.on)return;if(SUD[f])AP.rt=AP.pos||0;aload(!SUD[f]&&murl(f,s,a)&&rr%2==1?1:0)})}
 const p3=n=>String(n).padStart(3,"0");
 const aurl=(f,s,a)=>`https://everyayah.com/data/${f}/${p3(s)}${p3(a)}.mp3`;
 const MIR={"Alafasy_128kbps":"ar.alafasy","Husary_128kbps":"ar.husary","Abdul_Basit_Murattal_192kbps":"ar.abdulbasitmurattal","Minshawy_Murattal_128kbps":"ar.minshawi","Maher_AlMuaiqly_128kbps":"ar.mahermuaiqly","Saood_ash-Shuraym_128kbps":"ar.saoodshuraym","Abdurrahmaan_As-Sudais_192kbps":"ar.abdurrahmaansudais","Hudhaify_128kbps":"ar.hudhaify","Abu_Bakr_Ash-Shaatree_128kbps":"ar.shaatree","Muhammad_Ayyoub_128kbps":"ar.muhammadayyoub","Muhammad_Jibreel_128kbps":"ar.muhammadjibreel","Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net":"ar.ahmedajamy"};
 function gay(s,a){let n=a;for(let i=0;i<s-1;i++)n+=QD.text[i].length;return n}
 const murl=(f,s,a)=>MIR[f]?`https://cdn.islamic.network/quran/audio/128/${MIR[f]}/${gay(s,a)}.mp3`:"";
 async function asrcLocal(s,a){const f=S.qrec||RLD[0];try{const b=await idbGet("au:"+f+"/"+p3(s)+p3(a));if(b){if(aUrl)URL.revokeObjectURL(aUrl);aUrl=URL.createObjectURL(b);return aUrl}}catch(e){}return""}
+/* قراءة مسبقة: نُنزّل الآيات التالية في الذاكرة أثناء تشغيل الحالية، فلا يتوقف الانتقال بينها إن ضعفت الشبكة أو كان التطبيق في الخلفية */
+const PFM=new Map();let PFU=null,PFB=0,PFT=0;
+function apFlush(){try{PFM.forEach(v=>URL.revokeObjectURL(v));PFM.clear();if(PFU){URL.revokeObjectURL(PFU);PFU=null}}catch(e){}}
+function aNx(p){if(p.bs)return{s:p.s,a:p.a,bs:0};if(AP.end&&p.s==AP.end[0]&&p.a==AP.end[1])return null;const n=QD.text[p.s-1].length;return p.a+1>n?null:{s:p.s,a:p.a+1,bs:0}}
+async function apre(){
+ if(PFB||!AP.on||SUD[S.qrec||RLD[0]]||navigator.onLine===false||Date.now()<PFT)return;PFB=1;
+ try{const f=S.qrec||RLD[0],id=AP.t;let p={s:AP.s,a:AP.a,bs:AP.bs};
+  for(let i=0;i<10&&AP.on&&AP.t==id;i++){p=aNx(p);if(!p)break;
+   const s=p.bs?1:p.s,a=p.bs?1:p.a,u=aurl(f,s,a);if(PFM.has(u))continue;
+   try{if(await idbGet("au:"+f+"/"+p3(s)+p3(a)))continue}catch(e){}
+   const c=new AbortController(),tm=setTimeout(()=>c.abort(),25000);
+   try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw 0;const b=await r.blob();if(b.size<500)throw 0;if(AP.on&&AP.t==id){PFM.set(u,URL.createObjectURL(b));if(PFM.size>14){const k=PFM.keys().next().value;URL.revokeObjectURL(PFM.get(k));PFM.delete(k)}}}
+   catch(e){PFT=Date.now()+20000;break}finally{clearTimeout(tm)}}}catch(e){}
+ PFB=0}
+setInterval(()=>{try{if(AP.on&&!PFB)apre()}catch(e){}},4000);
 async function aload(k){
  if(SUD[S.qrec||RLD[0]])return asur();
  AP.k=k||0;const s=AP.bs?1:AP.s,a=AP.bs?1:AP.a,f=S.qrec||RLD[0],u=AP.k?murl(f,s,a):aurl(f,s,a);
  if(!u){qstop();qtoast("تعذّر تشغيل الصوت لهذا القارئ",6000);return}
  const t=AP.t=Date.now();let src=u;
  if(!AP.k){const l=await asrcLocal(s,a);if(AP.t!=t||!AP.on)return;if(l)src=l}
- AU.src=src;kaOn();
+ let pf=null;if(!AP.k&&src===u){const e=PFM.get(u);if(e){PFM.delete(u);pf=e;src=e}}
+ AU.src=src;if(PFU&&PFU!==pf){try{URL.revokeObjectURL(PFU)}catch(e){}}PFU=pf;kaOn();setTimeout(apre,300);
  AU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر ▶ لبدء التشغيل")});
  if(S.qfollow!==false&&$("#qv")){const g=qPageOf(AP.s,AP.a);if(g!==qn)qp(g,1)}
  WF.w=-1;WF.ak="";qhl();qplui();qms()}
@@ -908,7 +971,7 @@ function arep(){const st=AP.st;if(!S.qrep||!st)return 0;AP.s=st[0];AP.a=st[1];AP
 function anext(){if(!AP.on)return;if(SUD[S.qrec||RLD[0]]){const s=AP.s;if(AP.end&&AP.end[0]>s&&s<114){AP.s=s+1;AP.a=1;aload();return}if(arep())return;qstop();qtoast("انتهت السورة");return}if(!AP.bs&&AP.end&&AP.s==AP.end[0]&&AP.a==AP.end[1]){if(arep())return;qstop();return}if(AP.bs){AP.bs=0;aload();return}let s=AP.s,a=AP.a+1;if(a>QD.text[s-1].length){if(arep())return;qstop();qtoast("انتهت السورة");return}AP.s=s;AP.a=a;aload()}
 function aprev(){if(!AP.on)return;if(SUD[S.qrec||RLD[0]]){if(AP.s>1){AP.s--;AP.a=1;aload()}return}if(AP.bs)AP.bs=0;else{let s=AP.s,a=AP.a-1;if(a<1){s--;if(s<1)return;a=QD.text[s-1].length}AP.s=s;AP.a=a}aload()}
 function atog(){AU.paused?AU.play():AU.pause()}
-function qstop(){const w=AP.on;try{saveRes()}catch(e){}AP.on=0;kaOff();try{AU.pause();AU.removeAttribute("src");AU.load()}catch(e){}qhl();qplui();if(w&&!HP.on)msClear()}
+function qstop(){const w=AP.on;try{saveRes()}catch(e){}AP.on=0;kaOff();try{apFlush()}catch(e){}try{AU.pause();AU.removeAttribute("src");AU.load()}catch(e){}qhl();qplui();if(w&&!HP.on)msClear()}
 
 /* ---- المتابعة كلمة بكلمة + التمرير التلقائي في الوضع الأفقي ---- */
 let WF={raf:0,w:-1,ak:"",key:"",wt:null,u:0,st:0,lk:""};
@@ -1475,11 +1538,14 @@ async function wakeOn(){if(S.wake===false||!$("#qv")||WL)return;try{if(navigator
 function wakeOff(){try{WL&&WL.release()}catch(e){}WL=null}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible"){if($("#qv"))wakeOn();snReset();ntTick()}});
 /* ---- التنبيهات والعبادات ---- */
-const NTD=[["wake","أذكار الاستيقاظ من النوم","05:00",1,"adhkar"],["morning","أذكار الصباح","06:00",1,"adhkar"],["evening","أذكار المساء","17:00",1,"adhkar"],["sleep","أذكار النوم","22:30",1,"adhkar"],["kahf","سورة الكهف يوم الجمعة","10:00",1,"q18"],["mulk","سورة الملك يوميًا","21:00",1,"q67"],["mon","صيام الاثنين (تذكير مساء الأحد)","20:00",1,"fast"],["thu","صيام الخميس (تذكير مساء الأربعاء)","20:00",1,"fast"],["ghusl","الغسل والتطيب للجمعة","07:30",1,"nl"],["tabkeer","التبكير إلى الجمعة","10:30",1,"nl"]];
-const NTM={adhkar:["حان وقت أذكارك، فاجعل لسانك رطبًا بذكر الله.","لحظات قليلة مع الذكر تُطمئن القلب. ابدأ الآن.","ذكّر قلبك بربه، فأذكارك في انتظارك.","هيّا إلى أذكارك، وليكن يومك عامرًا بالذكر.","وقت الأذكار قد حان، فلا تدعه يفوتك."],q18:["يوم الجمعة مباركٌ، فاقرأ سورة الكهف.","لا تنسَ سورة الكهف في جمعتك."],q67:["موعدك مع سورة الملك، اقرأها بتدبّر.","اجعل لك وردًا من سورة الملك اليوم."],fast:["غدًا يوم صيام، فانوِ من الليل إن شاء الله.","تذكير لطيف: غدًا الاثنين أو الخميس، يوم صيامٍ مستحب."],salat:["اللهم صلِّ وسلّم على نبينا محمد ﷺ","صلِّ على النبي ﷺ"]};
+const NTD=[["wake","أذكار الاستيقاظ من النوم","05:00",1,"adhkar"],["morning","أذكار الصباح","06:00",1,"adhkar"],["evening","أذكار المساء","17:00",1,"adhkar"],["sleep","أذكار النوم","22:30",1,"adhkar"],["wird","ورد اليوم","10:00",1,"wd"],["kahf","سورة الكهف ليلة الجمعة","20:00",1,"q18"],["mulk","سورة الملك يوميًا","21:00",1,"q67"],["mon","صيام الاثنين (تذكير مساء الأحد)","20:00",1,"fast"],["thu","صيام الخميس (تذكير مساء الأربعاء)","20:00",1,"fast"],["ghusl","الغسل والتطيب للجمعة","07:30",1,"nl"],["tabkeer","التبكير إلى الجمعة","10:30",1,"nl"]];
+const NTM={adhkar:["حان وقت أذكارك، فاجعل لسانك رطبًا بذكر الله.","لحظات قليلة مع الذكر تُطمئن القلب. ابدأ الآن.","ذكّر قلبك بربه، فأذكارك في انتظارك.","هيّا إلى أذكارك، وليكن يومك عامرًا بالذكر.","وقت الأذكار قد حان، فلا تدعه يفوتك."],q18:["ليلة الجمعة مباركة، فاقرأ سورة الكهف.","لا تنسَ سورة الكهف في ليلة جمعتك."],q67:["موعدك مع سورة الملك، اقرأها بتدبّر.","اجعل لك وردًا من سورة الملك اليوم."],fast:["غدًا يوم صيام، فانوِ من الليل إن شاء الله.","تذكير لطيف: غدًا الاثنين أو الخميس، يوم صيامٍ مستحب."],salat:["اللهم صلِّ وسلّم على نبينا محمد ﷺ","صلِّ على النبي ﷺ"]};
 const ntMsg=k=>{const a=NTM[k]||NTM.adhkar;return a[Math.floor(Math.random()*a.length)]};
-function ntS(k){S.nt=S.nt||{};if(!S.ntD3){S.ntD3=1;Object.keys(S.nt).forEach(x=>{const o=S.nt[x];if(o&&!o.u)o.on=1});try{save()}catch(e){}}
- if(!S.nt[k]){const d=NTD.find(x=>x[0]==k);S.nt[k]=k=="salat"?{on:1,every:30,from:"08:00",to:"22:00"}:{on:1,t:d?d[2]:"08:00"}}const c=S.nt[k];if(k=="wake"&&c.rel===undefined)c.rel=c.t=="05:00"?15:0;return c}
+function ntS(k){S.nt=S.nt||{};if(!S.ntW2){S.ntW2=1;if(S.nt.wird&&S.nt.wird.t=="16:00")S.nt.wird.t="10:00"}
+ if(!S.ntK2){S.ntK2=1;if(S.nt.kahf&&S.nt.kahf.t=="10:00")S.nt.kahf.t="20:00"}
+ if(!S.ntD3){S.ntD3=1;Object.keys(S.nt).forEach(x=>{const o=S.nt[x];if(o&&!o.u)o.on=1});try{save()}catch(e){}}
+ if(!S.ntSal0){S.ntSal0=1;if(S.nt.salat&&!S.nt.salat.u)S.nt.salat.on=0;try{save()}catch(e){}}
+ if(!S.nt[k]){const d=NTD.find(x=>x[0]==k);S.nt[k]=k=="salat"?{on:0,every:30,from:"08:00",to:"22:00"}:{on:1,t:d?d[2]:"08:00"}}const c=S.nt[k];if(k=="wake"&&c.rel===undefined)c.rel=c.t=="05:00"?15:0;return c}
 function ntEff(k,c,n){if(k=="wake"&&c.rel>0){try{const f=new Date(times(n)[0].getTime()-c.rel*6e4);return String(f.getHours()).padStart(2,"0")+":"+String(f.getMinutes()).padStart(2,"0")}catch(e){return null}}return c.t}
 const ntPerm=()=>typeof Notification=="undefined"?"unsupported":Notification.permission;
 async function ntAsk(){try{await Notification.requestPermission()}catch(e){}nt()}
@@ -1491,8 +1557,8 @@ let ntAu=null;
 async function ntSound(k){try{if(!NTA[k])return false;if(ntAu){try{ntAu.pause()}catch(e){}}ntAu=new Audio(NTA[k]);ntAu.volume=1;await ntAu.play();return true}catch(e){return false}}
 const ntE=x=>String(x==null?"":x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function ntCat(tag,t){if(tag=="sil")return/استعادة|انتهى/.test(t||"")?"silend":"sil";if(NTP[tag])return tag;if(tag=="mon"||tag=="thu")return"fast";if(/\|/.test(tag||""))return"adhan";if(/^c\d+$/.test(tag||""))return"custom";return null}
-function ntPick(tag,t){const c=ntCat(tag,t);if(!c)return null;const P=NTP[c];S.ntI=S.ntI||{};const n=S.ntI[c]=(S.ntI[c]||0)+1,it=P.i[(n-1)%P.i.length];
- const x=P.x?P.x[(n-1)%P.x.length]:null;
+function ntPick(tag,t){const c=ntCat(tag,t);if(!c)return null;const P=NTP[c];S.ntI=S.ntI||{};const n=S.ntI[c]=(S.ntI[c]||0)+1,dn=Math.floor(Date.now()/864e5),it=P.i[(n-1+dn)%P.i.length];
+ const x=P.x?P.x[(n-1+dn)%P.x.length]:null;
  return{c,k:it[0],t:it[1],s:it[2],x:x?{k:x[0],t:x[1],s:x[2]}:null,a:P.a,snd:P.snd,keep:P.keep}}
 function ntLog(e){S.nlog=S.nlog||[];S.nlog.unshift(e);if(S.nlog.length>150)S.nlog.length=150;save()}
 const ntT0=Date.now();
@@ -1511,13 +1577,13 @@ function ntBanner(t,b,a){
   else if(Math.abs(dx)<8){hide();ntOpen(a)}
   else{d.style.transition="transform .2s,opacity .2s";d.style.transform="";d.style.opacity="1";d._t=setTimeout(hide,15000)}};
  d.onclick=null;clearTimeout(d._t);d._t=setTimeout(hide,15000)}
-function ntOpen(a){a=a||"nt";if(a=="qr"){go("quran");try{qopen(S.qp||1)}catch(e){qopen(1)}}else if(/^d:\d+:\d+$/.test(a)){const q=a.split(":");go("adhkar");sec(+q[1]);if(HD[+q[1]]){ci=Math.min(+q[2],HD[+q[1]].length-1);rd()}}else if(a=="kh"){go("quran");try{const p=khPlan();qopen(p&&!p.fin?Math.min(604,p.pos):1)}catch(e){qopen(1)}}else if(a=="adhkar")go("adhkar");else if(a.slice(0,2)=="c:"&&+a.slice(2)>=0){go("adhkar");sec(+a.slice(2))}else if(a=="nl")nl();else if(/^q\d+$/.test(a)){go("quran");qopen(QSP[+a.slice(1)-1])}else nt()}
+function ntOpen(a){a=a||"nt";if(a=="qr"){go("quran");try{qopen(S.qp||1)}catch(e){qopen(1)}}else if(/^d:\d+:\d+$/.test(a)){const q=a.split(":");go("adhkar");sec(+q[1]);if(HD[+q[1]]){ci=Math.min(+q[2],HD[+q[1]].length-1);rd()}}else if(a=="kh"){go("quran");try{const p=khPlan();qopen(p&&!p.fin?Math.min(604,p.pos):1)}catch(e){qopen(1)}}else if(a=="adhkar")go("adhkar");else if(a.slice(0,2)=="c:"&&+a.slice(2)>=0){go("adhkar");sec(+a.slice(2))}else if(a=="wd")wd();else if(a=="pb")pbl();else if(a=="nl")nl();else if(/^q\d+$/.test(a)){go("quran");qopen(QSP[+a.slice(1)-1])}else nt()}
 async function ntFire(t,b,tag,act,silent){
  const m=ntPick(tag,t);let body=b,a=act;
  if(m){a=m.a||act;body=(m.keep&&b?b+"\n":"")+m.t+"\n— "+m.s+(m.x?"\n\n"+m.x.t+"\n— "+m.x.s:"");
   ntLog({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),ts:Date.now(),t,m:m.t,s:m.s,k:m.k,x:m.x,b:m.keep?b:"",a})}
  let played=false;
- if(silent!==true&&S.ntSnd!==false&&S.ntCs!==0&&m&&m.snd)played=await ntSound(m.snd);
+ if(silent!==true&&S.ntSnd!==false&&S.ntCs!==0&&m&&m.snd&&!(window.__sdCh&&window.__sdCh(tag)))played=await ntSound(m.snd);
  if(document.visibilityState=="visible"){ntBanner(t,body,a);return}
  if(ntPerm()=="granted"){const o={body,tag,dir:"rtl",lang:"ar",silent:played?true:(silent!==undefined?silent:S.ntSnd===false),data:{a},renotify:true};
   try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r){await r.showNotification(t,o);return}}}catch(e){}
@@ -1531,7 +1597,8 @@ const ntm=s=>+s.slice(0,2)*60+ +s.slice(3);
 function snReset(){try{S.ntl=S.ntl||{};Object.keys(S.ntl).forEach(k=>{if(k.indexOf("sn_")==0)delete S.ntl[k]})}catch(e){}}
 function ntTick(){try{khTick()}catch(e){}try{snTick()}catch(e){}try{nxTick()}catch(e){}
  const n=new Date(),mn=Math.floor(n/60000),hm=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0"),dy=n.getDay();S.ntl=S.ntl||{};let ch=0;
- NTD.forEach(d=>{const c=ntS(d[0]);if(!c.on||ntEff(d[0],c,n)!=hm||S.ntl[d[0]]==mn)return;const ds={kahf:[5],ghusl:[5],tabkeer:[5],mon:[0],thu:[3]}[d[0]];if(ds&&!ds.includes(dy))return;S.ntl[d[0]]=mn;ch=1;ntFire(d[1],ntMsg(d[4]=="fast"?"fast":d[4][0]=="q"?d[4]:NTM[d[0]]?d[0]:"adhkar"),d[0],d[4])});
+ NTD.forEach(d=>{const c=ntS(d[0]);if(!c.on||ntEff(d[0],c,n)!=hm||S.ntl[d[0]]==mn)return;if(d[0]=="wird")return;const ds={kahf:[4],ghusl:[5],tabkeer:[5],mon:[0],thu:[3]}[d[0]];if(ds&&!ds.includes(dy))return;if(d[0]=="kahf"){const dk=n.toDateString();if(S.ntl.kahfD==dk)return;S.ntl.kahfD=dk}S.ntl[d[0]]=mn;ch=1;ntFire(d[1],ntMsg(d[4]=="fast"?"fast":d[4][0]=="q"?d[4]:NTM[d[0]]?d[0]:"adhkar"),d[0],d[4])});
+ {const w=ntS("wird"),nn=Math.max(1,Math.min(3,+w.n||3));if(w.on&&!wdDone())[w.t,w.t2||"15:00",w.t3||"20:00"].slice(0,nn).forEach((tt,k)=>{if(tt==hm&&S.ntl["wird"+k]!=mn){S.ntl["wird"+k]=mn;ch=1;ntFire("ورد اليوم",wdMsg(k),"wird","wd")}})}
  const sc=ntS("salat"),m=n.getHours()*60+n.getMinutes();
  if(sc.on&&m>=ntm(sc.from)&&m<=ntm(sc.to)&&(m-ntm(sc.from))%sc.every==0&&S.ntl.salat!=mn){S.ntl.salat=mn;ch=1;ntFire("الصلاة على النبي ﷺ",ntMsg("salat"),"salat","nt")}
  (S.ntc||[]).forEach(x=>{if(!x.on||x.done||S.ntl[x.id]==mn)return;const cand=x.rep=="once"?new Date(x.d+"T"+x.t):new Date(n.getFullYear(),n.getMonth(),n.getDate(),+x.t.slice(0,2),+x.t.slice(3));if(x.rep=="weekly"&&cand.getDay()!=new Date(x.d+"T00:00").getDay())return;if(Math.floor((cand-x.pre*60000)/60000)==mn){S.ntl[x.id]=mn;ch=1;if(x.rep=="once")x.done=1;ntFire(x.n,x.ds||"حان موعد التنبيه"+(x.pre?" بعد "+x.pre+" دقيقة":""),x.id,"nt",!!x.sl)}});
@@ -1890,11 +1957,13 @@ NTP.tabkeer={a:"nl",keep:1,i:[
 snH("«مَنِ اغْتَسَلَ يَوْمَ الْجُمُعَةِ غُسْلَ الْجَنَابَةِ ثُمَّ رَاحَ فَكَأَنَّمَا قَرَّبَ بَدَنَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الثَّانِيَةِ فَكَأَنَّمَا قَرَّبَ بَقَرَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الثَّالِثَةِ فَكَأَنَّمَا قَرَّبَ كَبْشًا أَقْرَنَ، وَمَنْ رَاحَ فِي السَّاعَةِ الرَّابِعَةِ فَكَأَنَّمَا قَرَّبَ دَجَاجَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الْخَامِسَةِ فَكَأَنَّمَا قَرَّبَ بَيْضَةً، فَإِذَا خَرَجَ الْإِمَامُ حَضَرَتِ الْمَلَائِكَةُ يَسْتَمِعُونَ الذِّكْرَ»","متفق عليه (البخاري ٨٨١ ومسلم ٨٥٠) عن أبي هريرة"),
 snH("«إِذَا كَانَ يَوْمُ الْجُمُعَةِ كَانَ عَلَى كُلِّ بَابٍ مِنْ أَبْوَابِ الْمَسْجِدِ الْمَلَائِكَةُ يَكْتُبُونَ الْأَوَّلَ فَالْأَوَّلَ، فَإِذَا جَلَسَ الْإِمَامُ طَوَوُا الصُّحُفَ وَجَاءُوا يَسْتَمِعُونَ الذِّكْرَ»","رواه البخاري (٩٢٩) عن أبي هريرة")]};
 function nxCfg(){const x=S.nx=S.nx||{};x.q=x.q||{on:1,t:"22:30"};x.h=x.h||{on:1,off:40};x.d=x.d||{on:1,from:"08:00",to:"21:00",every:180,all:0,p:0};return x}
-function nxFlat(c){const NXX=[0,26,27],ks=(c.d.all?Object.keys(HD).map(Number).filter(k=>k<EVID):[...Array(34).keys()]).filter(k=>NXX.indexOf(k)<0),L=[];ks.forEach(k=>{if(HD[k])HD[k].forEach((x,i)=>L.push([k,i]))});return L}
+function nxFlat(c){const NXX=[0,2,26,27],ks=(c.d.all?Object.keys(HD).map(Number).filter(k=>k<EVID):[...Array(34).keys()]).filter(k=>NXX.indexOf(k)<0),L=[];ks.forEach(k=>{if(HD[k])HD[k].forEach((x,i)=>L.push([k,i]))});return L}
 function nxQiyam(){ntFire("🌙 قيام الليل",ntMsg("qiyam"),"qiyam","qr")}
 function nxHour(){ntFire("🕌 ساعة الإجابة",ntMsg("jumua"),"jumua","c:"+NXC)}
-function nxDay(){
- const c=nxCfg(),L=nxFlat(c);if(!L.length)return;let p=c.d.p||0;if(p>=L.length)p=0;c.d.p=p+1;
+function nxDay(t){
+ const c=nxCfg(),L=nxFlat(c);if(!L.length)return;let p;
+ if(t){p=c.d.p||0;if(p>=L.length)p=0}else{const ev=Math.max(1,+c.d.every||180),f=ntm(c.d.from),w=new Date(),sl=Math.max(0,Math.round((w.getHours()*60+w.getMinutes()-f)/ev)),sp=Math.max(1,Math.floor((ntm(c.d.to)-f)/ev)+1),dn=Math.floor(Date.UTC(w.getFullYear(),w.getMonth(),w.getDate())/864e5);p=(dn*sp+sl)%L.length}
+ c.d.p=p+1;
  const[k,i]=L[p],x=HD[k][i],txt=String(x[0]).replace(/<[^>]*>/g,"").trim(),a="d:"+k+":"+i,
   body=(txt.length>230?txt.slice(0,230).replace(/\s+\S*$/,"")+"…":txt)+(x[1]>1?"\n(تُقال "+AD(x[1])+" مرات)":"")+"\n— اضغط لتبدأ الذكر مع المسبحة";
  ntLog({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),ts:Date.now(),t:"📿 "+CHN(k),m:txt,s:String(x[2]||"").replace(/<[^>]*>/g,""),k:"h",x:null,b:"",a});
@@ -1906,7 +1975,7 @@ function nxTick(){
  if(c.d.on&&m>=ntm(c.d.from)&&m<=ntm(c.d.to)&&(m-ntm(c.d.from))%c.d.every==0&&S.ntl.nx_d!=mn){S.ntl.nx_d=mn;ch=1;nxDay()}
  if(ch)save()}
 function nxSet(g,f,v){nxCfg()[g][f]=v;save()}
-function nxTest(k){if(k=="q")nxQiyam();else if(k=="h")nxHour();else{nxDay();save()}}
+function nxTest(k){if(k=="q")nxQiyam();else if(k=="h")nxHour();else{nxDay(1);save()}}
 function nxCard(){
  const c=nxCfg();
  return `<div class="card"><div class="lh">🌙 قيام الليل · ساعة الإجابة · أذكار اليوم والليلة</div>
@@ -1934,18 +2003,19 @@ const ntRow=d=>{const c=ntS(d[0]);
  return `<div class="set"><span>${d[1]}</span><span style="display:flex;gap:8px;align-items:center"><input type="time" value="${c.t}" onchange="ntSet('${d[0]}','t',this.value)"><input type="checkbox" ${c.on?"checked":""} onchange="ntSet('${d[0]}','on',this.checked?1:0)" style="width:24px;height:24px"></span></div>`};
 function nt(){
  cur="set";SUBV="set";nav();const p=ntPerm(),sc=ntS("salat");
- $("#m").innerHTML=`<div class="card"><h1>التنبيهات والعبادات</h1>
+ $("#m").innerHTML=`<div class="pbslot">${pbHtml()}</div><div class="card"><h1>التنبيهات والعبادات</h1>
  <button class="gdl" style="width:100%;margin:6px 0" onclick="nl()">📜 الرسائل المحفوظة (${AD((S.nlog||[]).length)})</button>
  ${p=="granted"?`<div class="mu">✓ إشعارات النظام مسموحة</div>`:p=="unsupported"?`<div class="mu">⚠ هذا المتصفح لا يدعم الإشعارات؛ ستظهر التنبيهات داخل التطبيق فقط.</div>`:`<div class="mu">⚠ الإشعارات غير مفعّلة بعد، فالتنبيهات لن تصلك كإشعارات قبل السماح بها.${p=="denied"?" فعّلها من إعدادات الموقع أو التطبيق في هاتفك.":""}</div>${p=="denied"?"":`<button class="gdl" style="margin-top:6px" onclick="ntAsk()">السماح بالإشعارات</button>`}`}
  <div class="mu" style="margin-top:6px">تعمل التنبيهات دون إنترنت ما دام التطبيق مفتوحًا أو في الخلفية. وصولها بعد إغلاقه تمامًا يحتاج تثبيته كتطبيق APK بجدولة إشعارات محلية.</div>
+ <div class="mu" style="margin-top:6px;line-height:1.9">لكتم الأصوات (الأذان والصلاة على النبي وغيرها) من خارج التطبيق: اخفض «صوت التنبيهات» بأزرار صوت الهاتف، أو اسحب الإشعار من الستارة ليقف صوته. ويمكنك أيضًا اختيار «صامت» من هنا لكتمها كلها.</div>
  <div class="set"><span>صوت التنبيهات</span><select onchange="S.ntSnd=this.value==='1';save()"><option value="1" ${S.ntSnd!==false?"selected":""}>صوت الهاتف الافتراضي</option><option value="0" ${S.ntSnd===false?"selected":""}>صامت</option></select></div>
- <div class="set"><span>أصوات خاصة بدل صوت الهاتف (عصافير الصباح والمساء · تلاوة «إن الله وملائكته») — تعمل والتطبيق مفتوح</span><input type="checkbox" ${S.ntCs!==0?"checked":""} onchange="S.ntCs=this.checked?1:0;save()" style="width:24px;height:24px"></div>
- <div class="set"><span>تجربة التنبيه</span><span style="display:flex;gap:6px"><button onclick="ntFire('أذكار الصباح','','morning','adhkar')">الصباح</button><button onclick="ntFire('الصلاة على النبي ﷺ','','salat','nt')">الصلاة على النبي</button></span></div></div>
+ <div class="set"><span>أصوات خاصة بدل صوت الهاتف (عصافير الصباح والمساء · تلاوة «إن الله وملائكته») — تصلك والتطبيق مغلق في نسخة APK الأحدث</span><input type="checkbox" ${S.ntCs!==0?"checked":""} onchange="S.ntCs=this.checked?1:0;save()" style="width:24px;height:24px"></div>
+ <div class="set"><span>تجربة التنبيه</span><span style="display:flex;gap:6px"><button onclick="ntFire('أذكار الصباح','','morning','adhkar')">الصباح</button><button onclick="ntFire('ورد اليوم',wdMsg(0),'wird','wd')">ورد اليوم</button><button onclick="ntFire('الصلاة على النبي ﷺ','','salat','nt')">الصلاة على النبي</button></span></div></div>
  ${snCard()}${nxCard()}
  <div class="card"><div class="lh">الأذكار اليومية (مفعّلة افتراضيًا)</div>${NTD.slice(0,4).map(ntRow).join("")}</div>
- <div class="card"><div class="lh">تنبيهات الجمعة (كل أسبوع)</div>${["ghusl","tabkeer","kahf"].map(k=>ntRow(NTD.find(d=>d[0]==k))).join("")}<div class="mu">الغسل والتطيب صباح الجمعة، والتبكير قبل الصلاة، والكهف في وقتها. وتصلك أيضًا ساعة الإجابة قبيل المغرب، والصلاة على النبي ﷺ ليلة الجمعة (من مساء الخميس) ويومها، من البطاقتين التاليتين.</div></div>
- <div class="card"><div class="lh">تنبيهات إضافية (مفعّلة افتراضيًا)</div>${NTD.slice(4).filter(d=>!["kahf","ghusl","tabkeer"].includes(d[0])).map(ntRow).join("")}<div class="mu">الأيام القادمة للصيام: ${ntNextFast()} — اليوم ${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</div></div>
- <div class="card"><div class="lh">الصلاة على النبي ﷺ</div>
+ ${wdSet()}<div class="card"><div class="lh">تنبيهات الجمعة (كل أسبوع)</div>${["ghusl","tabkeer","kahf"].map(k=>ntRow(NTD.find(d=>d[0]==k))).join("")}<div class="mu">الغسل والتطيب صباح الجمعة، والتبكير قبل الصلاة، والكهف مرة واحدة مساء الخميس (ليلة الجمعة). وتصلك أيضًا ساعة الإجابة قبيل المغرب. أما تنبيه الصلاة على النبي ﷺ فمتوقف افتراضيًا، فعّله من بطاقته أدناه إن أردت.</div></div>
+ <div class="card"><div class="lh">تنبيهات إضافية (مفعّلة افتراضيًا)</div>${NTD.slice(4).filter(d=>!["kahf","ghusl","tabkeer","wird"].includes(d[0])).map(ntRow).join("")}<div class="mu">الأيام القادمة للصيام: ${ntNextFast()} — اليوم ${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</div></div>
+ <div class="card"><div class="lh">الصلاة على النبي ﷺ (متوقفة افتراضيًا)</div>
  <div class="set"><span>تفعيل</span><input type="checkbox" ${sc.on?"checked":""} onchange="ntSet('salat','on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
  <div class="set"><span>كل</span><select onchange="ntSet('salat','every',+this.value,1)">${[[15,"١٥ دقيقة"],[30,"٣٠ دقيقة"],[60,"ساعة"],[120,"ساعتين"]].map(o=>`<option value="${o[0]}" ${sc.every==o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></div>
  <div class="set"><span>من / إلى</span><span style="display:flex;gap:6px"><input type="time" value="${sc.from}" onchange="ntSet('salat','from',this.value,1)"><input type="time" value="${sc.to}" onchange="ntSet('salat','to',this.value,1)"></span></div>
@@ -1957,6 +2027,143 @@ function nt(){
  <div class="set"><span>صامت</span><input id="cs" type="checkbox" style="width:24px;height:24px"></div><button class="p" style="width:100%" onclick="ntAdd()">حفظ التنبيه</button></div></div>`}
 function ntAdd(){const n=$("#cn").value.trim();if(!n){qtoast("اكتب عنوان التنبيه");return}S.ntc=S.ntc||[];S.ntc.push({id:"c"+Date.now(),n,ds:$("#cds").value.trim(),d:$("#cd").value,t:$("#ct").value,rep:$("#cr").value,pre:+$("#cp").value,sl:$("#cs").checked?1:0,on:1});save();nt()}
 
+/* ---- مركز المشاكل: شريط أحمر في التطبيق + إشعار في الستارة + صفحة الحل ---- */
+let PB=[];
+async function pbList(){
+ const L=[],b=slB();let st={};try{st=await pmState()}catch(e){}
+ if(st.n=="prompt"||st.n=="denied")L.push({k:"n",i:"🔔",t:"إشعارات التطبيق غير مفعّلة",d:"بدونها لن تصلك تنبيهات الأذكار والصلاة على النبي ﷺ ولا تذكير الوضع الصامت.",s:st.n=="denied"?"الإذن مرفوض: سيفتح إعدادات التطبيق، اختر «الإشعارات» وفعّلها ثم ارجع.":"اضغط «السماح»، ثم وافق في النافذة التي تظهر.",bt:"السماح بالإشعارات"});
+ if(!S.chosen)L.push({k:"g",i:"📍",t:"الموقع غير محدّد",d:"تحتاجه مواقيت الصلاة واتجاه القبلة. ويمكنك بدلًا من ذلك اختيار مدينتك يدويًا من الإعدادات.",s:"اضغط «السماح» ثم وافق على الوصول إلى الموقع، وتأكد من تشغيل GPS.",bt:"السماح بالموقع"});
+ const on=!!slS().on;
+ if(b&&on){let h=false;try{h=b.has()}catch(e){}
+  if(!h)L.push({k:"d",i:"🔕",t:"الوضع الصامت للصلوات لا يعمل",d:"لم تمنح التطبيق إذن «عدم الإزعاج»، فلن يُسكت هاتفك وقت الصلاة.",s:"اضغط الزر، ابحث عن «زاد المسلم» في القائمة، فعّل المفتاح ثم اضغط «السماح» وارجع إلى التطبيق.",bt:"منح إذن عدم الإزعاج"});
+  let ex=true;try{ex=!/غير مسموحة/.test(b.status())}catch(e){}
+  if(!ex)L.push({k:"x",i:"⏰",t:"المنبّهات الدقيقة غير مسموحة",d:"قد يتأخر الصمت أو فكّه بضع دقائق عن وقته.",s:typeof b.askExact==="function"?"اضغط الزر وفعّل «السماح بضبط المنبّهات والتذكيرات».":"الإعدادات ← التطبيقات ← زاد المسلم ← المنبّهات والتذكيرات ← السماح.",bt:"السماح بالمنبّهات الدقيقة"})}
+ return L}
+function pbHtml(){if(!PB.length)return"";const f=PB[0];return `<div class="pbar" onclick="pbl()"><span class="pbi">⚠</span><span class="pbt"><b>${f.t}</b><span>${PB.length>1?"و"+AD(PB.length-1)+" مشكلة أخرى · اضغط للحل":"اضغط هنا للحل"}</span></span><span class="pbg">حلّ ←</span></div>`}
+function pbPaint(){try{document.querySelectorAll(".pbslot").forEach(e=>{e.innerHTML=pbHtml()})}catch(e){}if(document.getElementById("pbl"))pbDraw()}
+async function pbScan(){try{PB=await pbList()}catch(e){PB=[]}pbPaint();
+ /* إشعار في الستارة مرة يوميًا إن وُجدت مشكلة والتطبيق ليس أمامك */
+ try{if(PB.length&&document.visibilityState!="visible"&&ntPerm()=="granted"){const dk=new Date().toDateString(),hr=new Date().getHours();
+  if(S.pbDay!==dk&&hr>=8&&hr<22){S.pbDay=dk;save();ntFire("⚠ "+PB[0].t,PB[0].d+" اضغط لفتح صفحة الحل.","pb","pb")}}}catch(e){}}
+function pbDraw(){const e=document.getElementById("pbl");if(!e)return;
+ e.innerHTML=PB.length?PB.map(p=>`<div class="card pbc"><div class="set" style="margin:0;align-items:flex-start"><span style="font-size:1.8em;line-height:1">${p.i}</span><span style="flex:1"><b>${p.t}</b><div class="mu" style="margin:4px 0;line-height:1.8">${p.d}</div><div style="font-size:.85em;line-height:1.8">${p.s}</div></span></div><button class="gdl" style="width:100%;margin-top:10px" onclick="pbFix('${p.k}')">${p.bt}</button></div>`).join(""):`<div class="card" style="text-align:center"><div style="font-size:2.2em">✅</div><b>لا توجد مشاكل</b><div class="mu" style="margin-top:4px">كل الأذونات اللازمة ممنوحة.</div></div>`}
+function pbl(){cur="set";SUBV="set";nav();$("#m").innerHTML=`<div class="card"><div class="set" style="margin:0"><h1 style="margin:0">حل المشاكل</h1><button onclick="pbScan()">🔄 فحص</button></div><div class="mu" style="margin-top:4px">الأذونات والإعدادات التي تمنع التطبيق من العمل كاملًا.</div></div><div id="pbl"></div>`;pbDraw();pbScan()}
+async function pbFix(k){window.__pbAsk=1;const b=slB();
+ try{if(k=="n"){if(typeof Notification!="undefined"&&Notification.permission=="denied"){qtoast("فعّل الإشعارات من إعدادات الهاتف ← التطبيقات ← زاد المسلم ← الإشعارات",7000)}else await pmOne("n")}
+  else if(k=="g")await pmOne("g");
+  else if(k=="d"&&b)b.ask();
+  else if(k=="x"&&b){if(typeof b.askExact==="function")b.askExact();else qtoast("الإعدادات ← التطبيقات ← زاد المسلم ← المنبّهات والتذكيرات",7000)}}catch(e){}
+ setTimeout(pbScan,800)}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible"){setTimeout(pbScan,500)}else setTimeout(pbScan,45000)});
+setInterval(pbScan,60000);setTimeout(pbScan,1500);
+
+/* ---- ورد اليوم: ٢٠ ذكرًا من الأذكار الصحيحة (نصوصها وتخريجها من «حصن المسلم» ومن كتب السنة في تراث)، لكل ذكر مسبحة ١٠٠ ويستمر العدّ بعدها ---- */
+const WRD=[
+["لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ","«مَنْ قَالَ لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ، وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ عَشْرَ مِرَارٍ، كَانَ كَمَنْ أَعْتَقَ أَرْبَعَةَ أَنْفُسٍ مِنْ وَلَدِ إِسْمَاعِيلَ»","البخاري ٦٤٠٤، ومسلم ٢٦٩٣"],
+["أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ الَّذِي لاَ إِلَهَ إِلاَّ هُوَ الْحَيَّ الْقَيُّومَ وَأَتُوبُ إِلَيْهِ","من قاله «غَفَرَ اللَّهُ لَهُ وَإِنْ كَانَ فَرَّ مِنَ الزَّحْفِ»","أبو داود ١٥١٧، والترمذي ٣٥٧٧، وصححه الحاكم ووافقه الذهبي وصححه الألباني"],
+["سُبْحَانَ اللَّهِ وَبِحَمْدِهِ","«مَنْ قَالَ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ فِي يَوْمٍ مِائَةَ مَرَّةٍ حُطَّتْ خَطَايَاهُ وَلَوْ كَانَتْ مِثْلَ زَبَدِ الْبَحْرِ»","البخاري ٦٤٠٥، ومسلم ٢٦٩١"],
+["سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ","«كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ، حَبِيبَتَانِ إِلَى الرَّحْمَنِ»","متفق عليه، ومسلم ٢٦٩٤"],
+["سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ","«مَنْ قَالَ: سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ غُرِسَتْ لَهُ نَخْلَةٌ فِي الْجَنَّةِ»","الترمذي ٣٤٦٤، وصححه الحاكم ووافقه الذهبي"],
+["سُبْحَانَ اللَّهِ وَبِحَمْدِهِ عَدَدَ خَلْقِهِ وَرِضَا نَفْسِهِ وَزِنَةَ عَرْشِهِ وَمِدَادَ كَلِمَاتِهِ","«لَقَدْ قُلْتُ بَعْدَكِ أَرْبَعَ كَلِمَاتٍ ثَلاَثَ مَرَّاتٍ لَوْ وُزِنَتْ بِمَا قُلْتِ مُنْذُ الْيَوْمِ لَوَزَنَتْهُنَّ»","مسلم ٢٧٢٦"],
+["لاَ حَوْلَ وَلاَ قُوَّةَ إِلاَّ بِاللَّهِ","«أَلاَ أَدُلُّكَ عَلَى كَنْزٍ مِنْ كُنُوزِ الْجَنَّةِ؟ قُلْ: لاَ حَوْلَ وَلاَ قُوَّةَ إِلاَّ بِاللَّهِ»","متفق عليه، ومسلم ٢٧٠٤"],
+["سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ","«لَأَنْ أَقُولَ سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ، أَحَبُّ إِلَيَّ مِمَّا طَلَعَتْ عَلَيْهِ الشَّمْسُ»","مسلم ٢٦٩٥"],
+["لاَ إِلَهَ إِلاَّ اللَّهُ","«وَأَفْضَلَ الذِّكْرِ لاَ إِلَهَ إِلاَّ اللَّهُ»","الترمذي ٣٣٨٣، وابن ماجه ٣٨٠٠، وصححه الحاكم ووافقه الذهبي"],
+["الْحَمْدُ لِلَّهِ","«إِنَّ أَفْضَلَ الدُّعَاءِ الْحَمْدُ لِلَّهِ»","الترمذي ٣٣٨٣، وابن ماجه ٣٨٠٠، وصححه الحاكم ووافقه الذهبي"],
+["اللَّهُ أَكْبَرُ","«أَحَبُّ الْكَلاَمِ إِلَى اللَّهِ أَرْبَعٌ: سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ، لاَ يَضُرُّكَ بِأَيِّهِنَّ بَدَأتَ»","مسلم ٢١٣٧"],
+["أَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ","«وَاللَّهِ إِنِّي لأَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ فِي الْيَوْمِ أَكْثَرَ مِنْ سَبْعِينَ مَرَّةٍ»","البخاري ٦٣٠٧"],
+["رَبِّ اغْفِرْ لِي، وَتُبْ عَلَيَّ، إِنَّكَ أَنْتَ التَّوَّابُ الغَفُورُ","عَنِ ابْنِ عُمَرَ: «كَانَ يُعَدُّ لِرَسُولِ اللَّهِ ﷺ فِي الْمَجْلِسِ الوَاحِدِ مِائَةُ مَرَّةٍ مِنْ قَبْلِ أَنْ يَقُومَ»","الترمذي ٣٤٣٤، وابن ماجه ٣٨١٤، وصححه الألباني"],
+["لاَ إِلَهَ إِلاَّ أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ","«دَعْوَةُ ذِي النُّونِ إِذْ دَعَا وَهُوَ فِي بَطْنِ الْحُوتِ ... فَإِنَّهُ لَمْ يَدْعُ بِهَا رَجُلٌ مُسْلِمٌ فِي شَيْءٍ قَطُّ إِلاَّ اسْتَجَابَ اللَّهُ لَهُ»","الترمذي ٣٥٠٥، وصححه الحاكم ووافقه الذهبي"],
+["حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ","قالها إبراهيم ﷺ حين أُلقي في النار، وقالها نبينا ﷺ حين قيل له: إن الناس قد جمعوا لكم","البخاري ٤٥٦٣"],
+["يَا مُقَلِّبَ الْقُلُوبِ ثَبِّتْ قَلْبِي عَلَى دِينِكَ","«كَانَ أَكْثَرُ دُعَائِهِ يَا مُقَلِّبَ الْقُلُوبِ ثَبِّتْ قَلْبِي عَلَى دِينِكَ»","الترمذي ٣٥٢٢ و٢١٤٠ (حسن)، والأدب المفرد ٦٨٣ وصححه الألباني"],
+["سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ، أَشْهَدُ أَنْ لاَ إِلَهَ إِلاَّ أَنْتَ، أَسْتَغْفِرُكَ وَأَتُوبُ إِلَيْكَ","كفّارة المجلس: تُقال عند القيام من المجلس","أبو داود ٤٨٥٨، والترمذي ٣٤٣٣، والنسائي ١٣٤٤"],
+["اللَّهُمَّ اغْفِرْ لِي، وَارْحَمْنِي، وَاهْدِنِي، وَعَافِنِي وَارْزُقْنِي","«فَإِنَّ هَؤُلاَءِ تَجْمَعُ لَكَ دُنْيَاكَ وَآخِرَتَكَ»","مسلم ٢٦٩٧"],
+["اللَّهُمَّ أَنْتَ السَّلاَمُ، وَمِنْكَ السَّلاَمُ، تَبَارَكْتَ يَا ذَا الْجَلاَلِ وَالْإِكْرَامِ","تُقال بعد السلام من الصلاة، بعد الاستغفار ثلاثًا","مسلم ٥٩١"],
+["اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ","«مَنْ صَلَّى عَلَيَّ صَلاَةً صَلَّى اللَّهُ عَلَيْهِ بِهَا عَشْرًا»","رواه مسلم"]
+];
+/* آيات وأحاديث تحفّز على الذكر (للتنبيه وللشاشة) */
+const WRH=[
+["a","«فَٱذۡكُرُونِيٓ أَذۡكُرۡكُمۡ وَٱشۡكُرُواْ لِي وَلَا تَكۡفُرُونِ»","سورة البقرة · ١٥٢"],
+["h","«يَقُولُ اللَّهُ: أَنَا عِنْدَ ظَنِّ عَبْدِي بِي وَأَنَا مَعَهُ حِينَ يَذْكُرُنِي، إِنْ ذَكَرَنِي فِي نَفْسِهِ ذَكَرْتُهُ فِي نَفْسِي، وَإِنْ ذَكَرَنِي فِي مَلَإٍ ذَكَرْتُهُ فِي مَلَإٍ هُمْ خَيْرٌ مِنْهُمْ»","رواه مسلم"],
+["h","«سَبَقَ الْمُفَرِّدُونَ». قَالُوا: وَمَا الْمُفَرِّدُونَ يَا رَسُولَ اللَّهِ؟ قَالَ: «الذَّاكِرُونَ اللَّهَ كَثِيرًا وَالذَّاكِرَاتُ»","رواه مسلم"],
+["h","«لاَ يَزَالُ لِسَانُكَ رَطْبًا مِنْ ذِكْرِ اللَّهِ»","رواه الترمذي ٣٣٧٥"],
+["h","«مَثَلُ الَّذِي يَذْكُرُ رَبَّهُ وَالَّذِي لاَ يَذْكُرُ رَبَّهُ، مَثَلُ الْحَيِّ وَالْمَيِّتِ»","رواه البخاري"],
+["h","«كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ، حَبِيبَتَانِ إِلَى الرَّحْمَنِ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ»","متفق عليه"],
+["h","«أَيَعْجِزُ أَحَدُكُم أَنْ يَكْسِبَ كُلَّ يَوْمٍ أَلْفَ حَسَنَةٍ؟» قَالَ: «يُسَبِّحُ مِائَةَ تَسْبِيحَةٍ، فَيُكْتَبُ لَهُ أَلْفُ حَسَنَةٍ أَوْ يُحَطُّ عَنْهُ أَلْفُ خَطِيئَةٍ»","رواه مسلم ٢٦٩٨"],
+["h","«مَنْ قَالَ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ فِي يَوْمٍ مِائَةَ مَرَّةٍ حُطَّتْ خَطَايَاهُ وَلَوْ كَانَتْ مِثْلَ زَبَدِ الْبَحْرِ»","متفق عليه"],
+["h","«أَحَبُّ الْكَلاَمِ إِلَى اللَّهِ أَرْبَعٌ: سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ، لاَ يَضُرُّكَ بِأَيِّهِنَّ بَدَأتَ»","رواه مسلم ٢١٣٧"]
+];
+/* رسائل تذكير الورد: آيات وعبارات مسجوعة مرغِّبة في الذكر */
+const WRM=[
+["«أَلَا بِذِكۡرِ ٱللَّهِ تَطۡمَئِنُّ ٱلۡقُلُوبُ»","سورة الرعد · ٢٨"],
+["اِملأ دقائقك بالاستغفار، يملأ الله قلبك بالأنوار."],
+["«فَٱذۡكُرُونِيٓ أَذۡكُرۡكُمۡ»","سورة البقرة · ١٥٢"],
+["لسانٌ رطبٌ بالذكر، وقلبٌ عامرٌ بالشكر."],
+["«وَٱذۡكُرُواْ ٱللَّهَ كَثِيرٗا لَّعَلَّكُمۡ تُفۡلِحُونَ»","سورة الجمعة · ١٠"],
+["ذكرُ الله حياةٌ للقلوب، وجلاءٌ للكروب، ومَحوٌ للذنوب."],
+["سبِّح تسترح، واستغفر تفلح، وصلِّ على النبي تربح."],
+["«يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ ٱذۡكُرُواْ ٱللَّهَ ذِكۡرٗا كَثِيرٗا»","سورة الأحزاب · ٤١"],
+["بالذكر تُشرق الأرواح، وبالاستغفار تُفتح الأبواب."],
+["دقائقُ مع التسبيح، تشرح الصدر وتُريح."],
+["«وَلَذِكۡرُ ٱللَّهِ أَكۡبَرُ»","سورة العنكبوت · ٤٥"],
+["اجعل لقلبك وردًا، يُؤنسك وحدةً ويُغنيك زادًا."],
+["قليلٌ دائمٌ، خيرٌ من كثيرٍ منقطع، فاثبت على وردك."],
+["طيّب لسانك بالذكر، وطهّر قلبك بالاستغفار."]
+];
+function wdMsg(k){const dn=Math.floor(Date.now()/864e5),m=WRM[(dn*3+(k||0))%WRM.length];
+ const hd=["","ورد اليوم ما زال ينتظرك.","آخر تذكير لك اليوم، فأتمّ وردك."][k||0]||"";
+ const st=!k?AD(WRD.length)+" ذكرًا، لكل ذكر مسبحة "+AD(100)+". اضغط لتبدأ.":"أتمّ وردك واطمئنّ بالذكر.";
+ return (hd?hd+"\n":"")+m[0]+(m[1]?"\n— "+m[1]:"")+"\n"+st}
+function wdSet(){const w=ntS("wird"),n=Math.max(1,Math.min(3,+w.n||3));
+ return `<div class="card"><div class="lh">ورد اليوم</div>
+ <div class="set"><span>تفعيل تذكير الورد</span><input type="checkbox" ${w.on?"checked":""} onchange="ntSet('wird','on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
+ ${w.on?`<div class="set"><span>التذكير الأول</span><input type="time" value="${w.t}" onchange="ntSet('wird','t',this.value,1)"></div>
+ <div class="set"><span>عدد التذكيرات يوميًا (ما لم تُتمّ الورد)</span><select onchange="ntSet('wird','n',+this.value,1)">${[[1,"مرة واحدة"],[2,"مرتان"],[3,"ثلاث مرات"]].map(o=>`<option value="${o[0]}" ${n==o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></div>
+ ${n>1?`<div class="set"><span>${n>2?"التذكير الثاني والثالث":"التذكير الثاني"}</span><span style="display:flex;gap:6px"><input type="time" value="${w.t2||"15:00"}" onchange="ntSet('wird','t2',this.value,1)">${n>2?`<input type="time" value="${w.t3||"20:00"}" onchange="ntSet('wird','t3',this.value,1)">`:""}</span></div>`:""}
+ <div class="mu">يصلك التذكير بآية أو عبارة مرغِّبة في الذكر، ولا يصلك بعد أن تُتمّ ورد اليوم. والضغط عليه يفتح الورد.</div>`:`<div class="mu">التذكير متوقف. يبقى الورد متاحًا في الشاشة الرئيسية.</div>`}</div>`}
+const wdK=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+function wdS(){const k=wdK();S.wd=S.wd||{};
+ if(S.wd.d!==k||!Array.isArray(S.wd.c)||S.wd.c.length!=WRD.length){
+  if(S.wd.d&&Array.isArray(S.wd.c)){S.wdH=S.wdH||{};S.wdH[S.wd.d]=[S.wd.c.filter(x=>x>=100).length,S.wd.c.reduce((p,x)=>p+x,0)];const ks=Object.keys(S.wdH).sort();while(ks.length>120)delete S.wdH[ks.shift()]}
+  S.wd={d:k,c:WRD.map(()=>0)};try{save()}catch(e){}}
+ return S.wd}
+const wdTot=s=>s.c.reduce((p,x)=>p+x,0),wdFin=s=>s.c.filter(x=>x>=100).length;
+function wdDone(){const w=S.wd;return !!(w&&w.d===wdK()&&Array.isArray(w.c)&&w.c.length==WRD.length&&w.c.every(x=>x>=100))}
+function wdStreak(){const s=wdS(),H=S.wdH||{};let n=0,d=new Date();if(wdTot(s)>0)n=1;
+ for(let i=0;i<120;i++){d.setDate(d.getDate()-1);const k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");if(H[k]&&H[k][1]>0)n++;else break}
+ return n}
+function wdCard(o){const s=wdS(),f=wdFin(s),t=wdTot(s),st=t==0?0:f>=WRD.length?2:1,sk=wdStreak(),pct=Math.round(s.c.reduce((p,x)=>p+Math.min(x,100),0)/(WRD.length*100)*100);
+ const bd=st==0?`<span class="wdb r"><i></i>لم تدخل وردك اليوم</span>`:st==1?`<span class="wdb a">أكملت ${AD(f)} من ${AD(WRD.length)}</span>`:`<span class="wdb g">✓ أتممت ورد اليوم</span>`;
+ return `<div class="wdc st${st}" onclick="wd(${o?"'m'":"'h'"})" role="button"><div class="wdh"><span class="wdt">📿 ورد اليوم</span>${bd}</div><div class="wdp"><i style="width:${pct}%"></i></div><div class="wdm"><span>${AD(WRD.length)} ذكرًا · لكل ذكر ${AD(100)} مرة</span><span>${t?AD(t)+" تسبيحة":""}${sk>1?" · 🔥 "+AD(sk)+" أيام":""}</span></div><div class="wdgo">${st==0?"ابدأ وردك الآن ←":st==1?"أكمل وردك ←":"افتح الورد ←"}</div></div>`}
+function wd(o){wdIn=0;clearInterval(tick);if(o==="m")wdFrom="menu";else if(o==="h")wdFrom="home";cur="home";SUBV=wdFrom;nav();
+ const s=wdS(),f=wdFin(s),t=wdTot(s),sk=wdStreak(),pct=Math.round(s.c.reduce((p,x)=>p+Math.min(x,100),0)/(WRD.length*100)*100),h=WRH[Math.floor(Date.now()/864e5)%WRH.length];
+ const rows=WRD.map((d,i)=>{const c=s.c[i],ok=c>=100;return `<div class="wdi${ok?" ok":""}" onclick="wdOpen(${i})"><span class="wdn">${ok?"✓":AD(i+1)}</span><span class="wdx"><span class="wdtxt">${d[0]}</span><span class="wdbar"><i style="width:${Math.min(100,c)}%"></i></span></span><span class="wdc2">${AD(c)}<small>/${AD(100)}</small></span></div>`}).join("");
+ $("#m").innerHTML=`<div class="card"><div class="set" style="margin:0"><h1 style="margin:0">📿 ورد اليوم</h1><span class="mu">${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</span></div>
+ <div class="wdp lg"><i style="width:${pct}%"></i></div>
+ <div class="wdm"><span>${t==0?'<b style="color:#e53935">● لم تدخل وردك اليوم</b>':f>=WRD.length?'<b style="color:var(--ac)">✓ أتممت ورد اليوم</b>':"أكملت "+AD(f)+" من "+AD(WRD.length)+" ذكرًا"}</span><span>${AD(t)} تسبيحة${sk>1?" · 🔥 "+AD(sk)+" أيام متتالية":""}</span></div></div>
+ <div class="card wdq"><div class="lh">${h[0]=="a"?"آية":"حديث"} يُحفّز على الذكر</div><div class="wdqt">${h[1]}</div><div class="mu">— ${h[2]}</div></div>
+ <div class="card"><div class="lh">أذكار الورد · اضغط الذكر ثم عُدّ</div>${rows}<div class="mu" style="margin-top:6px">لكل ذكر مسبحة من ${AD(100)}، وإذا أتممتها يستمر العدّ (${AD(101)}، ${AD(102)}…) بلا حدّ.</div></div>
+ <details class="card"><summary class="lh" style="cursor:pointer">آيات وأحاديث في فضل الذكر (${AD(WRH.length)})</summary>${WRH.map(x=>`<div class="wdqi"><div class="wdqt">${x[1]}</div><div class="mu">— ${x[2]}</div></div>`).join("")}</details>`}
+var wdIn=0,wdFrom="home";
+function wdBack(){wdIn=0;wd()}
+function wdOpen(i,again){if(!again&&!wdIn){wdIn=1;qpush(wdBack)}
+ const s=wdS(),d=WRD[i];
+ $("#m").innerHTML=`<div class="card" style="text-align:center"><div class="set" style="margin:0"><button onclick="qpop()">→ القائمة</button><span class="mu">الذكر ${AD(i+1)} من ${AD(WRD.length)}</span><span style="width:70px"></span></div>
+ <div class="wdtx">${d[0]}</div><div class="wdfd">${d[1]}</div><div class="mu" style="font-size:.78em;margin-bottom:6px">${d[2]}</div>
+ <button class="wdbig" id="wdb" onclick="wdTap(${i})" aria-label="عدّ"><svg viewBox="0 0 220 220" width="236" height="236" aria-hidden="true"><circle cx="110" cy="110" r="96" fill="none" stroke="var(--ac2)" stroke-width="12"/><circle id="wdr" cx="110" cy="110" r="96" fill="none" stroke="var(--ac)" stroke-width="12" stroke-linecap="round" stroke-dasharray="603.2" stroke-dashoffset="603.2" transform="rotate(-90 110 110)"/></svg><span class="wdcn" id="wdn">٠</span><small id="wdl"></small></button>
+ <div class="wdctl"><button onclick="wdUndo(${i})">− تراجع</button><button onclick="wdOpen(${(i+WRD.length-1)%WRD.length},1)">السابق</button><button onclick="wdOpen(${(i+1)%WRD.length},1)">التالي</button><button onclick="wdReset(${i})">إعادة</button></div></div>`;wdPaint(i)}
+function wdPaint(i){const s=wdS(),c=s.c[i],r=document.getElementById("wdr"),n=document.getElementById("wdn"),l=document.getElementById("wdl");if(!n)return;
+ n.textContent=AD(c);r.style.strokeDashoffset=603.2*(1-Math.min(c,100)/100);r.style.stroke=c>=100?"#d4a017":"var(--ac)";
+ l.textContent=c<100?"بقي "+AD(100-c):c==100?"✓ أتممت "+AD(100):"✓ فوق "+AD(100)+" بـ "+AD(c-100)}
+const wdSv=()=>{clearTimeout(wdSv.t);wdSv.t=setTimeout(()=>{try{save()}catch(e){}},400)};
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState!="visible"){clearTimeout(wdSv.t);try{save()}catch(e){}}});
+function wdTap(i){const s=wdS(),was=wdDone();s.c[i]++;const c=s.c[i];wdPaint(i);
+ try{if(S.vib!==false&&navigator.vibrate)navigator.vibrate(c==100?[60,40,60]:c>100&&c%100==0?[40,30,40]:12)}catch(e){}
+ if(c==100)qtoast("✓ أتممت "+AD(100)+" — يمكنك المتابعة وسيستمر العدّ",2600);
+ if(!was&&wdDone()){qtoast("🎉 أتممت ورد اليوم، تقبّل الله منك",3500);try{window.zadResched&&window.zadResched()}catch(e){}}
+ wdSv()}
+function wdUndo(i){const s=wdS();if(s.c[i]>0){s.c[i]--;wdPaint(i);wdSv()}}
+function wdReset(i){if(!confirm("إعادة عدّ هذا الذكر إلى الصفر؟"))return;wdS().c[i]=0;wdPaint(i);wdSv()}
+
 /* ---- الوضع الصامت أثناء الصلاة ---- */
 const SLN=[[0,"الفجر"],[2,"الظهر"],[3,"العصر"],[4,"المغرب"],[5,"العشاء"]];
 const SLP=[[15,25],[10,20],[10,20],[1,15],[15,25]];
@@ -1967,7 +2174,7 @@ const SLD=[[10,"قليل"],[20,"وسط"],[40,"كثير"]];
 function slWin(dt0){const dt=dt0||new Date(),t=times(dt),c=slS(),fri=dt.getDay()==5;return SLN.map((p,i)=>{const jm=fri&&i==1&&(c.mode=="all"||c.fr.on),q=jm?c.fr:c.mode=="all"?(c.auto?{m:SLP[i][0],d:SLP[i][1]}:c.g):c.pr[i],s=new Date(+t[p[0]]+Math.max(1,q.m)*6e4);return{n:jm?"الجمعة":p[1],s,e:new Date(+s+Math.max(jm?90:1,q.d)*6e4),on:c.mode=="all"||jm?1:q.on}})}
 function slGo(st,w){const b=slB();
  if(b){let ok=false;try{ok=st?b.start():b.end()}catch(e){}
-  if(!ok)ntFire(st?"تعذّر تفعيل الوضع الصامت":"تعذّرت استعادة وضع الهاتف",st?"امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.":"أعد وضع الهاتف يدويًا من الإعدادات.","sil","nt");
+  if(!ok)ntFire(st?"تعذّر تفعيل الوضع الصامت":"تعذّرت استعادة وضع الهاتف",st?"امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.":"أعد وضع الهاتف يدويًا من الإعدادات.","pb","pb");
   else if(st)ntFire("وقت صلاة "+w.n,"تم تفعيل الوضع الصامت، وسيعود هاتفك لوضعه بعد انتهاء المدة.","sil","nt")}
  else ntFire(st?"وقت صلاة "+w.n:"انتهى وقت الصمت",st?"فعّل الوضع الصامت يدويًا. التطبيق لا يستطيع تغيير وضع الهاتف من النسخة الحالية.":"يمكنك إعادة صوت الهاتف.","sil","nt")}
 function slTest(){const b=slB();if(!b){qtoast("هذه النسخة لا تستطيع تغيير وضع الهاتف",5000);return}
@@ -2006,7 +2213,7 @@ function slTick(){const b=slB();
   const c=slS();slPush();try{b.reconcile()}catch(e){}
   if(c.on){let h=false;try{h=b.has()}catch(e){}
    if(!h){const n=Date.now(),w=slAll(0).find(x=>n>=x[0]&&n<x[1]);
-    const dk=new Date().toDateString();if(w&&S.silWarn!==dk){S.silWarn=dk;save();ntFire("تعذّر تفعيل الوضع الصامت","امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.","sil","nt")}}}
+    const dk=new Date().toDateString();if(w&&S.silWarn!==dk){S.silWarn=dk;save();ntFire("⚠ الوضع الصامت للصلوات لا يعمل","امنح التطبيق إذن «عدم الإزعاج». اضغط لفتح صفحة الحل.","pb","pb")}}}
   return}
  const c=slS(),n=new Date(),w=c.on?slWin().find(x=>x.on&&n>=x.s&&n<x.e):null;
  if(w&&!S.silOn){S.silOn=1;save();slGo(1,w)}else if(!w&&S.silOn){S.silOn=0;save();slGo(0)}}
@@ -2033,14 +2240,14 @@ function sl(){
  const mn=m=>AD(m)+" د";
  const chip=!b?`<span class="slc w">تذكير فقط</span>`:h?`<span class="slc g">✓ الإذن ممنوح</span>`:`<span class="slc w">⚠ الإذن غير ممنوح</span>`;
  const head=`<div class="card slh${c.on?" on":""}"><div class="set" style="margin:0"><span class="slt1"><b>الصمت التلقائي وقت الصلاة</b><span class="mu">${c.on?"يعمل تلقائيًا بعد كل أذان، وتوقفه متى شئت":"متوقف — لن يغيّر التطبيق وضع هاتفك"}</span></span>${sw(c.on,"slSet('on',this.checked?1:0,1)")}</div>${c.on?`<div style="margin-top:8px">${chip}</div>`:""}</div>`;
- if(!c.on){$("#m").innerHTML=`<div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}<div class="mu" style="padding:4px 10px;line-height:1.9">فعّل المفتاح ليُسكت التطبيق هاتفك بعد الأذان بدقائق، ثم يعيد وضعه الأصلي بعد انتهاء المدة.</div>`;return}
+ if(!c.on){$("#m").innerHTML=`<div class="pbslot">${pbHtml()}</div><div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}<div class="mu" style="padding:4px 10px;line-height:1.9">فعّل المفتاح ليُسكت التطبيق هاتفك بعد الأذان بدقائق، ثم يعيد وضعه الأصلي بعد انتهاء المدة.</div>`;return}
  const au=c.auto?SLN.map((p,i)=>`<div class="slr"><b>${p[1]}</b><span>بعد الأذان بـ${mn(SLP[i][0])}</span><i>صمت ${mn(SLP[i][1])}</i></div>`).join(""):"";
  const tools=b&&typeof b.release==="function"?`<div class="card"><div class="slbt"><button class="gdl" onclick="slRel()">🔓 فك الصمت الآن</button><button onclick="slSt()">ℹ حالة الجدولة</button></div><div class="mu" style="margin-top:6px">إن بقي هاتفك صامتًا بعد وقت الصلاة اضغط «فك الصمت الآن».</div></div>`:"";
  const ps=c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة</span>${sw(c.auto,"slSet('auto',this.checked?1:0,1)")}</div>${c.auto?`<div class="slt">${au}</div><div class="mu" style="margin-top:6px">المغرب بعد الأذان مباشرة، والظهر والعصر أطول، والعشاء والفجر أطول منهما.</div>`:slCtl(c.g,"slG")}</div>`
   :SLN.map((p,i)=>{const q=c.pr[i];return`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">${p[1]}</span>${sw(q.on,"slP("+i+",'on',this.checked?1:0)")}</div>${q.on?`<div style="margin-top:8px">${slCtl(q,"slP.bind(null,"+i+")")}</div>`:""}</div>`}).join("");
  const fr=`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">الجمعة <span class="mu">(بدل الظهر)</span></span>${c.mode=="each"?sw(c.fr.on,"slF('on',this.checked?1:0)"):""}</div>${c.mode=="all"||c.fr.on?`<div style="margin-top:8px">${slFc(c.fr)}</div>`:""}</div>`;
  const today=`<div class="card"><div class="lh">أوقات اليوم · ${S.city}</div><div class="slt">${slWin().map(x=>`<div class="slr${x.on?"":" off"}"><b>${x.n}</b><span>${fmt(x.s)} – ${fmt(x.e)}</span><i>${mn(Math.round((x.e-x.s)/6e4))}</i></div>`).join("")}</div><div class="mu" style="margin-top:6px">تُحدَّث تلقائيًا عند تغيير المدينة أو طريقة الحساب.</div></div>`;
- $("#m").innerHTML=`<div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}${b&&!h?slGuide():""}
+ $("#m").innerHTML=`<div class="pbslot">${pbHtml()}</div><div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}${b&&!h?slGuide():""}
  <div class="card"><div class="lh">نوع الضبط</div><div class="seg">${md("all","كلي · لكل الصلوات")}${md("each","جزئي · لكل صلاة")}</div></div>
  ${ps}${fr}${today}${tools}${slCompat()}`}
 
@@ -2048,33 +2255,61 @@ function sl(){
 /* ---- الأذان ---- */
 const ADM=[["mala","علي بن أحمد ملا — الحرم المكي",119],["ramadan","محمد رمضان سعد — الحرم المكي",54],["nayf","نايف فيده — الحرم المكي",127],["bukhari","عصام بخاري — الحرم المدني",129],["aqsa","ناجي قزاز — المسجد الأقصى",151],["afasy","مشاري العفاسي",130],["basit","عبد الباسط عبد الصمد",134],["minshawi","محمد صديق المنشاوي",143],["nuinaa","أحمد نعينع",146],["qazabri","عمر القزابري",103],["dosari","ياسر الدوسري",94],["noreen","نورين محمد صديق — رحمه الله",0]];
 const ADN=[[0,"الفجر"],[2,"الظهر"],[3,"العصر"],[4,"المغرب"],[5,"العشاء"]];
-const adS=()=>{if(!S.ad)S.ad={on:0,m:"mala",pr:[1,1,1,1,1],vol:1,fn:""};if(!S.ad.m||(S.ad.m=="custom"&&!S.ad.fn))S.ad.m="mala";return S.ad};
+const adS=()=>{if(!S.ad)S.ad={on:0,m:"noreen",pr:[1,1,1,1,1],vol:1,fn:""};if(!S.ad.m||(S.ad.m=="custom"&&!S.ad.fn))S.ad.m="noreen";return S.ad};
+const adNat=()=>!!window.__adNat&&typeof ADEMB!="undefined"&&!!ADEMB[adS().m];
 const ADA=new Audio();ADA.preload="none";let adUrl="",adPlaying=0;
 function adBtn(on){let b=$("#adstop");if(!b){b=document.createElement("button");b.id="adstop";b.textContent="⏹ إيقاف الأذان";b.onclick=adStop;document.body.appendChild(b)}b.classList.toggle("on",!!on);try{if(window.AdhanNative)AdhanNative.setPlaying(!!on)}catch(e){}}
 function adStop(){try{ADA.pause();ADA.removeAttribute("src");ADA.load()}catch(e){}adPlaying=0;adBtn(0);if(adUrl){try{URL.revokeObjectURL(adUrl)}catch(e){}adUrl=""}}
 ADA.onended=()=>{adPlaying=0;adBtn(0)};window.adStopNative=function(){if(adPlaying)adStop();return 1};
-ADA.onerror=()=>{if(!adPlaying)return;adPlaying=0;adBtn(0);qtoast("تعذّر تشغيل صوت الأذان. تأكد من الاتصال بالإنترنت أو اختر «ملف من جهازك» من إعدادات الأذان.",8000)};
-async function adSrc(){const c=adS();if(c.m=="custom"){try{const b=await idbGet("adhan:custom");if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}return ""}const m=ADM.find(x=>x[0]==c.m)||ADM[0];try{const b=await idbGet("adhan:c:"+m[0]);if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}if(typeof ADEMB!="undefined"&&ADEMB[m[0]]){adUrl=URL.createObjectURL(adBlob(m[0]));return adUrl}return "https://www.assabile.com/download/adhan/"+m[2]}
+let adFb=0;
+async function adFallback(){adFb=1;adStop();qtoast("تعذّر تحميل صوت هذا المؤذن من الإنترنت، فشُغِّل أذان نورين المضمّن بدلًا منه.",7000);
+ if(typeof ADEMB=="undefined"||!ADEMB.noreen)return false;
+ const u=URL.createObjectURL(adBlob("noreen"));adUrl=u;ADA.src=u;ADA.volume=Math.max(0,Math.min(1,adS().vol==null?1:adS().vol));adPlaying=1;
+ try{await ADA.play();adBtn(1);return true}catch(e){adPlaying=0;adBtn(0);return false}}
+ADA.onerror=()=>{if(!adPlaying)return;if(!adFb&&/^https?:/.test(ADA.src||"")){adFallback();return}adPlaying=0;adBtn(0);qtoast("تعذّر تشغيل صوت الأذان. تأكد من الاتصال بالإنترنت أو اختر «ملف من جهازك» من إعدادات الأذان.",8000)};
+/* ---- تنزيل المؤذنين من الإنترنت وحفظهم (يعمل بعدها دون إنترنت) ---- */
+const adRemote=m=>"https://www.assabile.com/download/adhan/"+m[2];
+async function adOk(b){try{if(!b||b.size<8000)return false;const u=new Uint8Array(await b.slice(0,4).arrayBuffer());return !(u[0]==60||u[0]==123||u[0]==10||u[0]==32)}catch(e){return false}}
+const adMime=b=>/^audio\//.test(b.type||"")?b:new Blob([b],{type:"audio/mpeg"});
+async function adFetch1(u){const ac=new AbortController(),t=setTimeout(()=>ac.abort(),30000);try{const r=await fetch(u,{signal:ac.signal,credentials:"omit",cache:"no-store"});if(!r.ok)return null;const b=await r.blob();return await adOk(b)?adMime(b):null}catch(e){return null}finally{clearTimeout(t)}}
+async function adFetchNat(u){try{const H=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp;if(!H||!H.request)return null;const r=await H.request({method:"GET",url:u,responseType:"blob",headers:{"Referer":"https://www.assabile.com/","User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36","Accept":"audio/*,*/*"},connectTimeout:20000,readTimeout:60000});if(!r||r.status!=200||!r.data||typeof r.data!="string")return null;const bin=atob(r.data),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);const b=new Blob([a],{type:"audio/mpeg"});return await adOk(b)?b:null}catch(e){return null}}
+const ADINF={};
+async function adDl(id,quiet){
+ const m=ADM.find(x=>x[0]==id);if(!m||!m[2])return null;
+ if(ADINF[id])return ADINF[id];
+ return ADINF[id]=(async()=>{try{
+  if(!quiet)qtoast("جارٍ تحميل صوت المؤذن…");
+  const u=adRemote(m);let b=null;
+  for(let i=0;i<2&&!b;i++){b=await adFetch1(u);if(!b)b=await adFetchNat(u);if(!b&&i==0)await new Promise(r=>setTimeout(r,1200))}
+  if(!b){if(!quiet)qtoast("تعذّر تحميل صوت هذا المؤذن. تحقق من الاتصال ثم أعد المحاولة، أو اختر مؤذنًا آخر.",6000);return null}
+  try{await idbSet("adhan:c:"+id,b);S.adc=S.adc||{};S.adc[id]=1;save()}catch(e){}
+  if(!quiet)qtoast("تم تحميل الصوت ✓ — يعمل الآن دون إنترنت");
+  if(document.getElementById("m")&&cur=="set"&&typeof adR=="function"&&adS().on)setTimeout(adR,0);
+  return b}finally{delete ADINF[id]}})()}
+async function adSrc(){const c=adS();if(c.m=="custom"){try{const b=await idbGet("adhan:custom");if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}return ""}const m=ADM.find(x=>x[0]==c.m)||ADM.find(x=>x[0]=="noreen")||ADM[0];try{const b=await idbGet("adhan:c:"+m[0]);if(b&&await adOk(b)){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}if(typeof ADEMB!="undefined"&&ADEMB[m[0]]){adUrl=URL.createObjectURL(adBlob(m[0]));return adUrl}
+ const nb=await adDl(m[0],1);if(nb){adUrl=URL.createObjectURL(nb);return adUrl}return adRemote(m)}
 async function adPlay(label){const c=adS();adStop();const u=await adSrc();if(!u){qtoast("لم تختر ملف أذان من جهازك بعد؛ افتح إعدادات الأذان واختر ملفًا أو اختر مؤذنًا من القائمة.",7000);return false}
- ADA.src=u;ADA.volume=Math.max(0,Math.min(1,c.vol==null?1:c.vol));adPlaying=1;
- try{await ADA.play();adBtn(1);return true}catch(e){adPlaying=0;adBtn(0);ntFire("حان وقت صلاة "+(label||""),"افتح التطبيق لتشغيل الأذان؛ المتصفح يمنع تشغيل الصوت تلقائيًا قبل التفاعل مع التطبيق.","adhan","nt");return false}}
+ adFb=0;ADA.src=u;ADA.volume=Math.max(0,Math.min(1,c.vol==null?1:c.vol));adPlaying=1;
+ try{await ADA.play();adBtn(1);return true}catch(e){if(!adFb&&/^https?:/.test(u)&&(e&&e.name!="NotAllowedError"))return await adFallback();adPlaying=0;adBtn(0);ntFire("حان وقت صلاة "+(label||""),"افتح التطبيق لتشغيل الأذان؛ المتصفح يمنع تشغيل الصوت تلقائيًا قبل التفاعل مع التطبيق.","adhan","nt");return false}}
 function adTick(){const c=adS();if(!c.on)return;const n=new Date(),t=times(n),dk=n.toDateString();S.adl=S.adl||{};let ch=0;
- ADN.forEach((p,i)=>{if(!c.pr[i])return;const tm=t[p[0]],d=n-tm,k=dk+"|"+p[0];if(d>=0&&d<9e4&&S.adl[k]!=1){S.adl[k]=1;ch=1;Object.keys(S.adl).forEach(x=>{if(x.split("|")[0]!=dk)delete S.adl[x]});ntFire("حان الآن وقت صلاة "+p[1],"حيّ على الصلاة",k,"nt",true);adPlay(p[1])}});
+ ADN.forEach((p,i)=>{if(!c.pr[i])return;const tm=t[p[0]],d=n-tm,k=dk+"|"+p[0];if(d>=0&&d<9e4&&S.adl[k]!=1){S.adl[k]=1;ch=1;Object.keys(S.adl).forEach(x=>{if(x.split("|")[0]!=dk)delete S.adl[x]});ntFire("حان الآن وقت صلاة "+p[1],"حيّ على الصلاة",k,"nt",true);if(!adNat())adPlay(p[1])}});
  if(ch)save()}
 setInterval(adTick,5000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")adTick()});
-function adSet(f,v,r){adS()[f]=v;save();if(f=="on"&&!v)adStop();if(f=="on"&&v&&ntPerm()=="default"){try{Notification.requestPermission()}catch(e){}}if(r)adR()}
+function adSet(f,v,r){adS()[f]=v;save();if(f=="m"&&v!="custom"&&!(typeof ADEMB!="undefined"&&ADEMB[v])&&!(S.adc&&S.adc[v])&&navigator.onLine)adDl(v);if(f=="on"&&!v)adStop();if(f=="on"&&v&&ntPerm()=="default"){try{Notification.requestPermission()}catch(e){}}if(r)adR()}
 async function adFile(inp){const f=inp.files&&inp.files[0];if(!f)return;try{await idbSet("adhan:custom",f);adS().m="custom";adS().fn=f.name;save();qtoast("تم حفظ الملف.");adR()}catch(e){qtoast("تعذّر حفظ الملف على الجهاز.")}}
+function adTestN(){try{new Notification("🕌 تجربة الأذان",{body:"هكذا يصلك تنبيه الأذان بصوت المؤذن وقت الصلاة",tag:"adtest|"+Date.now(),dir:"rtl",lang:"ar"});qtoast("سيصلك إشعار الأذان بعد لحظات")}catch(e){adTest()}}
 function adTest(){const m=adS().m=="custom"?(adS().fn||"ملف من جهازك"):(ADM.find(x=>x[0]==adS().m)||ADM[0])[1];adPlay("(تجربة) "+m)}
 function adR(){if(cur=="home"){clearInterval(tick);home()}else ad()}
 function ad(){cur="set";SUBV="set";nav();$("#m").innerHTML=adBody()}
 function adBody(){
- const c=adS(),emb=id=>typeof ADEMB!="undefined"&&!!ADEMB[id];
+ const c=adS(),emb=id=>(typeof ADEMB!="undefined"&&!!ADEMB[id])||!!(S.adc&&S.adc[id]);
  const opt=m=>`<option value="${m[0]}" ${c.m==m[0]?"selected":""}>${m[1]}${emb(m[0])?" ✓":""}</option>`;
  const first=ADK.map(id=>ADM.find(x=>x[0]==id)),rest=ADM.filter(x=>!ADK.includes(x[0]));
  return `<div class="card"><div class="set" style="margin:0"><b>المواقيت والأذان</b><label style="display:flex;gap:8px;align-items:center">${c.on?"مفعّل":"معطّل"}<input type="checkbox" ${c.on?"checked":""} onchange="adSet('on',this.checked?1:0,1)" style="width:24px;height:24px"></label></div>
  ${c.on?`<div class="set"><select style="max-width:100%;flex:1" onchange="adSet('m',this.value,1)"><optgroup label="تعمل دون إنترنت">${first.map(opt).join("")}</optgroup><optgroup label="تحتاج إنترنت">${rest.map(opt).join("")}</optgroup><option value="custom" ${c.m=="custom"?"selected":""}>ملف من جهازك${c.fn?" — "+c.fn:""}</option></select></div>
  <div class="set"><span>الصوت</span><input type="range" min="0.1" max="1" step="0.1" value="${c.vol==null?1:c.vol}" onchange="adSet('vol',+this.value)"></div>
- <div class="set"><button class="gdl" onclick="adTest()">▶ تجربة</button><button onclick="adStop()">⏹ إيقاف</button></div>
+ ${c.m!="custom"&&!emb(c.m)?`<div class="set"><span>هذا المؤذن يحتاج إنترنت</span><button class="gdl" onclick="adDl(adS().m)">⬇ تحميل للاستماع دون إنترنت</button></div>`:""}<div class="set"><button class="gdl" onclick="adTest()">▶ تجربة الصوت</button>${adNat()?`<button class="gdl" onclick="adTestN()">🔔 تجربة الإشعار</button>`:""}<button onclick="adStop()">⏹ إيقاف</button></div>
+ ${adNat()?`<div class="mu" style="margin:4px 2px 8px;line-height:1.8">يصلك الأذان كصوت إشعار بصوت المؤذن المختار، فيعمل والتطبيق مغلق. يتبع مستوى صوت التنبيهات في هاتفك، وتغيّره من إعدادات الإشعارات ← قناة «الأذان».</div>`:`<div class="mu" style="margin:4px 2px 8px;line-height:1.8">الأذان يُشغَّل والتطبيق مفتوح. الصوت أثناء إغلاق التطبيق يحتاج نسخة APK الأحدث وإذن الإشعارات.</div>`}
  <div class="set"><span>ملف من جهازك</span><input type="file" accept="audio/*" onchange="adFile(this)" style="max-width:55%"></div>
  <div style="display:flex;flex-wrap:wrap;gap:6px 16px">${ADN.map((p,i)=>`<label style="display:flex;gap:6px;align-items:center">${p[1]}<input type="checkbox" ${c.pr[i]?"checked":""} onchange="adS().pr[${i}]=this.checked?1:0;save()" style="width:22px;height:22px"></label>`).join("")}</div>`:""}</div>`}
 
@@ -2177,25 +2412,35 @@ async function hmap(c){
 function hico(){const pl=HP.on&&HP.c==cc&&HP.i==ci&&!HAU.paused;return pl?'<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>':'<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>'}
 function hui(){const b=document.getElementById("hpb");if(b){b.innerHTML=hico();b.classList.toggle("on",!!(HP.on&&HP.c==cc&&HP.i==ci&&!HAU.paused))}}
 function hshow(c,i){if(cur=="adhkar"&&inR&&cc==c&&ci!=i){ci=i;rd()}}
+const HPM=new Map();let HPU=null,HPB=0,HPT=0;
+function hpFlush(){try{HPM.forEach(v=>URL.revokeObjectURL(v));HPM.clear();if(HPU){URL.revokeObjectURL(HPU);HPU=null}}catch(e){}}
+async function hpre(){
+ if(HPB||!HP.on||!HP.m||HP.m.c!=HP.c||navigator.onLine===false||Date.now()<HPT)return;HPB=1;
+ try{const c=HP.c,id=HP.t;for(let k=1;k<=4&&HP.on&&HP.t==id;k++){const i=HP.i+k;if(i>=HD[c].length)break;const u0=HP.m.u[i];if(!u0)continue;const u=u0.replace(/^http:/,"https:");if(HPM.has(u))continue;
+  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),25000);
+  try{const r=await fetch(u,{signal:ctl.signal});if(!r.ok)throw 0;const b=await r.blob();if(b.size<500)throw 0;if(HP.on&&HP.t==id){HPM.set(u,URL.createObjectURL(b));if(HPM.size>8){const k2=HPM.keys().next().value;URL.revokeObjectURL(HPM.get(k2));HPM.delete(k2)}}}
+  catch(e){HPT=Date.now()+20000;break}finally{clearTimeout(tm)}}}catch(e){}
+ HPB=0}
+setInterval(()=>{try{if(HP.on&&!HPB)hpre()}catch(e){}},4000);
 async function hplay(c,i){
  if(AP.on)qstop();
  const t=HP.t=Date.now();if(!HP.on||HP.c!=c)HP.any=0;HP.on=1;HP.c=c;HP.i=i;hui();
  let u="";
- try{u=(await hmap(c))[i]||""}catch(e){if(HP.t==t){hstop();qtoast("يلزم اتصال بالإنترنت لتشغيل صوت الأذكار",5000)}return}
+ try{u=(await hmap(c))[i]||""}catch(e){if(HP.t==t)zRetry("h",c+"|"+i,()=>{if(HP.on&&HP.c==c&&HP.i==i)hplay(c,i)});return}
  if(HP.t!=t)return;
  if(!u){if(i<HD[c].length-1){hshow(c,i+1);return hplay(c,i+1)}const a=HP.any;hstop();qtoast(a?"انتهى الباب":"لا يتوفر تسجيل صوتي لهذا الباب",3500);return}
- HP.any=1;HAU.src=u.replace(/^http:/,"https:");HAU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر الاستماع لبدء التشغيل")});
+ HP.any=1;const su=u.replace(/^http:/,"https:"),hpf=HPM.get(su)||null;if(hpf)HPM.delete(su);HAU.src=hpf||su;if(HPU&&HPU!==hpf){try{URL.revokeObjectURL(HPU)}catch(e){}}HPU=hpf;setTimeout(hpre,300);HAU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر الاستماع لبدء التشغيل")});
  hms();hui()}
 function hms(){if(!HP.on)return;msSet(CHN(HP.c),"حصن المسلم · "+AD(HP.i+1)+" / "+AD(HD[HP.c].length),{play:(()=>{const p=HAU.play();if(p&&p.catch)p.catch(()=>setTimeout(()=>{try{HAU.play().catch(()=>{})}catch(e){}},400))}),pause:()=>{try{HAU.pause()}catch(e){}},prev:()=>{if(HP.i>0){hshow(HP.c,HP.i-1);hplay(HP.c,HP.i-1)}},next:hnext,stop:hstop})}
 function hnext(){if(!HP.on)return;if(HP.i<HD[HP.c].length-1){hshow(HP.c,HP.i+1);hplay(HP.c,HP.i+1)}else{hstop();qtoast("انتهى الباب",3000)}}
-function hstop(){const w=HP.on;HP.on=0;kaOff();HP.t=0;try{HAU.pause();HAU.removeAttribute("src");HAU.load()}catch(e){}hui();if(w&&!AP.on)msClear()}
+function hstop(){const w=HP.on;HP.on=0;kaOff();HP.t=0;try{hpFlush()}catch(e){}try{HAU.pause();HAU.removeAttribute("src");HAU.load()}catch(e){}hui();if(w&&!AP.on)msClear()}
 function hpt(){if(HP.on&&HP.c==cc&&HP.i==ci){HAU.paused?HAU.play():HAU.pause()}else hplay(cc,ci)}
 HAU.onended=()=>hnext();
 HAU.addEventListener("playing",()=>{try{ZR.h&&(ZR.h.n=0);hms();msPS(HAU)}catch(e){}});HAU.onplay=HAU.onpause=()=>{hui();msPS(HAU);if(!HAU.paused)kaOn()};
-HAU.onerror=()=>{if(!HP.on)return;const c=HP.c,i=HP.i;if(zRetry("h",c+"|"+i,()=>{if(!HP.on||HP.c!=c||HP.i!=i)return;hplay(c,i)}))return;hstop();qtoast("تعذّر تشغيل الصوت. تحقق من الاتصال بالإنترنت.",6000)};
+HAU.onerror=()=>{if(!HP.on)return;const c=HP.c,i=HP.i;zRetry("h",c+"|"+i,()=>{if(!HP.on||HP.c!=c||HP.i!=i)return;hplay(c,i)})};
 
 /* ---- حفظ تلقائي: التفاسير الثلاثة + ثلاثة أذانات في ذاكرة التطبيق ---- */
-const ADK=["afasy","mala","bukhari","aqsa","noreen"];
+const ADK=["noreen","afasy","mala","bukhari","aqsa"];
 let TFSEED=0,ADSEED=0;
 function persist(){try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}}
 async function tfSeed(){

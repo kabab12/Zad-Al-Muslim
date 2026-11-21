@@ -324,6 +324,7 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 .hm-grid button:active{transform:scale(.97);background:var(--ac2)}
 .hm-ps{gap:5px}.hm-pc{font-size:.74em!important;padding:9px 1px!important}
 .hm-wird,.hm-az{padding:14px 16px}.hm-wt b,.hm-at b{font-size:1.05em}.hm-wt span,.hm-at span{font-size:.8em}
+.hm .wdc{margin-bottom:0}
 
 
 /* الوضع الصامت أثناء الصلاة */
@@ -342,3 +343,53 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 .slr b{color:var(--ac)}.slr span{color:var(--tx);font-size:.88em}.slr i{font-style:normal;font-size:.78em;color:var(--mu);white-space:nowrap}
 .slr.off{opacity:.45}
 .slbt{display:flex;gap:8px}.slbt button{flex:1}
+
+/* الشريط الأحمر للأذونات والمشاكل */
+.pbar{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#b71c1c,#e53935);color:#fff;border-radius:14px;padding:10px 12px;margin-bottom:10px;cursor:pointer;box-shadow:0 3px 10px rgba(183,28,28,.35);animation:pbp 2.2s ease-in-out infinite}
+.pbi{font-size:1.5em;line-height:1}.pbt{display:flex;flex-direction:column;flex:1;gap:2px}.pbt b{font-size:.95em}.pbt span{font-size:.78em;opacity:.92}
+.pbg{background:rgba(255,255,255,.2);border-radius:999px;padding:6px 12px;font-weight:bold;font-size:.82em;white-space:nowrap}
+.pbc{border:1.5px solid #e53935}
+@keyframes pbp{0%,100%{box-shadow:0 3px 10px rgba(183,28,28,.35)}50%{box-shadow:0 3px 18px rgba(229,57,53,.75)}}
+/* بطاقة العدّ التنازلي لرمضان */
+.rmc{position:relative;overflow:hidden;text-align:center;color:#fff;border-radius:22px;padding:16px 14px 14px;margin-bottom:12px;background:radial-gradient(circle at 80% 15%,#1f6f86 0,transparent 55%),linear-gradient(165deg,#081a33,#0f3a62 62%,#14566a);box-shadow:0 6px 18px rgba(8,26,51,.35)}
+.rmc>*{position:relative}.rmst{position:absolute!important;inset:0;pointer-events:none}
+.rmst i{position:absolute;font-style:normal;color:#ffe9a6;animation:rmt 2.6s ease-in-out infinite}
+.rmt1{font-size:.85em;color:#cfe3ee}.rmb1{font-size:1.25em;font-weight:800;margin-top:2px}.rmf1{font-size:.72em;color:#b9d0dc;margin-top:8px}
+.rmm{display:inline-block;margin-top:6px;animation:rmd 1.9s cubic-bezier(.22,1.25,.36,1) both,rmf 3.6s ease-in-out 1.9s infinite,rmg 3.6s ease-in-out infinite}
+@keyframes rmd{0%{opacity:0;transform:translateY(-190px) rotate(-38deg) scale(.7)}55%{opacity:1}100%{opacity:1;transform:translateY(4px) rotate(-3deg) scale(1)}}
+.rmbar{height:7px;background:rgba(255,255,255,.18);border-radius:99px;margin:10px 6px 0;overflow:hidden}.rmbar i{display:block;height:100%;background:linear-gradient(90deg,#f4c542,#fff1a8);border-radius:99px}
+@keyframes rmf{0%,100%{transform:translateY(4px) rotate(-3deg)}50%{transform:translateY(-14px) rotate(3deg)}}
+@keyframes rmg{0%,100%{filter:drop-shadow(0 0 7px rgba(255,214,102,.4))}50%{filter:drop-shadow(0 0 22px rgba(255,214,102,.95))}}
+@keyframes rmt{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+@media (prefers-reduced-motion:reduce){.rmm,.rmst i,.pbar{animation:none}}
+
+/* ورد اليوم */
+.wdc{border-radius:20px;padding:14px;margin-bottom:12px;color:#fff;cursor:pointer;background:linear-gradient(160deg,#0d3b3a,#17695c);box-shadow:0 5px 16px rgba(13,59,58,.3);border:2px solid transparent}
+.wdc.st0{border-color:#ef5350}.wdc.st2{background:linear-gradient(160deg,#0f4d2a,#1e8f4e)}
+.wdh{display:flex;justify-content:space-between;align-items:center;gap:8px}.wdt{font-weight:800;font-size:1.08em}
+.wdb{font-size:.76em;font-weight:bold;padding:4px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.wdb.r{background:#e53935;color:#fff}.wdb.r i{width:8px;height:8px;border-radius:50%;background:#fff;animation:wdp 1.2s ease-in-out infinite}
+.wdb.a{background:#ffd166;color:#5a3b00}.wdb.g{background:#fff;color:#1e8f4e}
+.wdp{height:7px;background:rgba(255,255,255,.2);border-radius:99px;margin:10px 0 8px;overflow:hidden}.wdp i{display:block;height:100%;background:linear-gradient(90deg,#ffd166,#fff3c4);border-radius:99px;transition:width .3s}
+.wdp.lg{background:var(--ac2);height:9px}.wdp.lg i{background:linear-gradient(90deg,var(--ac),#d4a017)}
+.wdm{display:flex;justify-content:space-between;gap:8px;font-size:.78em;opacity:.95}
+.wdgo{margin-top:10px;text-align:center;background:rgba(255,255,255,.18);border-radius:12px;padding:9px;font-weight:bold}
+@keyframes wdp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.wdq{border-right:4px solid var(--ac)}.wdqt{line-height:2;font-size:1.02em}.wdqi{padding:8px 0;border-top:1px solid var(--bd,rgba(0,0,0,.08))}
+.wdi{display:flex;align-items:center;gap:10px;padding:10px 6px;border-top:1px solid var(--bd,rgba(0,0,0,.08));cursor:pointer}
+.wdi:first-of-type{border-top:0}
+.wdn{flex:none;width:30px;height:30px;border-radius:50%;background:var(--ac2);color:var(--ac);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.85em}
+.wdi.ok .wdn{background:var(--ac);color:#fff}
+.wdx{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.wdtxt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.8}
+.wdbar{height:5px;background:var(--ac2);border-radius:99px;overflow:hidden}.wdbar i{display:block;height:100%;background:var(--ac);border-radius:99px}
+.wdi.ok .wdbar i{background:#d4a017}
+.wdc2{flex:none;font-weight:800;color:var(--ac);min-width:3.4em;text-align:left}.wdc2 small{opacity:.6;font-weight:normal}
+.wdtx{font-size:1.25em;line-height:2.1;font-weight:700;margin:10px 4px 2px}
+.wdfd{font-size:.86em;line-height:1.9;color:var(--mu);margin:2px 6px}
+.wdbig{position:relative;width:236px;height:236px;margin:10px auto;border:0!important;background:transparent!important;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.wdbig svg{position:absolute;inset:0}.wdbig:active .wdcn{transform:scale(.92)}
+.wdcn{position:relative;font-size:3.6em;font-weight:800;color:var(--ac);line-height:1;transition:transform .08s}
+.wdbig small{position:relative;margin-top:8px;color:var(--mu);font-size:.85em}
+.wdctl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.wdctl button{flex:1;min-width:70px}
+@media (prefers-reduced-motion:reduce){.wdb.r i{animation:none}}

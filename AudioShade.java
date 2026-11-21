@@ -43,6 +43,7 @@ public class AudioShade {
     }
 
     private static android.os.PowerManager.WakeLock sWl;
+    private static android.net.wifi.WifiManager.WifiLock sWf;
 
     static synchronized void wake(Context c, boolean on) {
         try {
@@ -56,6 +57,23 @@ public class AudioShade {
                 if (!sWl.isHeld()) sWl.acquire(6L * 60L * 60L * 1000L);
             } else if (sWl != null && sWl.isHeld()) {
                 sWl.release();
+            }
+        } catch (Throwable ignored) {
+        }
+        // قفل واي‑فاي: يمنع النظام من إبطاء/إيقاف الواي‑فاي أثناء التشغيل والشاشة مطفأة، فلا ينقطع البث
+        try {
+            if (on) {
+                if (sWf == null) {
+                    android.net.wifi.WifiManager wm = (android.net.wifi.WifiManager)
+                            c.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                    if (wm != null) {
+                        sWf = wm.createWifiLock(android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "zad:audio-wifi");
+                        sWf.setReferenceCounted(false);
+                    }
+                }
+                if (sWf != null && !sWf.isHeld()) sWf.acquire();
+            } else if (sWf != null && sWf.isHeld()) {
+                sWf.release();
             }
         } catch (Throwable ignored) {
         }

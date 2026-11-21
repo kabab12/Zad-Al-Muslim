@@ -107,13 +107,51 @@
         },function(){return perm})};
       var hash=function(str){var h=2166136261;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)%2000000000+1000};
       var zid=function(tag,min){return hash(String(tag)+"|"+min)};
+      /* صوت الأذان كصوت قناة إشعار: يعمل والتطبيق مغلق ولا يعتمد على تشغيل الصفحة */
+      var adhanChannels=function(){
+        try{
+          if(typeof ADEMB==="undefined"||!LN.createChannel)return Promise.resolve();
+          var nm={};try{ADM.forEach(function(m){nm[m[0]]=m[1]})}catch(e){}
+          return Promise.all(Object.keys(ADEMB).map(function(id){
+            return LN.createChannel({id:"zad_adhan_"+id,name:"الأذان — "+(nm[id]||id),description:"صوت الأذان وقت الصلاة",importance:5,visibility:1,vibration:true,sound:"adhan_"+id+".ogg"}).catch(function(){})
+          })).then(function(){
+            if(!LN.listChannels)return;
+            return LN.listChannels().then(function(r){window.__adNat=((r&&r.channels)||[]).some(function(c){return /^zad_adhan_/.test(c.id)})}).catch(function(){})
+          })
+        }catch(e){return Promise.resolve()}};
+      var adCh=function(tag){
+        try{
+          if(!window.__adNat||!/\|/.test(String(tag||"")))return null;
+          var c=S.ad;if(!c||!c.on||S.ntSnd===false)return null;
+          return (typeof ADEMB!=="undefined"&&ADEMB[c.m])?"zad_adhan_"+c.m:null
+        }catch(e){return null}};
+      /* أصوات خاصة (عصافير الأذكار، وتلاوة «إن الله وملائكته يصلون على النبي») كأصوات قنوات إشعار */
+      var soundChannels=function(){
+        try{
+          if(!LN.createChannel)return Promise.resolve();
+          var defs=[["bird","الأذكار والختمة (عصافير)"],["ayah","الصلاة على النبي ﷺ (تلاوة)"]];
+          return Promise.all(defs.map(function(d){
+            return LN.createChannel({id:"zad_snd_"+d[0],name:d[1],description:"صوت خاص للتنبيه",importance:4,visibility:1,vibration:true,sound:"snd_"+d[0]+".mp3"}).catch(function(){})
+          })).then(function(){
+            if(!LN.listChannels)return;
+            return LN.listChannels().then(function(r){var ids=((r&&r.channels)||[]).map(function(c){return c.id});window.__sdNat=ids.indexOf("zad_snd_bird")>=0&&ids.indexOf("zad_snd_ayah")>=0}).catch(function(){})
+          })
+        }catch(e){return Promise.resolve()}};
+      var sdCh=function(tag){
+        try{
+          if(!window.__sdNat||typeof S==="undefined"||S.ntSnd===false||S.ntCs===0)return null;
+          var c=ntCat(String(tag||""),"");if(!c||c==="adhan"||c==="custom")return null;
+          var s=NTP[c]&&NTP[c].snd;return s?("zad_snd_"+s):null
+        }catch(e){return null}};
+      window.__sdCh=sdCh;
+      var adTried=false;
       var ensureChannel=function(){
-        if(!chanP)chanP=Promise.all([LN.createChannel({id:"zad_reminders",name:"تذكيرات زاد المسلم",description:"الأذكار والصلاة على النبي والأذان والورد",importance:4,visibility:1,vibration:true,lights:true}).catch(function(){}),LN.createChannel({id:"zad_silent",name:"تذكيرات زاد المسلم (صامتة)",description:"التذكيرات بلا صوت ولا اهتزاز",importance:2,visibility:1,vibration:false,lights:false}).catch(function(){})]);
+        if(!chanP)chanP=Promise.all([LN.createChannel({id:"zad_reminders",name:"تذكيرات زاد المسلم",description:"الأذكار والصلاة على النبي والأذان والورد",importance:4,visibility:1,vibration:true,lights:true}).catch(function(){}),LN.createChannel({id:"zad_silent",name:"تذكيرات زاد المسلم (صامتة)",description:"التذكيرات بلا صوت ولا اهتزاز",importance:2,visibility:1,vibration:false,lights:false}).catch(function(){})]).then(adhanChannels).then(soundChannels);
         return chanP};
       var clip=function(s,n){s=String(s||"");return s.length>n?s.slice(0,n-1).replace(/\s+\S*$/,"")+"…":s};
       var build=function(title,body,act,tag,atMs,id){
         return{id:id,title:String(title||"زاد المسلم"),body:clip(body,600),largeBody:String(body||""),summaryText:"زاد المسلم",
-          schedule:{at:new Date(atMs),allowWhileIdle:true},channelId:(typeof S!=="undefined"&&S.ntSnd===false)?"zad_silent":"zad_reminders",smallIcon:"ic_stat_zad",extra:{a:act||"nt",tag:String(tag||"")}}};
+          schedule:{at:new Date(atMs),allowWhileIdle:true},channelId:adCh(tag)||sdCh(tag)||((typeof S!=="undefined"&&S.ntSnd===false)?"zad_silent":"zad_reminders"),smallIcon:"ic_stat_zad",extra:{a:act||"nt",tag:String(tag||"")}}};
       /* سجلّ ما أُرسل فعلًا: لا يتكرر التنبيه نفسه خلال دقيقة ونصف، حتى لو أُعيد فتح التطبيق */
       var ledger=function(){try{var o=JSON.parse(localStorage.getItem("zadFired")||"{}"),t=Date.now();Object.keys(o).forEach(function(k){if(t-o[k]>864e5)delete o[k]});return o}catch(e){return{}}};
       var fireNow=function(title,opts){
@@ -158,8 +196,8 @@
         return out};
 
       /* توقيع إعدادات التنبيهات: لا نعيد الجدولة إلا إذا تغيّر شيء مؤثّر (نتجاهل ما يتغير باستمرار كموضع التلاوة) */
-      var VOL={qres:1,ql:1,qp:1,qn:1,ntl:1,adl:1,nlog:1,ntI:1,silOn:1,silWarn:1,lastOpen:1};
-      var sigNow=function(){try{return "nx2|"+JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
+      var VOL={wd:1,wdH:1,qres:1,ql:1,qp:1,qn:1,ntl:1,adl:1,nlog:1,ntI:1,silOn:1,silWarn:1,lastOpen:1};
+      var sigNow=function(){try{return "nx4|"+JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
       var lastSig=(function(){try{return localStorage.getItem("zadSchedSig")||""}catch(e){return""}})(),lastAt=0;
       var schedule=function(force){
         if(busy){again=true;return}
@@ -167,6 +205,7 @@
         var sg=sigNow(),t0=Date.now(),full=(sg!==lastSig);
         if(force===true)full=true;
         else if(!full&&t0-lastAt<3*36e5)return;
+        if(!adTried){adTried=true;ensureChannel().then(function(){schedule(force)});return}
         busy=true;
         var plan=[];try{plan=simulate(3,15)}catch(e){plan=[]}
         var now=Date.now(),seen={},items=[];
@@ -186,7 +225,8 @@
           return ch
         }).then(function(){SCH=seen;lastSig=sg;lastAt=Date.now();try{localStorage.setItem("zadSchedSig",sg)}catch(e){}}).catch(function(){}).then(function(){busy=false;if(again){again=false;setTimeout(function(){schedule()},2500)}})};
 
-      /* واجهة Notification القياسية التي يستعملها التطبيق: تتحول إلى إشعار أصلي */
+      window.zadResched=function(){try{schedule(true)}catch(e){}};
+        /* واجهة Notification القياسية التي يستعملها التطبيق: تتحول إلى إشعار أصلي */
       var ZN=function(title,opts){this.title=title;this.body=(opts&&opts.body)||"";this.tag=(opts&&opts.tag)||"";this.onclick=null;this.close=function(){};fireNow(title,opts)};
       Object.defineProperty(ZN,"permission",{get:function(){return perm}});
       ZN.requestPermission=function(cb){return ask().then(function(p){if(cb)try{cb(p)}catch(e){}return p})};
@@ -199,7 +239,7 @@
         var f=window.ntFire;if(typeof f!=="function"||f.__zad)return;
         var w=function(t,b,tag){
           try{
-            if(!SIM&&document.visibilityState==="visible"&&tag){
+            if(!SIM&&document.visibilityState==="visible"&&tag&&!adCh(tag)&&!sdCh(tag)){
               var m=Math.floor(Date.now()/6e4),ids=[zid(tag,m),zid(tag,m-1)].map(function(i){return{id:i}});
               LN.cancel({notifications:ids}).catch(function(){});
               if(LN.removeDeliveredNotifications)LN.removeDeliveredNotifications({notifications:ids}).catch(function(){})}
@@ -251,8 +291,8 @@
       /* هل هناك جلسة صوت نشطة؟ وهل الصوت يعمل فعلًا؟ — نقرأ ذلك من عناصر الصوت نفسها لا من نسخة مخزّنة */
       var active=function(){try{return !!((typeof AP!=="undefined"&&AP.on)||(typeof HP!=="undefined"&&HP.on)||(typeof KA!=="undefined"&&!KA.paused))}catch(e){return false}};
       var real=function(){try{
-        if(typeof AP!=="undefined"&&AP.on)return !AU.paused;
-        if(typeof HP!=="undefined"&&HP.on)return !HAU.paused;
+        if(typeof AP!=="undefined"&&AP.on)return !AU.paused||!!(typeof ZR!=="undefined"&&ZR.q&&ZR.q.tm);
+        if(typeof HP!=="undefined"&&HP.on)return !HAU.paused||!!(typeof ZR!=="undefined"&&ZR.h&&ZR.h.tm);
         return typeof KA!=="undefined"&&!KA.paused}catch(e){return false}};
       /* مزامنة أيقونة الإشعار مع الحالة الفعلية. force=true بعد ضغطة زر الستارة: نُرسل فورًا دون تأخير */
       var sync=function(force){
@@ -329,7 +369,7 @@
   var pz=0,wl=false;
   var hold=function(){
     if(!active()){pz=0;return false}
-    var r=ref(function(){return(typeof AU!=="undefined"&&AP.on&&!AU.paused)||(typeof HAU!=="undefined"&&HP.on&&!HAU.paused)});
+    var r=ref(function(){return(typeof AU!=="undefined"&&AP.on&&(!AU.paused||(typeof ZR!=="undefined"&&ZR.q&&ZR.q.tm)))||(typeof HAU!=="undefined"&&HP.on&&(!HAU.paused||(typeof ZR!=="undefined"&&ZR.h&&ZR.h.tm)))});
     if(r){pz=0;return true}
     if(!pz)pz=Date.now();
     return Date.now()-pz<30000};

@@ -4,11 +4,16 @@
 /* حصن المسلم: الوضع الأفقي — النص يتمرّر في عموده وزر العدّ بجانبه بدل أن ينكمش النص إلى صفر */
 .hz{display:flex;flex-direction:column;height:100%;min-height:0;gap:8px}
 #rc{touch-action:pan-y}
+/* ثلثان للذكر (يتمرّر إن طال) وثلث للعدّ: أي لمسة داخل الثلث تُحسب */
+.hz>#rc{flex:1 1 0;min-height:0;overflow-y:auto!important}
+.hz>.hzt{flex:0 0 33.333%;width:100%!important;height:auto!important;margin:0!important;border-radius:22px;font-size:2.4em;touch-action:manipulation;-webkit-user-select:none;user-select:none;cursor:pointer}
+.hz>.hzt .hzhint{display:block;font-size:.26em;opacity:.8;margin-top:2px}
+@media (max-width:400px){.hz>.hzb .mu{display:none}}
 @media (orientation:landscape) and (max-height:700px){
-.hz{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:6px 14px;height:100%;min-height:0}
+.hz{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:6px 14px;height:100%;min-height:0}
 .hz>.hzb{grid-column:1/-1;grid-row:1}
 .hz>#rc{grid-column:1;grid-row:2;min-height:0;overflow-y:auto!important}
-.hz>.hzt{grid-column:2;grid-row:2;align-self:center;width:96px!important;height:96px!important;margin:0 8px!important}
+.hz>.hzt{grid-column:2;grid-row:2;align-self:stretch;flex:none}
 }
 #qv.qrd #qpg{justify-content:flex-start!important;overflow-y:auto!important}#qtoast{white-space:pre-line}
 /* درجات التكبير ونمط «قراءة مثل آية» فقط (#qv.qrd) — الصفحة الكاملة ١٥ سطرًا لا تتأثر:
@@ -127,13 +132,51 @@
         },function(){return perm})};
       var hash=function(str){var h=2166136261;for(var i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)%2000000000+1000};
       var zid=function(tag,min){return hash(String(tag)+"|"+min)};
+      /* صوت الأذان كصوت قناة إشعار: يعمل والتطبيق مغلق ولا يعتمد على تشغيل الصفحة */
+      var adhanChannels=function(){
+        try{
+          if(typeof ADEMB==="undefined"||!LN.createChannel)return Promise.resolve();
+          var nm={};try{ADM.forEach(function(m){nm[m[0]]=m[1]})}catch(e){}
+          return Promise.all(Object.keys(ADEMB).map(function(id){
+            return LN.createChannel({id:"zad_adhan_"+id,name:"الأذان — "+(nm[id]||id),description:"صوت الأذان وقت الصلاة",importance:5,visibility:1,vibration:true,sound:"adhan_"+id+".ogg"}).catch(function(){})
+          })).then(function(){
+            if(!LN.listChannels)return;
+            return LN.listChannels().then(function(r){window.__adNat=((r&&r.channels)||[]).some(function(c){return /^zad_adhan_/.test(c.id)})}).catch(function(){})
+          })
+        }catch(e){return Promise.resolve()}};
+      var adCh=function(tag){
+        try{
+          if(!window.__adNat||!/\|/.test(String(tag||"")))return null;
+          var c=S.ad;if(!c||!c.on||S.ntSnd===false)return null;
+          return (typeof ADEMB!=="undefined"&&ADEMB[c.m])?"zad_adhan_"+c.m:null
+        }catch(e){return null}};
+      /* أصوات خاصة (عصافير الأذكار، وتلاوة «إن الله وملائكته يصلون على النبي») كأصوات قنوات إشعار */
+      var soundChannels=function(){
+        try{
+          if(!LN.createChannel)return Promise.resolve();
+          var defs=[["bird","الأذكار والختمة (عصافير)"],["ayah","الصلاة على النبي ﷺ (تلاوة)"]];
+          return Promise.all(defs.map(function(d){
+            return LN.createChannel({id:"zad_snd_"+d[0],name:d[1],description:"صوت خاص للتنبيه",importance:4,visibility:1,vibration:true,sound:"snd_"+d[0]+".mp3"}).catch(function(){})
+          })).then(function(){
+            if(!LN.listChannels)return;
+            return LN.listChannels().then(function(r){var ids=((r&&r.channels)||[]).map(function(c){return c.id});window.__sdNat=ids.indexOf("zad_snd_bird")>=0&&ids.indexOf("zad_snd_ayah")>=0}).catch(function(){})
+          })
+        }catch(e){return Promise.resolve()}};
+      var sdCh=function(tag){
+        try{
+          if(!window.__sdNat||typeof S==="undefined"||S.ntSnd===false||S.ntCs===0)return null;
+          var c=ntCat(String(tag||""),"");if(!c||c==="adhan"||c==="custom")return null;
+          var s=NTP[c]&&NTP[c].snd;return s?("zad_snd_"+s):null
+        }catch(e){return null}};
+      window.__sdCh=sdCh;
+      var adTried=false;
       var ensureChannel=function(){
-        if(!chanP)chanP=Promise.all([LN.createChannel({id:"zad_reminders",name:"تذكيرات زاد المسلم",description:"الأذكار والصلاة على النبي والأذان والورد",importance:4,visibility:1,vibration:true,lights:true}).catch(function(){}),LN.createChannel({id:"zad_silent",name:"تذكيرات زاد المسلم (صامتة)",description:"التذكيرات بلا صوت ولا اهتزاز",importance:2,visibility:1,vibration:false,lights:false}).catch(function(){})]);
+        if(!chanP)chanP=Promise.all([LN.createChannel({id:"zad_reminders",name:"تذكيرات زاد المسلم",description:"الأذكار والصلاة على النبي والأذان والورد",importance:4,visibility:1,vibration:true,lights:true}).catch(function(){}),LN.createChannel({id:"zad_silent",name:"تذكيرات زاد المسلم (صامتة)",description:"التذكيرات بلا صوت ولا اهتزاز",importance:2,visibility:1,vibration:false,lights:false}).catch(function(){})]).then(adhanChannels).then(soundChannels);
         return chanP};
       var clip=function(s,n){s=String(s||"");return s.length>n?s.slice(0,n-1).replace(/\s+\S*$/,"")+"…":s};
       var build=function(title,body,act,tag,atMs,id){
         return{id:id,title:String(title||"زاد المسلم"),body:clip(body,600),largeBody:String(body||""),summaryText:"زاد المسلم",
-          schedule:{at:new Date(atMs),allowWhileIdle:true},channelId:(typeof S!=="undefined"&&S.ntSnd===false)?"zad_silent":"zad_reminders",smallIcon:"ic_stat_zad",extra:{a:act||"nt",tag:String(tag||"")}}};
+          schedule:{at:new Date(atMs),allowWhileIdle:true},channelId:adCh(tag)||sdCh(tag)||((typeof S!=="undefined"&&S.ntSnd===false)?"zad_silent":"zad_reminders"),smallIcon:"ic_stat_zad",extra:{a:act||"nt",tag:String(tag||"")}}};
       /* سجلّ ما أُرسل فعلًا: لا يتكرر التنبيه نفسه خلال دقيقة ونصف، حتى لو أُعيد فتح التطبيق */
       var ledger=function(){try{var o=JSON.parse(localStorage.getItem("zadFired")||"{}"),t=Date.now();Object.keys(o).forEach(function(k){if(t-o[k]>864e5)delete o[k]});return o}catch(e){return{}}};
       var fireNow=function(title,opts){
@@ -178,8 +221,8 @@
         return out};
 
       /* توقيع إعدادات التنبيهات: لا نعيد الجدولة إلا إذا تغيّر شيء مؤثّر (نتجاهل ما يتغير باستمرار كموضع التلاوة) */
-      var VOL={qres:1,ql:1,qp:1,qn:1,ntl:1,adl:1,nlog:1,ntI:1,silOn:1,silWarn:1,lastOpen:1};
-      var sigNow=function(){try{return "nx2|"+JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
+      var VOL={wd:1,wdH:1,qres:1,ql:1,qp:1,qn:1,ntl:1,adl:1,nlog:1,ntI:1,silOn:1,silWarn:1,lastOpen:1};
+      var sigNow=function(){try{return "nx4|"+JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
       var lastSig=(function(){try{return localStorage.getItem("zadSchedSig")||""}catch(e){return""}})(),lastAt=0;
       var schedule=function(force){
         if(busy){again=true;return}
@@ -187,6 +230,7 @@
         var sg=sigNow(),t0=Date.now(),full=(sg!==lastSig);
         if(force===true)full=true;
         else if(!full&&t0-lastAt<3*36e5)return;
+        if(!adTried){adTried=true;ensureChannel().then(function(){schedule(force)});return}
         busy=true;
         var plan=[];try{plan=simulate(3,15)}catch(e){plan=[]}
         var now=Date.now(),seen={},items=[];
@@ -206,7 +250,8 @@
           return ch
         }).then(function(){SCH=seen;lastSig=sg;lastAt=Date.now();try{localStorage.setItem("zadSchedSig",sg)}catch(e){}}).catch(function(){}).then(function(){busy=false;if(again){again=false;setTimeout(function(){schedule()},2500)}})};
 
-      /* واجهة Notification القياسية التي يستعملها التطبيق: تتحول إلى إشعار أصلي */
+      window.zadResched=function(){try{schedule(true)}catch(e){}};
+        /* واجهة Notification القياسية التي يستعملها التطبيق: تتحول إلى إشعار أصلي */
       var ZN=function(title,opts){this.title=title;this.body=(opts&&opts.body)||"";this.tag=(opts&&opts.tag)||"";this.onclick=null;this.close=function(){};fireNow(title,opts)};
       Object.defineProperty(ZN,"permission",{get:function(){return perm}});
       ZN.requestPermission=function(cb){return ask().then(function(p){if(cb)try{cb(p)}catch(e){}return p})};
@@ -219,7 +264,7 @@
         var f=window.ntFire;if(typeof f!=="function"||f.__zad)return;
         var w=function(t,b,tag){
           try{
-            if(!SIM&&document.visibilityState==="visible"&&tag){
+            if(!SIM&&document.visibilityState==="visible"&&tag&&!adCh(tag)&&!sdCh(tag)){
               var m=Math.floor(Date.now()/6e4),ids=[zid(tag,m),zid(tag,m-1)].map(function(i){return{id:i}});
               LN.cancel({notifications:ids}).catch(function(){});
               if(LN.removeDeliveredNotifications)LN.removeDeliveredNotifications({notifications:ids}).catch(function(){})}
@@ -271,8 +316,8 @@
       /* هل هناك جلسة صوت نشطة؟ وهل الصوت يعمل فعلًا؟ — نقرأ ذلك من عناصر الصوت نفسها لا من نسخة مخزّنة */
       var active=function(){try{return !!((typeof AP!=="undefined"&&AP.on)||(typeof HP!=="undefined"&&HP.on)||(typeof KA!=="undefined"&&!KA.paused))}catch(e){return false}};
       var real=function(){try{
-        if(typeof AP!=="undefined"&&AP.on)return !AU.paused;
-        if(typeof HP!=="undefined"&&HP.on)return !HAU.paused;
+        if(typeof AP!=="undefined"&&AP.on)return !AU.paused||!!(typeof ZR!=="undefined"&&ZR.q&&ZR.q.tm);
+        if(typeof HP!=="undefined"&&HP.on)return !HAU.paused||!!(typeof ZR!=="undefined"&&ZR.h&&ZR.h.tm);
         return typeof KA!=="undefined"&&!KA.paused}catch(e){return false}};
       /* مزامنة أيقونة الإشعار مع الحالة الفعلية. force=true بعد ضغطة زر الستارة: نُرسل فورًا دون تأخير */
       var sync=function(force){
@@ -349,7 +394,7 @@
   var pz=0,wl=false;
   var hold=function(){
     if(!active()){pz=0;return false}
-    var r=ref(function(){return(typeof AU!=="undefined"&&AP.on&&!AU.paused)||(typeof HAU!=="undefined"&&HP.on&&!HAU.paused)});
+    var r=ref(function(){return(typeof AU!=="undefined"&&AP.on&&(!AU.paused||(typeof ZR!=="undefined"&&ZR.q&&ZR.q.tm)))||(typeof HAU!=="undefined"&&HP.on&&(!HAU.paused||(typeof ZR!=="undefined"&&ZR.h&&ZR.h.tm)))});
     if(r){pz=0;return true}
     if(!pz)pz=Date.now();
     return Date.now()-pz<30000};
@@ -768,6 +813,7 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 .hm-grid button:active{transform:scale(.97);background:var(--ac2)}
 .hm-ps{gap:5px}.hm-pc{font-size:.74em!important;padding:9px 1px!important}
 .hm-wird,.hm-az{padding:14px 16px}.hm-wt b,.hm-at b{font-size:1.05em}.hm-wt span,.hm-at span{font-size:.8em}
+.hm .wdc{margin-bottom:0}
 
 
 /* الوضع الصامت أثناء الصلاة */
@@ -786,7 +832,59 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 .slr b{color:var(--ac)}.slr span{color:var(--tx);font-size:.88em}.slr i{font-style:normal;font-size:.78em;color:var(--mu);white-space:nowrap}
 .slr.off{opacity:.45}
 .slbt{display:flex;gap:8px}.slbt button{flex:1}
+
+/* الشريط الأحمر للأذونات والمشاكل */
+.pbar{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#b71c1c,#e53935);color:#fff;border-radius:14px;padding:10px 12px;margin-bottom:10px;cursor:pointer;box-shadow:0 3px 10px rgba(183,28,28,.35);animation:pbp 2.2s ease-in-out infinite}
+.pbi{font-size:1.5em;line-height:1}.pbt{display:flex;flex-direction:column;flex:1;gap:2px}.pbt b{font-size:.95em}.pbt span{font-size:.78em;opacity:.92}
+.pbg{background:rgba(255,255,255,.2);border-radius:999px;padding:6px 12px;font-weight:bold;font-size:.82em;white-space:nowrap}
+.pbc{border:1.5px solid #e53935}
+@keyframes pbp{0%,100%{box-shadow:0 3px 10px rgba(183,28,28,.35)}50%{box-shadow:0 3px 18px rgba(229,57,53,.75)}}
+/* بطاقة العدّ التنازلي لرمضان */
+.rmc{position:relative;overflow:hidden;text-align:center;color:#fff;border-radius:22px;padding:16px 14px 14px;margin-bottom:12px;background:radial-gradient(circle at 80% 15%,#1f6f86 0,transparent 55%),linear-gradient(165deg,#081a33,#0f3a62 62%,#14566a);box-shadow:0 6px 18px rgba(8,26,51,.35)}
+.rmc>*{position:relative}.rmst{position:absolute!important;inset:0;pointer-events:none}
+.rmst i{position:absolute;font-style:normal;color:#ffe9a6;animation:rmt 2.6s ease-in-out infinite}
+.rmt1{font-size:.85em;color:#cfe3ee}.rmb1{font-size:1.25em;font-weight:800;margin-top:2px}.rmf1{font-size:.72em;color:#b9d0dc;margin-top:8px}
+.rmm{display:inline-block;margin-top:6px;animation:rmd 1.9s cubic-bezier(.22,1.25,.36,1) both,rmf 3.6s ease-in-out 1.9s infinite,rmg 3.6s ease-in-out infinite}
+@keyframes rmd{0%{opacity:0;transform:translateY(-190px) rotate(-38deg) scale(.7)}55%{opacity:1}100%{opacity:1;transform:translateY(4px) rotate(-3deg) scale(1)}}
+.rmbar{height:7px;background:rgba(255,255,255,.18);border-radius:99px;margin:10px 6px 0;overflow:hidden}.rmbar i{display:block;height:100%;background:linear-gradient(90deg,#f4c542,#fff1a8);border-radius:99px}
+@keyframes rmf{0%,100%{transform:translateY(4px) rotate(-3deg)}50%{transform:translateY(-14px) rotate(3deg)}}
+@keyframes rmg{0%,100%{filter:drop-shadow(0 0 7px rgba(255,214,102,.4))}50%{filter:drop-shadow(0 0 22px rgba(255,214,102,.95))}}
+@keyframes rmt{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
+@media (prefers-reduced-motion:reduce){.rmm,.rmst i,.pbar{animation:none}}
+
+/* ورد اليوم */
+.wdc{border-radius:20px;padding:14px;margin-bottom:12px;color:#fff;cursor:pointer;background:linear-gradient(160deg,#0d3b3a,#17695c);box-shadow:0 5px 16px rgba(13,59,58,.3);border:2px solid transparent}
+.wdc.st0{border-color:#ef5350}.wdc.st2{background:linear-gradient(160deg,#0f4d2a,#1e8f4e)}
+.wdh{display:flex;justify-content:space-between;align-items:center;gap:8px}.wdt{font-weight:800;font-size:1.08em}
+.wdb{font-size:.76em;font-weight:bold;padding:4px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.wdb.r{background:#e53935;color:#fff}.wdb.r i{width:8px;height:8px;border-radius:50%;background:#fff;animation:wdp 1.2s ease-in-out infinite}
+.wdb.a{background:#ffd166;color:#5a3b00}.wdb.g{background:#fff;color:#1e8f4e}
+.wdp{height:7px;background:rgba(255,255,255,.2);border-radius:99px;margin:10px 0 8px;overflow:hidden}.wdp i{display:block;height:100%;background:linear-gradient(90deg,#ffd166,#fff3c4);border-radius:99px;transition:width .3s}
+.wdp.lg{background:var(--ac2);height:9px}.wdp.lg i{background:linear-gradient(90deg,var(--ac),#d4a017)}
+.wdm{display:flex;justify-content:space-between;gap:8px;font-size:.78em;opacity:.95}
+.wdgo{margin-top:10px;text-align:center;background:rgba(255,255,255,.18);border-radius:12px;padding:9px;font-weight:bold}
+@keyframes wdp{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.wdq{border-right:4px solid var(--ac)}.wdqt{line-height:2;font-size:1.02em}.wdqi{padding:8px 0;border-top:1px solid var(--bd,rgba(0,0,0,.08))}
+.wdi{display:flex;align-items:center;gap:10px;padding:10px 6px;border-top:1px solid var(--bd,rgba(0,0,0,.08));cursor:pointer}
+.wdi:first-of-type{border-top:0}
+.wdn{flex:none;width:30px;height:30px;border-radius:50%;background:var(--ac2);color:var(--ac);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:.85em}
+.wdi.ok .wdn{background:var(--ac);color:#fff}
+.wdx{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.wdtxt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.8}
+.wdbar{height:5px;background:var(--ac2);border-radius:99px;overflow:hidden}.wdbar i{display:block;height:100%;background:var(--ac);border-radius:99px}
+.wdi.ok .wdbar i{background:#d4a017}
+.wdc2{flex:none;font-weight:800;color:var(--ac);min-width:3.4em;text-align:left}.wdc2 small{opacity:.6;font-weight:normal}
+.wdtx{font-size:1.25em;line-height:2.1;font-weight:700;margin:10px 4px 2px}
+.wdfd{font-size:.86em;line-height:1.9;color:var(--mu);margin:2px 6px}
+.wdbig{position:relative;width:236px;height:236px;margin:10px auto;border:0!important;background:transparent!important;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.wdbig svg{position:absolute;inset:0}.wdbig:active .wdcn{transform:scale(.92)}
+.wdcn{position:relative;font-size:3.6em;font-weight:800;color:var(--ac);line-height:1;transition:transform .08s}
+.wdbig small{position:relative;margin-top:8px;color:var(--mu);font-size:.85em}
+.wdctl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.wdctl button{flex:1;min-width:70px}
+@media (prefers-reduced-motion:reduce){.wdb.r i{animation:none}}
 </style></head><body>
+<div id="zsplash" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:2147483647;background:#083f2f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;transition:opacity .45s ease"><img src="data:image/png;base64,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" width="132" height="132" alt="" style="border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.4)"><div style="font-family:'Amiri Quran','Amiri',serif;font-size:30px;color:#ffe08a;letter-spacing:.5px">زاد المسلم</div></div>
+<script>(function(){var s=document.getElementById("zsplash"),t=Date.now(),d=0;function go(){if(d||!s)return;d=1;s.style.opacity="0";s.style.pointerEvents="none";setTimeout(function(){if(s.parentNode)s.parentNode.removeChild(s)},500)}function arm(){setTimeout(go,Math.max(0,1100-(Date.now()-t)))}if(document.readyState==="complete")arm();else addEventListener("load",arm);setTimeout(go,6000)})()</script>
 <div id="tbar"></div><main id="m"></main>
 <nav id="nv"></nav>
 <script>
@@ -884,7 +982,7 @@ let ready=0,inR=0,SUBV=null;
 function tbar(){const e=$("#tbar");if(!e)return;const sh=cur!=="menu"&&!inQ&&!$("#qv");e.style.display=sh?"flex":"none";if(sh&&!e.firstChild)e.innerHTML='<button onclick="uiBack()" aria-label="رجوع">→ رجوع</button><span class="sp"></span><button onclick="goHome()" aria-label="القائمة الرئيسية">🏠 القائمة الرئيسية</button>'}
 function uiBack(){if(qst.length){qpop();return}if(inQ){qx();return}if(inR){bk();return}if(SUBV){const t=SUBV;SUBV=null;go(t);return}if(cur!=="menu")go("menu")}
 function goHome(){qst=[];if($("#qv"))qshut();go("menu")}
-function go(t){wakeOff();rotOff();SUBV=null;if(ready&&t!=="menu"&&!(history.state&&history.state.t)){try{history.pushState({t:1},"")}catch(e){}}inR=0;inQ=0;cur=t;nav();if(ready&&t==="menu")hClean();stopCmp();clearInterval(tick);({quran,adhkar,home,qibla,tasbih,set,menu}[t])();if(ready&&!S.chosen&&(t=="home"||t=="qibla"))askLoc()}
+function go(t){wdIn=0;qst=qst.filter(f=>f!==wdBack);wakeOff();rotOff();SUBV=null;if(ready&&t!=="menu"&&!(history.state&&history.state.t)){try{history.pushState({t:1},"")}catch(e){}}inR=0;inQ=0;cur=t;nav();if(ready&&t==="menu")hClean();stopCmp();clearInterval(tick);({quran,adhkar,home,qibla,tasbih,set,menu}[t])();if(ready&&!S.chosen&&(t=="home"||t=="qibla"))askLoc()}
 /* ======== الشاشة الرئيسية: لوحة أنيقة (تاريخ هجري، الصلاة القادمة، ورد اليوم، ذكر الوقت، اختصارات) ======== */
 const hmA=s=>String(s).replace(/\d/g,d=>"٠١٢٣٤٥٦٧٨٩"[d]);
 function hmGreet(){const h=new Date().getHours();return h<4?"طاب ليلك":h<11?"صباح الخير":h<15?"طاب يومك":h<18?"مساء الخير":"مساؤك طيّب"}
@@ -922,8 +1020,10 @@ function menu(){
   <div class="hm-top"><div class="hm-gr"><small>${hmGreet()}</small><h2>${hmA(hijri().replace(/^[^ ]+ /,"").replace(/\s*هـ\s*$/,"")+" هـ")}</h2><span>${hmA(hijri().split(" ")[0]+" · "+greg().replace(/^[^،]+،\s*/,""))}${city?" · "+esc(city):""}</span></div><div class="hm-lg">${LOGO(54)}</div></div>
   <div class="hm-next"><div class="hm-nl"><small>الصلاة القادمة</small><b>${NAMES[P.ni]}</b><span>${fmt(P.next)}</span></div><div class="hm-cd" id="hmc"></div></div>
   <div class="hm-prog"><i id="hmp2"></i></div></section>
+ ${ramCard()}
  <div class="hm-grid">${[["quran","القرآن الكريم"],["adhkar","حصن المسلم"],["tasbih","المسبحة"],["qibla","القبلة"],["home","المواقيت والأذان"],["set","الإعدادات"]].map(a=>`<button onclick="go('${a[0]}')"><span class="hm-ic"><svg viewBox="0 0 24 24">${NI[a[0]]}</svg></span><b>${a[1]}</b></button>`).join("")}</div>
  <div class="hm-ps">${chips}</div>
+ ${wdCard(1)}
  ${hmWird()}
  <div class="hm-az" onclick="${az.c==0?"go('adhkar')":"ntOpen('c:"+az.c+"')"}"><div class="hm-ai">${az.i}</div><div class="hm-at"><small>ذكر هذا الوقت</small><b>${az.t}</b><span>${az.d}</span></div><div class="hm-go">‹</div></div>
  ${hmThought()}${hmNextSeason()}
@@ -933,52 +1033,90 @@ function menu(){
 /* عدّاد رمضان التنازلي: يظهر قبل رمضان بـ٩٠ يومًا (ثلاثة أشهر) حسب التقويم الهجري في التطبيق */
 function ramCard(){try{
  const n=new Date(),tt=Date.UTC(n.getFullYear(),n.getMonth(),n.getDate(),12),[hy,hm,hd]=todayH();
- if(hm==9)return `<div class="card" style="text-align:center"><div class="mu">🌙 رمضان مبارك</div><div class="big">اليوم ${AD(hd)} من ${AD(mlen(hy,9))}</div></div>`;
+ const card=(top,num,sub,lbl,pct,foot)=>{const nz=String(num).length>2?34:String(num).length>1?42:50;
+  return `<div class="rmc"><div class="rmst"><i style="top:10%;right:9%;font-size:15px">✦</i><i style="top:34%;right:86%;font-size:10px;animation-delay:.7s">✦</i><i style="top:72%;right:12%;font-size:11px;animation-delay:1.2s">✦</i><i style="top:16%;right:66%;font-size:9px;animation-delay:1.8s">✦</i><i style="top:78%;right:84%;font-size:14px;animation-delay:.3s">✦</i><i style="top:50%;right:94%;font-size:8px;animation-delay:1.5s">✦</i></div>
+  <div class="rmt1">${top}</div>
+  <div class="rmm"><svg viewBox="0 0 160 160" width="176" height="176" aria-hidden="true"><defs><linearGradient id="rmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4b8"/><stop offset=".55" stop-color="#f4c542"/><stop offset="1" stop-color="#c98a16"/></linearGradient><mask id="rmk"><rect width="160" height="160" fill="#fff"/><circle cx="104" cy="68" r="50" fill="#000"/></mask></defs><circle cx="80" cy="80" r="64" fill="url(#rmg)" mask="url(#rmk)"/><circle cx="80" cy="80" r="70" fill="none" stroke="#f4c542" stroke-opacity=".22" stroke-dasharray="2 6" mask="url(#rmk)"/><text x="92" y="${num=="اليوم"?76:num.length>2?78:80}" text-anchor="middle" dominant-baseline="middle" font-size="${num=="اليوم"?26:nz}" font-weight="800" fill="#fff" style="paint-order:stroke;stroke:#a86f0a;stroke-width:1.5px">${num}</text><text x="92" y="${num=="اليوم"?100:104}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffe9a6">${sub}</text></svg></div>
+  <div class="rmb1">${lbl}</div>${pct==null?"":`<div class="rmbar"><i style="width:${pct}%"></i></div>`}<div class="rmf1">${foot}</div></div>`};
+ if(hm==9)return card("🌙 رمضان مبارك",AD(hd),"من "+AD(mlen(hy,9)),"اليوم "+AD(hd)+" من "+AD(mlen(hy,9)),Math.round(hd/mlen(hy,9)*100),"تقبّل الله صيامكم وقيامكم");
  const Y=hm>9?hy+1:hy,start=mstart(Y,9),df=Math.round((start-tt)/DAY);
  if(df<0||df>90)return"";
  const pct=Math.max(0,Math.min(100,Math.round((90-df)/90*100)));
  const gd=new Intl.DateTimeFormat("ar",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(start);
  const lbl=df==0?"رمضان يبدأ اليوم 🌙":df==1?"بقي يوم واحد على رمضان":df==2?"بقي يومان على رمضان":"بقي "+AD(df)+(df<=10?" أيام":" يومًا")+" على رمضان";
- return `<div class="card" style="text-align:center"><div class="mu">🌙 العدّ التنازلي لرمضان ${AD(Y)} هـ</div><div class="big">${lbl}</div><div class="khbar" style="margin:8px 0"><i style="width:${pct}%"></i></div><div class="mu">يبدأ تقريبًا ${gd} (حسب التقويم، ويتبع تعديل رؤية الهلال)</div></div>`
+ return card("🌙 العدّ التنازلي لرمضان "+AD(Y)+" هـ",df==0?"اليوم":AD(df),df==0?"رمضان":df==1?"يوم":df<=10?"أيام":"يومًا",lbl,pct,"يبدأ تقريبًا "+gd+" (حسب التقويم، ويتبع تعديل رؤية الهلال)")
 }catch(e){return""}}
 function home(){
  const t=times(new Date()),[ni]=nextP();
- $("#m").innerHTML=`<div class="cp">${needLoc()}<div class="card"><div class="set" style="margin:0"><span style="display:flex;align-items:center;gap:10px">${LOGO(40)}<h1 style="margin:0">زاد المسلم</h1></span><span><button class="gdl" onclick="pcal()">🕌 تقويم المواقيت</button> <button class="gdl" onclick="hcal()">📅 التقويم</button></span></div><div>${hijri()}</div><div class="mu">${greg()}</div></div>
- ${ramCard()}<div class="card"><div class="mu">القادمة: ${NAMES[ni]} — ${S.city}</div><div class="big" id="cd"></div></div>
+ $("#m").innerHTML=`<div class="cp"><div class="pbslot">${pbHtml()}</div><div class="card"><div class="set" style="margin:0"><span style="display:flex;align-items:center;gap:10px">${LOGO(40)}<h1 style="margin:0">زاد المسلم</h1></span><span><button class="gdl" onclick="pcal()">🕌 تقويم المواقيت</button> <button class="gdl" onclick="hcal()">📅 التقويم</button></span></div><div>${hijri()}</div><div class="mu">${greg()}</div></div>
+ ${wdCard()}<div class="card"><div class="mu">القادمة: ${NAMES[ni]} — ${S.city}</div><div class="big" id="cd"></div></div>
  <div class="card">${t.map((x,i)=>`<div class="row ${i==ni?"next":""}"><span>${NAMES[i]}</span><span>${fmt(x)}</span></div>`).join("")}</div>`+adBody()+`</div>`;
  const u=()=>{const[,n]=nextP();let s=Math.max(0,Math.floor((n-new Date())/1e3));const p=x=>String(x).padStart(2,"0");$("#cd").textContent=`${p(s/3600|0)}:${p(s%3600/60|0)}:${p(s%60)}`};u();tick=setInterval(u,1e3)}
 let hd=null,cmpOn=false;
 function bearing(){const a=21.4225,b=39.8262,dl=b-S.lng;return((Math.atan2(sin(dl),cos(S.lat)*tan(a)-sin(S.lat)*cos(dl))/R)+360)%360}
 function qdist(){const a=21.4225,b=39.8262,dl=b-S.lng,c=Math.acos(Math.max(-1,Math.min(1,sin(S.lat)*sin(a)+cos(S.lat)*cos(a)*cos(dl))));return Math.round(c*6371)}
 function qibla(){
- const q=bearing();
- $("#m").innerHTML=`${needLoc()}<div class="card" style="text-align:center"><h1 style="margin:0">القبلة</h1><div class="mu">${S.city} · ${Math.round(q).toLocaleString("ar")}° من الشمال · ${qdist().toLocaleString("ar")} كم</div>
+ const q=bearing(),dv=decl();
+ $("#m").innerHTML=`${needLoc()}<div class="card" style="text-align:center"><h1 style="margin:0">القبلة</h1><div class="mu">${S.city} · ${Math.round(q).toLocaleString("ar")}° من الشمال · ${qdist().toLocaleString("ar")} كم</div><div class="mu" style="font-size:.85em">الانحراف المغناطيسي هنا ${Math.abs(dv).toLocaleString("ar",{minimumFractionDigits:1,maximumFractionDigits:1})}° ${dv>=0?"شرقًا":"غربًا"} — يُصحَّح تلقائيًا</div>
  <div class="cmp" id="cmp"><div class="dl" id="dl"><span class="n">ش</span><div class="ka" style="transform:rotate(${q}deg)"><span id="kb">🕋</span></div></div><div class="pt"></div></div>
- <div id="st" class="mu" style="min-height:2.6em">أمسك الهاتف أفقيًا وحرّكه حتى يصل 🕋 إلى السهم الأعلى.</div><div class="set" style="justify-content:center;gap:10px"><span class="mu">تصحيح الاتجاه</span><button onclick="cmpAdj(-1)">−</button><b id="adj" style="min-width:3em;direction:ltr">${(S.cmpAdj||0).toLocaleString("ar")}°</b><button onclick="cmpAdj(1)">+</button></div><button class="p" onclick="startCmp()">تشغيل البوصلة</button></div>`;
+ <div id="st" class="mu" style="min-height:2.6em">أمسك الهاتف أفقيًا وحرّكه حتى يصل 🕋 إلى السهم الأعلى.</div><div id="cq" class="mu" style="font-size:.82em;min-height:1.4em;color:#c0392b"></div><div class="set" style="justify-content:center;gap:10px"><span class="mu">تصحيح الاتجاه</span><button onclick="cmpAdj(-1)">−</button><b id="adj" style="min-width:3em;direction:ltr">${(S.cmpAdj||0).toLocaleString("ar")}°</b><button onclick="cmpAdj(1)">+</button></div><button class="p" onclick="startCmp()">تشغيل البوصلة</button></div>`;
  if(!(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission))startCmp()}
 function tiltH(a,b,g){const cZ=cos(a),sZ=sin(a),cX=cos(b),sX=sin(b),cY=cos(g),sY=sin(g);let X,Y;
  if(Math.abs(cX*cY)>.7){X=-sZ*cX;Y=cZ*cX}else{X=-(cZ*sY+sZ*sX*cY);Y=-(sZ*sY-cZ*sX*cY)}
  return(Math.atan2(X,Y)/R+360)%360}
+/* انحراف الشمال المغناطيسي عن الجغرافي (نموذج WMM2025 الرسمي من NOAA/BGS، يعمل دون إنترنت): حساسات الهاتف تعطي الشمال المغناطيسي بينما القبلة محسوبة من الشمال الجغرافي */
+const WMMC=[-29351.8,0,12,0,-1410.8,4545.4,9.7,-21.5,-2556.6,0,-11.6,0,2951.1,-3133.6,-5.2,-27.7,1649.3,-815.1,-8,-12.1,1361,0,-1.3,0,-2404.1,-56.6,-4.2,4,1243.8,237.5,0.4,-0.3,453.6,-549.5,-15.6,-4.1,895,0,-1.6,0,799.5,278.6,-2.4,-1.1,55.7,-133.9,-6,4.1,-281.1,212,5.6,1.6,12.1,-375.6,-7,-4.4,-233.2,0,0.6,0,368.9,45.4,1.4,-0.5,187.2,220.2,0,2.2,-138.7,-122.9,0.6,0.4,-142,43,2.2,1.7,20.9,106.1,0.9,1.9,64.4,0,-0.2,0,63.8,-18.4,-0.4,0.3,76.9,16.8,0.9,-1.6,-115.7,48.8,1.2,-0.4,-40.9,-59.8,-0.9,0.9,14.9,10.9,0.3,0.7,-60.7,72.7,0.9,0.9,79.5,0,0,0,-77,-48.9,-0.1,0.6,-8.8,-14.4,-0.1,0.5,59.3,-1,0.5,-0.8,15.8,23.4,-0.1,0,2.5,-7.4,-0.8,-1,-11.1,-25.1,-0.8,0.6,14.2,-2.3,0.8,-0.2,23.2,0,-0.1,0,10.8,7.1,0.2,-0.2,-17.5,-12.6,0,0.5,2,11.4,0.5,-0.4,-21.7,-9.7,-0.1,0.4,16.9,12.7,0.3,-0.5,15,0.7,0.2,-0.6,-16.8,-5.2,0,0.3,0.9,3.9,0.2,0.2,4.6,0,0,0,7.8,-24.8,-0.1,-0.3,3,12.2,0.1,0.3,-0.2,8.3,0.3,-0.3,-2.5,-3.3,-0.3,0.3,-13.1,-5.2,0,0.2,2.4,7.2,0.3,-0.1,8.6,-0.6,-0.1,-0.2,-8.7,0.8,0.1,0.4,-12.9,10,-0.1,0.1,-1.3,0,0.1,0,-6.4,3.3,0,0,0.2,0,0.1,0,2,2.4,0.1,-0.2,-1,5.3,0,0.1,-0.6,-9.1,-0.3,-0.1,-0.9,0.4,0,0.1,1.5,-4.2,-0.1,0,0.9,-3.8,-0.1,-0.1,-2.7,0.9,0,0.2,-3.9,-9.1,0,0,2.9,0,0,0,-1.5,0,0,0,-2.5,2.9,0,0.1,2.4,-0.6,0,0,-0.6,0.2,0,0.1,-0.1,0.5,-0.1,0,-0.6,-0.3,0,0,-0.1,-1.2,0,0.1,1.1,-1.7,-0.1,0,-1,-2.9,-0.1,0,-0.2,-1.8,-0.1,0,2.6,-2.3,-0.1,0,-2,0,0,0,-0.2,-1.3,0,0,0.3,0.7,0,0,1.2,1,0,-0.1,-1.3,-1.4,0,0.1,0.6,0,0,0,0.6,0.6,0.1,0,0.5,-0.1,0,0,-0.1,0.8,0,0,-0.4,0.1,0,0,-0.2,-1,-0.1,0,-1.3,0.1,0,0,-0.7,0.2,-0.1,-0.1];
+function wmmDec(lat,lon,alt,yr){
+ const D=Math.PI/180,a=6378.137,f=1/298.257223563,e2=f*(2-f),re=6371.2,N=12;
+ const ph=lat*D,la=lon*D,sp=Math.sin(ph),cp=Math.cos(ph),Rc=a/Math.sqrt(1-e2*sp*sp);
+ const p=(Rc+alt)*cp,z=(Rc*(1-e2)+alt)*sp,r=Math.hypot(p,z),pc=Math.asin(z/r),x=Math.sin(pc),c=Math.cos(pc);
+ const dt=yr-2025,P=[],dP=[];
+ for(let n=0;n<=N;n++){P.push(new Array(n+1).fill(0));dP.push(new Array(n+1).fill(0))}
+ P[0][0]=1;
+ for(let n=1;n<=N;n++)for(let m=0;m<=n;m++){
+  if(n==m)P[n][n]=(n==1?1:Math.sqrt((2*n-1)/(2*n)))*c*P[n-1][n-1];
+  else P[n][m]=((2*n-1)*x*P[n-1][m]-(n-1>=m?Math.sqrt((n-1)*(n-1)-m*m)*(n>=2&&m<=n-2?P[n-2][m]:0):0))/Math.sqrt(n*n-m*m)}
+ for(let n=1;n<=N;n++)for(let m=0;m<=n;m++)dP[n][m]=((m<=n-1?Math.sqrt(n*n-m*m)*P[n-1][m]:0)-n*x*P[n][m])/c;
+ let X=0,Y=0,Z=0,k=0;
+ for(let n=1;n<=N;n++){const q=Math.pow(re/r,n+2);
+  for(let m=0;m<=n;m++,k++){
+   const g=WMMC[4*k]+WMMC[4*k+2]*dt,h=WMMC[4*k+1]+WMMC[4*k+3]*dt,cm=Math.cos(m*la),sm=Math.sin(m*la);
+   X-=q*(g*cm+h*sm)*dP[n][m];Y+=q*m*(g*sm-h*cm)*P[n][m]/c;Z-=q*(n+1)*(g*cm+h*sm)*P[n][m]}}
+ const ps=pc-ph,Xg=X*Math.cos(ps)-Z*Math.sin(ps),Zg=X*Math.sin(ps)+Z*Math.cos(ps);
+ return {d:Math.atan2(Y,Xg)/D,x:Xg,y:Y,z:Zg}}
+function decl(){try{if(Math.abs(S.lat)>85)return 0;const d=new Date(),y=d.getFullYear(),yr=y+(d-new Date(y,0,1))/(new Date(y+1,0,1)-new Date(y,0,1)),r=wmmDec(S.lat,S.lng,0,Math.max(2025,Math.min(2029.99,yr)));return isFinite(r.d)?r.d:0}catch(e){return 0}}
 async function startCmp(){
  const st=t=>{const e=$("#st");if(e)e.textContent=t};
  try{if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){if(await DeviceOrientationEvent.requestPermission()!="granted")throw 0}}catch(e){st("اسمح بالوصول للحركة والاتجاه ثم اضغط «تشغيل البوصلة» مرة أخرى.");return}
- stopCmp();const q=bearing();let got=false,abs=false,sm=null,last=0,wasOk=false,tp=0;
- hd=e=>{let h=null;const ia=e.type=="deviceorientationabsolute";if(ia)abs=true;
-  if(e.webkitCompassHeading!=null)h=e.webkitCompassHeading;
-  else if(e.alpha!=null&&(ia||(!abs&&e.absolute)))h=(e.beta!=null&&e.gamma!=null)?tiltH(e.alpha,e.beta,e.gamma):(360-e.alpha)%360;
+ stopCmp();const q=bearing(),dc=decl();let got=false,abs=false,sm=null,last=0,wasOk=false,tp=0,rel=null,rn=0,off=null,po=0,nz=0,lq=0;const t0=performance.now(),ad=(a,b)=>((a-b+540)%360)-180;
+ /* دقة أعلى: الاتجاه المغناطيسي (مطلق لكنه مضطرب) يُدمج مع اتجاه الجيروسكوب (ناعم لكنه نسبي): الجيروسكوب يتتبّع الحركة فورًا، والمغناطيسي يصحّح الإزاحة ببطء، فتُتجاهل قفزات التشويش اللحظية */
+ hd=e=>{let hA=null,hR=null;const ia=e.type=="deviceorientationabsolute";if(ia)abs=true;
+  if(e.webkitCompassHeading!=null)hA=e.webkitCompassHeading;
+  else if(e.alpha!=null){const hh=(e.beta!=null&&e.gamma!=null)?tiltH(e.alpha,e.beta,e.gamma):(360-e.alpha)%360;
+   if(ia||(!abs&&e.absolute))hA=hh;else if(!e.absolute)hR=hh}
+  if(hA==null&&hR==null)return;
+  const n=performance.now();
+  if(hR!=null){rel=hR;rn=n}
+  if(hA!=null&&rel!=null&&n-rn<400){const d=ad(hA,rel),dt=Math.min(200,po?n-po:16);po=n;
+   if(off==null)off=(d+360)%360;
+   else{const e1=ad(d,off),tau=Math.abs(e1)>25?5000:1500;off=(off+e1*(1-Math.exp(-dt/tau))+360)%360;nz+=(Math.abs(e1)-nz)*.02}}
+  let h=null;
+  if(off!=null&&rel!=null&&n-rn<400)h=(rel+off+720)%360;
+  else if(hA!=null)h=hA;
   if(h==null)return;
-  h=(h+((screen.orientation&&screen.orientation.angle)||0)+(S.cmpAdj||0)+720)%360;got=true;
-  const n=performance.now(),dt=Math.min(120,tp?n-tp:16);tp=n;
-  sm=sm==null?h:(sm+(((h-sm+540)%360)-180)*(1-Math.exp(-dt/110))+360)%360;
+  h=(h+((screen.orientation&&screen.orientation.angle)||0)+(S.cmpAdj||0)+dc+720)%360;got=true;
+  const dt2=Math.min(120,tp?n-tp:16);tp=n;
+  sm=sm==null?h:(sm+(((h-sm+540)%360)-180)*(1-Math.exp(-dt2/110))+360)%360;
   if(n-last<33)return;last=n;
   const dl=$("#dl"),kb=$("#kb"),cm=$("#cmp");if(!dl)return;
   dl.style.transform=`rotate(${-sm}deg)`;kb.style.transform=`rotate(${sm-q}deg)`;
-  const d=((q-sm+540)%360)-180,ok=Math.abs(d)<5;cm.classList.toggle("ok",ok);
+  const d=((q-sm+540)%360)-180,ok=Math.abs(d)<3;cm.classList.toggle("ok",ok);
   if(ok&&!wasOk&&navigator.vibrate){try{navigator.vibrate(60)}catch(_){}}wasOk=ok;
-  st((ok?"✓ هذا اتجاه القبلة":`حرّك الهاتف ${Math.round(Math.abs(d)).toLocaleString("ar")}° نحو ${d>0?"اليمين":"اليسار"}`)+` · اتجاهك ${Math.round(sm).toLocaleString("ar")}°`)};
+  st((ok?"✓ هذا اتجاه القبلة":`حرّك الهاتف ${Math.round(Math.abs(d)).toLocaleString("ar")}° نحو ${d>0?"اليمين":"اليسار"}`)+` · اتجاهك ${Math.round(sm).toLocaleString("ar")}°`);
+  if(n-lq>1000){lq=n;const c=$("#cq");if(c)c.textContent=(n-t0>4000&&nz>9)?"⚠ تشويش مغناطيسي: ابتعد عن المعادن والمغناطيس وحافظة الهاتف المغناطيسية، وحرّك الهاتف على شكل ٨ لمعايرته.":""}};
  addEventListener("deviceorientationabsolute",hd,true);addEventListener("deviceorientation",hd,true);cmpOn=true;
- setTimeout(()=>{if(!got)st("لا تصل بيانات من مستشعر الاتجاه. تأكد أن هاتفك فيه بوصلة (مستشعر مغناطيسي) وأن إذن الحركة والاتجاه غير مقيّد، ثم أعد فتح هذه الصفحة.")},2500);
- setTimeout(()=>{if(got&&!wasOk)st("لمعايرة أدق حرّك الهاتف على شكل ٨ وابتعد عن المعادن والمغناطيس.")},6000)}
+ setTimeout(()=>{if(!got)st("لا تصل بيانات من مستشعر الاتجاه. تأكد أن هاتفك فيه بوصلة (مستشعر مغناطيسي) وأن إذن الحركة والاتجاه غير مقيّد، ثم أعد فتح هذه الصفحة.")},2500)}
+if(!S.cmpDc){S.cmpDc=1;S.cmpAdj=0;save()}
 function cmpAdj(d){S.cmpAdj=Math.max(-30,Math.min(30,(S.cmpAdj||0)+d));save();const e=$("#adj");if(e)e.textContent=S.cmpAdj.toLocaleString("ar")+"°"}
 function stopCmp(){if(cmpOn){removeEventListener("deviceorientationabsolute",hd,true);removeEventListener("deviceorientation",hd,true);cmpOn=false}}
 function tasbih(){
@@ -1298,17 +1436,20 @@ function mv(d){const n=ci-d;if(n<0||n>=HD[cc].length)return;ci=n;rd();if(HP.on&&
 if(!S.vi){S.vib=true;S.vi=1;save()}
 const RF=[16,20,26];
 function rd(){const L=HD[cc],x=L[ci],k="h"+cc+"-"+ci,d=S.tas[k]||0,rem=Math.max(0,x[1]-d),rf=S.rf||0;
- $("#m").innerHTML=`<div class="hz"><div class="set hzb" style="margin:0"><button onclick="bk()" aria-label="رجوع إلى الفهرس" style="font-size:1.1em;font-weight:bold;min-width:40px;min-height:36px;padding:2px 10px">→</button><button id="hpb" class="hpb" onclick="hpt()" aria-label="استماع">${hico()}</button><span style="display:flex;align-items:center;gap:6px"><span class="mu">حجم الخط</span><button onclick="fz(-1)" style="min-width:48px;font-size:1.2em">−</button><button onclick="fz(1)" style="min-width:48px;font-size:1.2em">+</button></span></div>
+ $("#m").innerHTML=`<div class="hz"><div class="set hzb" style="margin:0"><button onclick="bk()" aria-label="رجوع إلى الفهرس" style="font-size:1.1em;font-weight:bold;min-width:40px;min-height:36px;padding:2px 10px">→</button><button id="hpb" class="hpb" onclick="hpt()" aria-label="استماع">${hico()}</button><button id="hvb" onclick="hzVibT()" aria-label="${S.vib?'الاهتزاز مفعّل — اضغط للإيقاف':'الاهتزاز متوقف — اضغط للتشغيل'}" style="min-width:44px;min-height:36px;font-size:1.1em;padding:2px 8px;opacity:${S.vib?1:.5}">${S.vib?"📳":"📴"}</button><span style="display:flex;align-items:center;gap:6px"><span class="mu">حجم الخط</span><button onclick="fz(-1)" style="min-width:48px;font-size:1.2em">−</button><button onclick="fz(1)" style="min-width:48px;font-size:1.2em">+</button></span></div>
  <div id="rc" style="flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;line-height:2.1;font-size:${RF[rf]}px;padding:4px 2px"><div class="mu" style="margin-bottom:6px">${CHN(cc)} · ${AD(ci+1)}/${AD(L.length)}</div><p style="margin:0 0 12px">${x[0]}</p><div class="mu" style="font-size:.8em">${x[2]}</div></div>
- <button class="tas hzt" id="tb" onclick="hc()" style="width:112px;height:112px;margin:0 auto 8px;font-size:2.2em;flex:none"><span id="tn"></span></button></div>`;tnU(d,x[1]);
+ <button class="tas hzt" id="tb" onpointerdown="hc()" onclick="if(!event.detail)hc()" aria-label="عدّ"><span id="tn"></span><small class="hzhint">اضغط في أي مكان هنا للعدّ</small></button></div>`;tnU(d,x[1]);
  let sx=0;const e=$("#rc");e.ontouchstart=t=>sx=t.touches[0].clientX;e.ontouchend=t=>{const dx=t.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)mv(dx>0?-1:1)}}
 function tnU(d,n){const tn=$("#tn"),tb=$("#tb");if(!tn)return;const done=d>=n;tn.innerHTML=done?`<b style="font-size:1em">✓</b><small style="display:block;font-size:.3em;opacity:.9;line-height:1">تم · التالي</small>`:`<b style="font-size:1em;line-height:1">${AD(d)}</b><small style="display:block;font-size:.34em;opacity:.9;line-height:1.3">من ${AD(n)}</small>`;if(tb){const pc=Math.min(100,Math.round(100*d/n));tb.style.backgroundImage=`linear-gradient(to top,rgba(255,255,255,.28) ${pc}%,transparent ${pc}%)`}}
 function th(v){S.theme=v;apply();save();set()}
 function fz(d){S.rf=Math.max(0,Math.min(2,(S.rf||0)+d));save();rd()}
+function hzVib(p){try{if(S.vib&&navigator.vibrate)navigator.vibrate(p)}catch(e){}}
+function hzVibT(){S.vib=!S.vib;save();const b=$("#hvb");if(b){b.textContent=S.vib?"📳":"📴";b.style.opacity=S.vib?"1":".5";b.setAttribute("aria-label",S.vib?"الاهتزاز مفعّل — اضغط للإيقاف":"الاهتزاز متوقف — اضغط للتشغيل")}if(S.vib)hzVib(30)}
 function hc(){const k="h"+cc+"-"+ci,x=HD[cc][ci],d=S.tas[k]||0;
- if(d>=x[1]){mv(-1);return}
+ if(d>=x[1]){hzVib(20);mv(-1);return}
  S.tas[k]=d+1;save();const rem=x[1]-d-1;tnU(d+1,x[1]);
- if(!rem){if(S.vib&&navigator.vibrate)navigator.vibrate(30);
+ hzVib(rem?20:[45,60,45,60,130]);
+ if(!rem){
   if(S.auto!==false&&ci<HD[cc].length-1){const c=cc,i=ci;setTimeout(()=>{if(cc==c&&ci==i&&$("#rc"))mv(-1)},500)}}}
 let locBusy=0,locT=0;
 function reqLoc(cb){
@@ -1666,23 +1807,43 @@ function kaOn(){try{if(KA.paused)KA.play().catch(()=>{})}catch(e){}}
 function kaOff(){try{if(!AP.on&&!HP.on)KA.pause()}catch(e){}}
 AU.addEventListener("playing",()=>{try{ZR.q&&(ZR.q.n=0);qms();msPS(AU);msPos()}catch(e){}});AU.onended=()=>anext();AU.onplay=AU.onpause=()=>{qplui();msPS(AU);if(!AU.paused)kaOn()};
 const ZR={};
-function zRetry(kind,key,fn){const r=ZR[kind]||(ZR[kind]={n:0,key:"",tm:0,h:null});if(r.key!==key){r.key=key;r.n=0}if(r.n>=5)return false;r.n++;const d=[1000,2500,5000,9000,15000][r.n-1];clearTimeout(r.tm);if(r.h){removeEventListener("online",r.h);r.h=null}const go=()=>{r.tm=0;try{fn()}catch(e){}};r.tm=setTimeout(()=>{if(navigator.onLine===false){r.h=()=>{removeEventListener("online",r.h);r.h=null;r.tm=setTimeout(go,800)};addEventListener("online",r.h);try{qtoast("لا يوجد اتصال… سيُستأنف التشغيل تلقائيًا عند عودة الإنترنت",4500)}catch(e){}}else go()},d);if(r.n==1)try{qtoast("ضعف في الشبكة… نعيد المحاولة",2500)}catch(e){}return true}
+function zRetry(kind,key,fn){const r=ZR[kind]||(ZR[kind]={n:0,key:"",tm:0,h:null,go:null});if(r.key!==key){r.key=key;r.n=0}r.n++;const d=[1000,2000,3500,6000,10000,15000][r.n-1]||20000;clearTimeout(r.tm);if(r.h){removeEventListener("online",r.h);r.h=null}
+ const go=()=>{clearTimeout(r.tm);r.tm=0;if(r.h){removeEventListener("online",r.h);r.h=null}r.go=null;try{fn()}catch(e){}};r.go=go;
+ r.tm=setTimeout(()=>{if(navigator.onLine===false){r.h=()=>go();addEventListener("online",r.h,{once:true});r.tm=setTimeout(go,20000);try{if(r.n<3)qtoast("لا يوجد اتصال… سيُستأنف التشغيل تلقائيًا عند عودة الإنترنت",4500)}catch(e){}}else go()},d);
+ try{if(r.n==1)qtoast("ضعف في الشبكة… نعيد المحاولة",2500);else if(r.n==8)qtoast("ما زلنا نحاول استئناف التشغيل… اضغط إيقاف إن أردت التوقف",5000)}catch(e){}return true}
+addEventListener("online",()=>{try{for(const k in ZR){const r=ZR[k];if(r&&r.tm&&r.go)r.go()}if(AP.on)apre();if(HP.on)hpre()}catch(e){}});
 AU.addEventListener("timeupdate",()=>{if(AP&&AU.currentTime>0)AP.pos=AU.currentTime});
-(function(){let n=0;setInterval(()=>{try{const q=AP.on&&!AU.paused&&!AU.ended&&AU.readyState<3,h=HP.on&&!HAU.paused&&!HAU.ended&&HAU.readyState<3;if(q||h){if(++n>=5){n=0;if(q)AU.onerror();else HAU.onerror()}}else n=0}catch(e){}},5000)})();
-AU.onerror=()=>{if(!AP.on)return;const f=S.qrec||RLD[0],s=AP.bs?1:AP.s,a=AP.bs?1:AP.a,code=(AU.error&&AU.error.code)||0,host=String(AU.currentSrc||AU.src||"").replace(/^[a-z]+:\/\/([^\/]*).*$/i,"$1");if(zRetry("q",f+"|"+s+"|"+a+"|"+(AP.k||0),()=>{if(!AP.on)return;if(SUD[f])AP.rt=AP.pos||0;aload(AP.k||0)}))return;if(!AP.k&&murl(f,s,a)&&!String(AU.src).startsWith("blob:")){aload(1);return}qstop();qtoast("تعذّر الوصول لملف الصوت (رمز "+code+" · "+(host||"؟")+")\nالقارئ: "+recname()+" · "+AD(s)+":"+AD(a)+"\nتأكد من الاتصال، وإن تكرر مع هذا القارئ فجرّب قارئًا آخر",9000)}
+(function(){let n=0,lp=-1;const pr=x=>x.currentTime+(x.buffered&&x.buffered.length?x.buffered.end(x.buffered.length-1):0);setInterval(()=>{try{const q=AP.on&&!AU.paused&&!AU.ended&&AU.readyState<3&&!(ZR.q&&ZR.q.tm),h=HP.on&&!HAU.paused&&!HAU.ended&&HAU.readyState<3&&!(ZR.h&&ZR.h.tm);if(q||h){const p=pr(q?AU:HAU);if(p!==lp){lp=p;n=0}else if(++n>=3){n=0;lp=-1;if(q)AU.onerror();else HAU.onerror()}}else{n=0;lp=-1}}catch(e){}},5000)})();
+AU.onerror=()=>{if(!AP.on)return;const f=S.qrec||RLD[0],s=AP.bs?1:AP.s,a=AP.bs?1:AP.a,key=f+"|"+s+"|"+a,rr=(ZR.q&&ZR.q.key===key)?ZR.q.n:0;zRetry("q",key,()=>{if(!AP.on)return;if(SUD[f])AP.rt=AP.pos||0;aload(!SUD[f]&&murl(f,s,a)&&rr%2==1?1:0)})}
 const p3=n=>String(n).padStart(3,"0");
 const aurl=(f,s,a)=>`https://everyayah.com/data/${f}/${p3(s)}${p3(a)}.mp3`;
 const MIR={"Alafasy_128kbps":"ar.alafasy","Husary_128kbps":"ar.husary","Abdul_Basit_Murattal_192kbps":"ar.abdulbasitmurattal","Minshawy_Murattal_128kbps":"ar.minshawi","Maher_AlMuaiqly_128kbps":"ar.mahermuaiqly","Saood_ash-Shuraym_128kbps":"ar.saoodshuraym","Abdurrahmaan_As-Sudais_192kbps":"ar.abdurrahmaansudais","Hudhaify_128kbps":"ar.hudhaify","Abu_Bakr_Ash-Shaatree_128kbps":"ar.shaatree","Muhammad_Ayyoub_128kbps":"ar.muhammadayyoub","Muhammad_Jibreel_128kbps":"ar.muhammadjibreel","Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net":"ar.ahmedajamy"};
 function gay(s,a){let n=a;for(let i=0;i<s-1;i++)n+=QD.text[i].length;return n}
 const murl=(f,s,a)=>MIR[f]?`https://cdn.islamic.network/quran/audio/128/${MIR[f]}/${gay(s,a)}.mp3`:"";
 async function asrcLocal(s,a){const f=S.qrec||RLD[0];try{const b=await idbGet("au:"+f+"/"+p3(s)+p3(a));if(b){if(aUrl)URL.revokeObjectURL(aUrl);aUrl=URL.createObjectURL(b);return aUrl}}catch(e){}return""}
+/* قراءة مسبقة: نُنزّل الآيات التالية في الذاكرة أثناء تشغيل الحالية، فلا يتوقف الانتقال بينها إن ضعفت الشبكة أو كان التطبيق في الخلفية */
+const PFM=new Map();let PFU=null,PFB=0,PFT=0;
+function apFlush(){try{PFM.forEach(v=>URL.revokeObjectURL(v));PFM.clear();if(PFU){URL.revokeObjectURL(PFU);PFU=null}}catch(e){}}
+function aNx(p){if(p.bs)return{s:p.s,a:p.a,bs:0};if(AP.end&&p.s==AP.end[0]&&p.a==AP.end[1])return null;const n=QD.text[p.s-1].length;return p.a+1>n?null:{s:p.s,a:p.a+1,bs:0}}
+async function apre(){
+ if(PFB||!AP.on||SUD[S.qrec||RLD[0]]||navigator.onLine===false||Date.now()<PFT)return;PFB=1;
+ try{const f=S.qrec||RLD[0],id=AP.t;let p={s:AP.s,a:AP.a,bs:AP.bs};
+  for(let i=0;i<10&&AP.on&&AP.t==id;i++){p=aNx(p);if(!p)break;
+   const s=p.bs?1:p.s,a=p.bs?1:p.a,u=aurl(f,s,a);if(PFM.has(u))continue;
+   try{if(await idbGet("au:"+f+"/"+p3(s)+p3(a)))continue}catch(e){}
+   const c=new AbortController(),tm=setTimeout(()=>c.abort(),25000);
+   try{const r=await fetch(u,{signal:c.signal});if(!r.ok)throw 0;const b=await r.blob();if(b.size<500)throw 0;if(AP.on&&AP.t==id){PFM.set(u,URL.createObjectURL(b));if(PFM.size>14){const k=PFM.keys().next().value;URL.revokeObjectURL(PFM.get(k));PFM.delete(k)}}}
+   catch(e){PFT=Date.now()+20000;break}finally{clearTimeout(tm)}}}catch(e){}
+ PFB=0}
+setInterval(()=>{try{if(AP.on&&!PFB)apre()}catch(e){}},4000);
 async function aload(k){
  if(SUD[S.qrec||RLD[0]])return asur();
  AP.k=k||0;const s=AP.bs?1:AP.s,a=AP.bs?1:AP.a,f=S.qrec||RLD[0],u=AP.k?murl(f,s,a):aurl(f,s,a);
  if(!u){qstop();qtoast("تعذّر تشغيل الصوت لهذا القارئ",6000);return}
  const t=AP.t=Date.now();let src=u;
  if(!AP.k){const l=await asrcLocal(s,a);if(AP.t!=t||!AP.on)return;if(l)src=l}
- AU.src=src;kaOn();
+ let pf=null;if(!AP.k&&src===u){const e=PFM.get(u);if(e){PFM.delete(u);pf=e;src=e}}
+ AU.src=src;if(PFU&&PFU!==pf){try{URL.revokeObjectURL(PFU)}catch(e){}}PFU=pf;kaOn();setTimeout(apre,300);
  AU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر ▶ لبدء التشغيل")});
  if(S.qfollow!==false&&$("#qv")){const g=qPageOf(AP.s,AP.a);if(g!==qn)qp(g,1)}
  WF.w=-1;WF.ak="";qhl();qplui();qms()}
@@ -1699,7 +1860,7 @@ function arep(){const st=AP.st;if(!S.qrep||!st)return 0;AP.s=st[0];AP.a=st[1];AP
 function anext(){if(!AP.on)return;if(SUD[S.qrec||RLD[0]]){const s=AP.s;if(AP.end&&AP.end[0]>s&&s<114){AP.s=s+1;AP.a=1;aload();return}if(arep())return;qstop();qtoast("انتهت السورة");return}if(!AP.bs&&AP.end&&AP.s==AP.end[0]&&AP.a==AP.end[1]){if(arep())return;qstop();return}if(AP.bs){AP.bs=0;aload();return}let s=AP.s,a=AP.a+1;if(a>QD.text[s-1].length){if(arep())return;qstop();qtoast("انتهت السورة");return}AP.s=s;AP.a=a;aload()}
 function aprev(){if(!AP.on)return;if(SUD[S.qrec||RLD[0]]){if(AP.s>1){AP.s--;AP.a=1;aload()}return}if(AP.bs)AP.bs=0;else{let s=AP.s,a=AP.a-1;if(a<1){s--;if(s<1)return;a=QD.text[s-1].length}AP.s=s;AP.a=a}aload()}
 function atog(){AU.paused?AU.play():AU.pause()}
-function qstop(){const w=AP.on;try{saveRes()}catch(e){}AP.on=0;kaOff();try{AU.pause();AU.removeAttribute("src");AU.load()}catch(e){}qhl();qplui();if(w&&!HP.on)msClear()}
+function qstop(){const w=AP.on;try{saveRes()}catch(e){}AP.on=0;kaOff();try{apFlush()}catch(e){}try{AU.pause();AU.removeAttribute("src");AU.load()}catch(e){}qhl();qplui();if(w&&!HP.on)msClear()}
 
 /* ---- المتابعة كلمة بكلمة + التمرير التلقائي في الوضع الأفقي ---- */
 let WF={raf:0,w:-1,ak:"",key:"",wt:null,u:0,st:0,lk:""};
@@ -2266,11 +2427,14 @@ async function wakeOn(){if(S.wake===false||!$("#qv")||WL)return;try{if(navigator
 function wakeOff(){try{WL&&WL.release()}catch(e){}WL=null}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible"){if($("#qv"))wakeOn();snReset();ntTick()}});
 /* ---- التنبيهات والعبادات ---- */
-const NTD=[["wake","أذكار الاستيقاظ من النوم","05:00",1,"adhkar"],["morning","أذكار الصباح","06:00",1,"adhkar"],["evening","أذكار المساء","17:00",1,"adhkar"],["sleep","أذكار النوم","22:30",1,"adhkar"],["kahf","سورة الكهف يوم الجمعة","10:00",1,"q18"],["mulk","سورة الملك يوميًا","21:00",1,"q67"],["mon","صيام الاثنين (تذكير مساء الأحد)","20:00",1,"fast"],["thu","صيام الخميس (تذكير مساء الأربعاء)","20:00",1,"fast"],["ghusl","الغسل والتطيب للجمعة","07:30",1,"nl"],["tabkeer","التبكير إلى الجمعة","10:30",1,"nl"]];
-const NTM={adhkar:["حان وقت أذكارك، فاجعل لسانك رطبًا بذكر الله.","لحظات قليلة مع الذكر تُطمئن القلب. ابدأ الآن.","ذكّر قلبك بربه، فأذكارك في انتظارك.","هيّا إلى أذكارك، وليكن يومك عامرًا بالذكر.","وقت الأذكار قد حان، فلا تدعه يفوتك."],q18:["يوم الجمعة مباركٌ، فاقرأ سورة الكهف.","لا تنسَ سورة الكهف في جمعتك."],q67:["موعدك مع سورة الملك، اقرأها بتدبّر.","اجعل لك وردًا من سورة الملك اليوم."],fast:["غدًا يوم صيام، فانوِ من الليل إن شاء الله.","تذكير لطيف: غدًا الاثنين أو الخميس، يوم صيامٍ مستحب."],salat:["اللهم صلِّ وسلّم على نبينا محمد ﷺ","صلِّ على النبي ﷺ"]};
+const NTD=[["wake","أذكار الاستيقاظ من النوم","05:00",1,"adhkar"],["morning","أذكار الصباح","06:00",1,"adhkar"],["evening","أذكار المساء","17:00",1,"adhkar"],["sleep","أذكار النوم","22:30",1,"adhkar"],["wird","ورد اليوم","10:00",1,"wd"],["kahf","سورة الكهف ليلة الجمعة","20:00",1,"q18"],["mulk","سورة الملك يوميًا","21:00",1,"q67"],["mon","صيام الاثنين (تذكير مساء الأحد)","20:00",1,"fast"],["thu","صيام الخميس (تذكير مساء الأربعاء)","20:00",1,"fast"],["ghusl","الغسل والتطيب للجمعة","07:30",1,"nl"],["tabkeer","التبكير إلى الجمعة","10:30",1,"nl"]];
+const NTM={adhkar:["حان وقت أذكارك، فاجعل لسانك رطبًا بذكر الله.","لحظات قليلة مع الذكر تُطمئن القلب. ابدأ الآن.","ذكّر قلبك بربه، فأذكارك في انتظارك.","هيّا إلى أذكارك، وليكن يومك عامرًا بالذكر.","وقت الأذكار قد حان، فلا تدعه يفوتك."],q18:["ليلة الجمعة مباركة، فاقرأ سورة الكهف.","لا تنسَ سورة الكهف في ليلة جمعتك."],q67:["موعدك مع سورة الملك، اقرأها بتدبّر.","اجعل لك وردًا من سورة الملك اليوم."],fast:["غدًا يوم صيام، فانوِ من الليل إن شاء الله.","تذكير لطيف: غدًا الاثنين أو الخميس، يوم صيامٍ مستحب."],salat:["اللهم صلِّ وسلّم على نبينا محمد ﷺ","صلِّ على النبي ﷺ"]};
 const ntMsg=k=>{const a=NTM[k]||NTM.adhkar;return a[Math.floor(Math.random()*a.length)]};
-function ntS(k){S.nt=S.nt||{};if(!S.ntD3){S.ntD3=1;Object.keys(S.nt).forEach(x=>{const o=S.nt[x];if(o&&!o.u)o.on=1});try{save()}catch(e){}}
- if(!S.nt[k]){const d=NTD.find(x=>x[0]==k);S.nt[k]=k=="salat"?{on:1,every:30,from:"08:00",to:"22:00"}:{on:1,t:d?d[2]:"08:00"}}const c=S.nt[k];if(k=="wake"&&c.rel===undefined)c.rel=c.t=="05:00"?15:0;return c}
+function ntS(k){S.nt=S.nt||{};if(!S.ntW2){S.ntW2=1;if(S.nt.wird&&S.nt.wird.t=="16:00")S.nt.wird.t="10:00"}
+ if(!S.ntK2){S.ntK2=1;if(S.nt.kahf&&S.nt.kahf.t=="10:00")S.nt.kahf.t="20:00"}
+ if(!S.ntD3){S.ntD3=1;Object.keys(S.nt).forEach(x=>{const o=S.nt[x];if(o&&!o.u)o.on=1});try{save()}catch(e){}}
+ if(!S.ntSal0){S.ntSal0=1;if(S.nt.salat&&!S.nt.salat.u)S.nt.salat.on=0;try{save()}catch(e){}}
+ if(!S.nt[k]){const d=NTD.find(x=>x[0]==k);S.nt[k]=k=="salat"?{on:0,every:30,from:"08:00",to:"22:00"}:{on:1,t:d?d[2]:"08:00"}}const c=S.nt[k];if(k=="wake"&&c.rel===undefined)c.rel=c.t=="05:00"?15:0;return c}
 function ntEff(k,c,n){if(k=="wake"&&c.rel>0){try{const f=new Date(times(n)[0].getTime()-c.rel*6e4);return String(f.getHours()).padStart(2,"0")+":"+String(f.getMinutes()).padStart(2,"0")}catch(e){return null}}return c.t}
 const ntPerm=()=>typeof Notification=="undefined"?"unsupported":Notification.permission;
 async function ntAsk(){try{await Notification.requestPermission()}catch(e){}nt()}
@@ -2282,8 +2446,8 @@ let ntAu=null;
 async function ntSound(k){try{if(!NTA[k])return false;if(ntAu){try{ntAu.pause()}catch(e){}}ntAu=new Audio(NTA[k]);ntAu.volume=1;await ntAu.play();return true}catch(e){return false}}
 const ntE=x=>String(x==null?"":x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function ntCat(tag,t){if(tag=="sil")return/استعادة|انتهى/.test(t||"")?"silend":"sil";if(NTP[tag])return tag;if(tag=="mon"||tag=="thu")return"fast";if(/\|/.test(tag||""))return"adhan";if(/^c\d+$/.test(tag||""))return"custom";return null}
-function ntPick(tag,t){const c=ntCat(tag,t);if(!c)return null;const P=NTP[c];S.ntI=S.ntI||{};const n=S.ntI[c]=(S.ntI[c]||0)+1,it=P.i[(n-1)%P.i.length];
- const x=P.x?P.x[(n-1)%P.x.length]:null;
+function ntPick(tag,t){const c=ntCat(tag,t);if(!c)return null;const P=NTP[c];S.ntI=S.ntI||{};const n=S.ntI[c]=(S.ntI[c]||0)+1,dn=Math.floor(Date.now()/864e5),it=P.i[(n-1+dn)%P.i.length];
+ const x=P.x?P.x[(n-1+dn)%P.x.length]:null;
  return{c,k:it[0],t:it[1],s:it[2],x:x?{k:x[0],t:x[1],s:x[2]}:null,a:P.a,snd:P.snd,keep:P.keep}}
 function ntLog(e){S.nlog=S.nlog||[];S.nlog.unshift(e);if(S.nlog.length>150)S.nlog.length=150;save()}
 const ntT0=Date.now();
@@ -2302,13 +2466,13 @@ function ntBanner(t,b,a){
   else if(Math.abs(dx)<8){hide();ntOpen(a)}
   else{d.style.transition="transform .2s,opacity .2s";d.style.transform="";d.style.opacity="1";d._t=setTimeout(hide,15000)}};
  d.onclick=null;clearTimeout(d._t);d._t=setTimeout(hide,15000)}
-function ntOpen(a){a=a||"nt";if(a=="qr"){go("quran");try{qopen(S.qp||1)}catch(e){qopen(1)}}else if(/^d:\d+:\d+$/.test(a)){const q=a.split(":");go("adhkar");sec(+q[1]);if(HD[+q[1]]){ci=Math.min(+q[2],HD[+q[1]].length-1);rd()}}else if(a=="kh"){go("quran");try{const p=khPlan();qopen(p&&!p.fin?Math.min(604,p.pos):1)}catch(e){qopen(1)}}else if(a=="adhkar")go("adhkar");else if(a.slice(0,2)=="c:"&&+a.slice(2)>=0){go("adhkar");sec(+a.slice(2))}else if(a=="nl")nl();else if(/^q\d+$/.test(a)){go("quran");qopen(QSP[+a.slice(1)-1])}else nt()}
+function ntOpen(a){a=a||"nt";if(a=="qr"){go("quran");try{qopen(S.qp||1)}catch(e){qopen(1)}}else if(/^d:\d+:\d+$/.test(a)){const q=a.split(":");go("adhkar");sec(+q[1]);if(HD[+q[1]]){ci=Math.min(+q[2],HD[+q[1]].length-1);rd()}}else if(a=="kh"){go("quran");try{const p=khPlan();qopen(p&&!p.fin?Math.min(604,p.pos):1)}catch(e){qopen(1)}}else if(a=="adhkar")go("adhkar");else if(a.slice(0,2)=="c:"&&+a.slice(2)>=0){go("adhkar");sec(+a.slice(2))}else if(a=="wd")wd();else if(a=="pb")pbl();else if(a=="nl")nl();else if(/^q\d+$/.test(a)){go("quran");qopen(QSP[+a.slice(1)-1])}else nt()}
 async function ntFire(t,b,tag,act,silent){
  const m=ntPick(tag,t);let body=b,a=act;
  if(m){a=m.a||act;body=(m.keep&&b?b+"\n":"")+m.t+"\n— "+m.s+(m.x?"\n\n"+m.x.t+"\n— "+m.x.s:"");
   ntLog({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),ts:Date.now(),t,m:m.t,s:m.s,k:m.k,x:m.x,b:m.keep?b:"",a})}
  let played=false;
- if(silent!==true&&S.ntSnd!==false&&S.ntCs!==0&&m&&m.snd)played=await ntSound(m.snd);
+ if(silent!==true&&S.ntSnd!==false&&S.ntCs!==0&&m&&m.snd&&!(window.__sdCh&&window.__sdCh(tag)))played=await ntSound(m.snd);
  if(document.visibilityState=="visible"){ntBanner(t,body,a);return}
  if(ntPerm()=="granted"){const o={body,tag,dir:"rtl",lang:"ar",silent:played?true:(silent!==undefined?silent:S.ntSnd===false),data:{a},renotify:true};
   try{if(navigator.serviceWorker){const r=await navigator.serviceWorker.getRegistration();if(r){await r.showNotification(t,o);return}}}catch(e){}
@@ -2322,7 +2486,8 @@ const ntm=s=>+s.slice(0,2)*60+ +s.slice(3);
 function snReset(){try{S.ntl=S.ntl||{};Object.keys(S.ntl).forEach(k=>{if(k.indexOf("sn_")==0)delete S.ntl[k]})}catch(e){}}
 function ntTick(){try{khTick()}catch(e){}try{snTick()}catch(e){}try{nxTick()}catch(e){}
  const n=new Date(),mn=Math.floor(n/60000),hm=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0"),dy=n.getDay();S.ntl=S.ntl||{};let ch=0;
- NTD.forEach(d=>{const c=ntS(d[0]);if(!c.on||ntEff(d[0],c,n)!=hm||S.ntl[d[0]]==mn)return;const ds={kahf:[5],ghusl:[5],tabkeer:[5],mon:[0],thu:[3]}[d[0]];if(ds&&!ds.includes(dy))return;S.ntl[d[0]]=mn;ch=1;ntFire(d[1],ntMsg(d[4]=="fast"?"fast":d[4][0]=="q"?d[4]:NTM[d[0]]?d[0]:"adhkar"),d[0],d[4])});
+ NTD.forEach(d=>{const c=ntS(d[0]);if(!c.on||ntEff(d[0],c,n)!=hm||S.ntl[d[0]]==mn)return;if(d[0]=="wird")return;const ds={kahf:[4],ghusl:[5],tabkeer:[5],mon:[0],thu:[3]}[d[0]];if(ds&&!ds.includes(dy))return;if(d[0]=="kahf"){const dk=n.toDateString();if(S.ntl.kahfD==dk)return;S.ntl.kahfD=dk}S.ntl[d[0]]=mn;ch=1;ntFire(d[1],ntMsg(d[4]=="fast"?"fast":d[4][0]=="q"?d[4]:NTM[d[0]]?d[0]:"adhkar"),d[0],d[4])});
+ {const w=ntS("wird"),nn=Math.max(1,Math.min(3,+w.n||3));if(w.on&&!wdDone())[w.t,w.t2||"15:00",w.t3||"20:00"].slice(0,nn).forEach((tt,k)=>{if(tt==hm&&S.ntl["wird"+k]!=mn){S.ntl["wird"+k]=mn;ch=1;ntFire("ورد اليوم",wdMsg(k),"wird","wd")}})}
  const sc=ntS("salat"),m=n.getHours()*60+n.getMinutes();
  if(sc.on&&m>=ntm(sc.from)&&m<=ntm(sc.to)&&(m-ntm(sc.from))%sc.every==0&&S.ntl.salat!=mn){S.ntl.salat=mn;ch=1;ntFire("الصلاة على النبي ﷺ",ntMsg("salat"),"salat","nt")}
  (S.ntc||[]).forEach(x=>{if(!x.on||x.done||S.ntl[x.id]==mn)return;const cand=x.rep=="once"?new Date(x.d+"T"+x.t):new Date(n.getFullYear(),n.getMonth(),n.getDate(),+x.t.slice(0,2),+x.t.slice(3));if(x.rep=="weekly"&&cand.getDay()!=new Date(x.d+"T00:00").getDay())return;if(Math.floor((cand-x.pre*60000)/60000)==mn){S.ntl[x.id]=mn;ch=1;if(x.rep=="once")x.done=1;ntFire(x.n,x.ds||"حان موعد التنبيه"+(x.pre?" بعد "+x.pre+" دقيقة":""),x.id,"nt",!!x.sl)}});
@@ -2681,11 +2846,13 @@ NTP.tabkeer={a:"nl",keep:1,i:[
 snH("«مَنِ اغْتَسَلَ يَوْمَ الْجُمُعَةِ غُسْلَ الْجَنَابَةِ ثُمَّ رَاحَ فَكَأَنَّمَا قَرَّبَ بَدَنَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الثَّانِيَةِ فَكَأَنَّمَا قَرَّبَ بَقَرَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الثَّالِثَةِ فَكَأَنَّمَا قَرَّبَ كَبْشًا أَقْرَنَ، وَمَنْ رَاحَ فِي السَّاعَةِ الرَّابِعَةِ فَكَأَنَّمَا قَرَّبَ دَجَاجَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الْخَامِسَةِ فَكَأَنَّمَا قَرَّبَ بَيْضَةً، فَإِذَا خَرَجَ الْإِمَامُ حَضَرَتِ الْمَلَائِكَةُ يَسْتَمِعُونَ الذِّكْرَ»","متفق عليه (البخاري ٨٨١ ومسلم ٨٥٠) عن أبي هريرة"),
 snH("«إِذَا كَانَ يَوْمُ الْجُمُعَةِ كَانَ عَلَى كُلِّ بَابٍ مِنْ أَبْوَابِ الْمَسْجِدِ الْمَلَائِكَةُ يَكْتُبُونَ الْأَوَّلَ فَالْأَوَّلَ، فَإِذَا جَلَسَ الْإِمَامُ طَوَوُا الصُّحُفَ وَجَاءُوا يَسْتَمِعُونَ الذِّكْرَ»","رواه البخاري (٩٢٩) عن أبي هريرة")]};
 function nxCfg(){const x=S.nx=S.nx||{};x.q=x.q||{on:1,t:"22:30"};x.h=x.h||{on:1,off:40};x.d=x.d||{on:1,from:"08:00",to:"21:00",every:180,all:0,p:0};return x}
-function nxFlat(c){const NXX=[0,26,27],ks=(c.d.all?Object.keys(HD).map(Number).filter(k=>k<EVID):[...Array(34).keys()]).filter(k=>NXX.indexOf(k)<0),L=[];ks.forEach(k=>{if(HD[k])HD[k].forEach((x,i)=>L.push([k,i]))});return L}
+function nxFlat(c){const NXX=[0,2,26,27],ks=(c.d.all?Object.keys(HD).map(Number).filter(k=>k<EVID):[...Array(34).keys()]).filter(k=>NXX.indexOf(k)<0),L=[];ks.forEach(k=>{if(HD[k])HD[k].forEach((x,i)=>L.push([k,i]))});return L}
 function nxQiyam(){ntFire("🌙 قيام الليل",ntMsg("qiyam"),"qiyam","qr")}
 function nxHour(){ntFire("🕌 ساعة الإجابة",ntMsg("jumua"),"jumua","c:"+NXC)}
-function nxDay(){
- const c=nxCfg(),L=nxFlat(c);if(!L.length)return;let p=c.d.p||0;if(p>=L.length)p=0;c.d.p=p+1;
+function nxDay(t){
+ const c=nxCfg(),L=nxFlat(c);if(!L.length)return;let p;
+ if(t){p=c.d.p||0;if(p>=L.length)p=0}else{const ev=Math.max(1,+c.d.every||180),f=ntm(c.d.from),w=new Date(),sl=Math.max(0,Math.round((w.getHours()*60+w.getMinutes()-f)/ev)),sp=Math.max(1,Math.floor((ntm(c.d.to)-f)/ev)+1),dn=Math.floor(Date.UTC(w.getFullYear(),w.getMonth(),w.getDate())/864e5);p=(dn*sp+sl)%L.length}
+ c.d.p=p+1;
  const[k,i]=L[p],x=HD[k][i],txt=String(x[0]).replace(/<[^>]*>/g,"").trim(),a="d:"+k+":"+i,
   body=(txt.length>230?txt.slice(0,230).replace(/\s+\S*$/,"")+"…":txt)+(x[1]>1?"\n(تُقال "+AD(x[1])+" مرات)":"")+"\n— اضغط لتبدأ الذكر مع المسبحة";
  ntLog({id:Date.now()+"-"+Math.random().toString(36).slice(2,6),ts:Date.now(),t:"📿 "+CHN(k),m:txt,s:String(x[2]||"").replace(/<[^>]*>/g,""),k:"h",x:null,b:"",a});
@@ -2697,7 +2864,7 @@ function nxTick(){
  if(c.d.on&&m>=ntm(c.d.from)&&m<=ntm(c.d.to)&&(m-ntm(c.d.from))%c.d.every==0&&S.ntl.nx_d!=mn){S.ntl.nx_d=mn;ch=1;nxDay()}
  if(ch)save()}
 function nxSet(g,f,v){nxCfg()[g][f]=v;save()}
-function nxTest(k){if(k=="q")nxQiyam();else if(k=="h")nxHour();else{nxDay();save()}}
+function nxTest(k){if(k=="q")nxQiyam();else if(k=="h")nxHour();else{nxDay(1);save()}}
 function nxCard(){
  const c=nxCfg();
  return `<div class="card"><div class="lh">🌙 قيام الليل · ساعة الإجابة · أذكار اليوم والليلة</div>
@@ -2725,18 +2892,19 @@ const ntRow=d=>{const c=ntS(d[0]);
  return `<div class="set"><span>${d[1]}</span><span style="display:flex;gap:8px;align-items:center"><input type="time" value="${c.t}" onchange="ntSet('${d[0]}','t',this.value)"><input type="checkbox" ${c.on?"checked":""} onchange="ntSet('${d[0]}','on',this.checked?1:0)" style="width:24px;height:24px"></span></div>`};
 function nt(){
  cur="set";SUBV="set";nav();const p=ntPerm(),sc=ntS("salat");
- $("#m").innerHTML=`<div class="card"><h1>التنبيهات والعبادات</h1>
+ $("#m").innerHTML=`<div class="pbslot">${pbHtml()}</div><div class="card"><h1>التنبيهات والعبادات</h1>
  <button class="gdl" style="width:100%;margin:6px 0" onclick="nl()">📜 الرسائل المحفوظة (${AD((S.nlog||[]).length)})</button>
  ${p=="granted"?`<div class="mu">✓ إشعارات النظام مسموحة</div>`:p=="unsupported"?`<div class="mu">⚠ هذا المتصفح لا يدعم الإشعارات؛ ستظهر التنبيهات داخل التطبيق فقط.</div>`:`<div class="mu">⚠ الإشعارات غير مفعّلة بعد، فالتنبيهات لن تصلك كإشعارات قبل السماح بها.${p=="denied"?" فعّلها من إعدادات الموقع أو التطبيق في هاتفك.":""}</div>${p=="denied"?"":`<button class="gdl" style="margin-top:6px" onclick="ntAsk()">السماح بالإشعارات</button>`}`}
  <div class="mu" style="margin-top:6px">تعمل التنبيهات دون إنترنت ما دام التطبيق مفتوحًا أو في الخلفية. وصولها بعد إغلاقه تمامًا يحتاج تثبيته كتطبيق APK بجدولة إشعارات محلية.</div>
+ <div class="mu" style="margin-top:6px;line-height:1.9">لكتم الأصوات (الأذان والصلاة على النبي وغيرها) من خارج التطبيق: اخفض «صوت التنبيهات» بأزرار صوت الهاتف، أو اسحب الإشعار من الستارة ليقف صوته. ويمكنك أيضًا اختيار «صامت» من هنا لكتمها كلها.</div>
  <div class="set"><span>صوت التنبيهات</span><select onchange="S.ntSnd=this.value==='1';save()"><option value="1" ${S.ntSnd!==false?"selected":""}>صوت الهاتف الافتراضي</option><option value="0" ${S.ntSnd===false?"selected":""}>صامت</option></select></div>
- <div class="set"><span>أصوات خاصة بدل صوت الهاتف (عصافير الصباح والمساء · تلاوة «إن الله وملائكته») — تعمل والتطبيق مفتوح</span><input type="checkbox" ${S.ntCs!==0?"checked":""} onchange="S.ntCs=this.checked?1:0;save()" style="width:24px;height:24px"></div>
- <div class="set"><span>تجربة التنبيه</span><span style="display:flex;gap:6px"><button onclick="ntFire('أذكار الصباح','','morning','adhkar')">الصباح</button><button onclick="ntFire('الصلاة على النبي ﷺ','','salat','nt')">الصلاة على النبي</button></span></div></div>
+ <div class="set"><span>أصوات خاصة بدل صوت الهاتف (عصافير الصباح والمساء · تلاوة «إن الله وملائكته») — تصلك والتطبيق مغلق في نسخة APK الأحدث</span><input type="checkbox" ${S.ntCs!==0?"checked":""} onchange="S.ntCs=this.checked?1:0;save()" style="width:24px;height:24px"></div>
+ <div class="set"><span>تجربة التنبيه</span><span style="display:flex;gap:6px"><button onclick="ntFire('أذكار الصباح','','morning','adhkar')">الصباح</button><button onclick="ntFire('ورد اليوم',wdMsg(0),'wird','wd')">ورد اليوم</button><button onclick="ntFire('الصلاة على النبي ﷺ','','salat','nt')">الصلاة على النبي</button></span></div></div>
  ${snCard()}${nxCard()}
  <div class="card"><div class="lh">الأذكار اليومية (مفعّلة افتراضيًا)</div>${NTD.slice(0,4).map(ntRow).join("")}</div>
- <div class="card"><div class="lh">تنبيهات الجمعة (كل أسبوع)</div>${["ghusl","tabkeer","kahf"].map(k=>ntRow(NTD.find(d=>d[0]==k))).join("")}<div class="mu">الغسل والتطيب صباح الجمعة، والتبكير قبل الصلاة، والكهف في وقتها. وتصلك أيضًا ساعة الإجابة قبيل المغرب، والصلاة على النبي ﷺ ليلة الجمعة (من مساء الخميس) ويومها، من البطاقتين التاليتين.</div></div>
- <div class="card"><div class="lh">تنبيهات إضافية (مفعّلة افتراضيًا)</div>${NTD.slice(4).filter(d=>!["kahf","ghusl","tabkeer"].includes(d[0])).map(ntRow).join("")}<div class="mu">الأيام القادمة للصيام: ${ntNextFast()} — اليوم ${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</div></div>
- <div class="card"><div class="lh">الصلاة على النبي ﷺ</div>
+ ${wdSet()}<div class="card"><div class="lh">تنبيهات الجمعة (كل أسبوع)</div>${["ghusl","tabkeer","kahf"].map(k=>ntRow(NTD.find(d=>d[0]==k))).join("")}<div class="mu">الغسل والتطيب صباح الجمعة، والتبكير قبل الصلاة، والكهف مرة واحدة مساء الخميس (ليلة الجمعة). وتصلك أيضًا ساعة الإجابة قبيل المغرب. أما تنبيه الصلاة على النبي ﷺ فمتوقف افتراضيًا، فعّله من بطاقته أدناه إن أردت.</div></div>
+ <div class="card"><div class="lh">تنبيهات إضافية (مفعّلة افتراضيًا)</div>${NTD.slice(4).filter(d=>!["kahf","ghusl","tabkeer","wird"].includes(d[0])).map(ntRow).join("")}<div class="mu">الأيام القادمة للصيام: ${ntNextFast()} — اليوم ${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</div></div>
+ <div class="card"><div class="lh">الصلاة على النبي ﷺ (متوقفة افتراضيًا)</div>
  <div class="set"><span>تفعيل</span><input type="checkbox" ${sc.on?"checked":""} onchange="ntSet('salat','on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
  <div class="set"><span>كل</span><select onchange="ntSet('salat','every',+this.value,1)">${[[15,"١٥ دقيقة"],[30,"٣٠ دقيقة"],[60,"ساعة"],[120,"ساعتين"]].map(o=>`<option value="${o[0]}" ${sc.every==o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></div>
  <div class="set"><span>من / إلى</span><span style="display:flex;gap:6px"><input type="time" value="${sc.from}" onchange="ntSet('salat','from',this.value,1)"><input type="time" value="${sc.to}" onchange="ntSet('salat','to',this.value,1)"></span></div>
@@ -2748,6 +2916,143 @@ function nt(){
  <div class="set"><span>صامت</span><input id="cs" type="checkbox" style="width:24px;height:24px"></div><button class="p" style="width:100%" onclick="ntAdd()">حفظ التنبيه</button></div></div>`}
 function ntAdd(){const n=$("#cn").value.trim();if(!n){qtoast("اكتب عنوان التنبيه");return}S.ntc=S.ntc||[];S.ntc.push({id:"c"+Date.now(),n,ds:$("#cds").value.trim(),d:$("#cd").value,t:$("#ct").value,rep:$("#cr").value,pre:+$("#cp").value,sl:$("#cs").checked?1:0,on:1});save();nt()}
 
+/* ---- مركز المشاكل: شريط أحمر في التطبيق + إشعار في الستارة + صفحة الحل ---- */
+let PB=[];
+async function pbList(){
+ const L=[],b=slB();let st={};try{st=await pmState()}catch(e){}
+ if(st.n=="prompt"||st.n=="denied")L.push({k:"n",i:"🔔",t:"إشعارات التطبيق غير مفعّلة",d:"بدونها لن تصلك تنبيهات الأذكار والصلاة على النبي ﷺ ولا تذكير الوضع الصامت.",s:st.n=="denied"?"الإذن مرفوض: سيفتح إعدادات التطبيق، اختر «الإشعارات» وفعّلها ثم ارجع.":"اضغط «السماح»، ثم وافق في النافذة التي تظهر.",bt:"السماح بالإشعارات"});
+ if(!S.chosen)L.push({k:"g",i:"📍",t:"الموقع غير محدّد",d:"تحتاجه مواقيت الصلاة واتجاه القبلة. ويمكنك بدلًا من ذلك اختيار مدينتك يدويًا من الإعدادات.",s:"اضغط «السماح» ثم وافق على الوصول إلى الموقع، وتأكد من تشغيل GPS.",bt:"السماح بالموقع"});
+ const on=!!slS().on;
+ if(b&&on){let h=false;try{h=b.has()}catch(e){}
+  if(!h)L.push({k:"d",i:"🔕",t:"الوضع الصامت للصلوات لا يعمل",d:"لم تمنح التطبيق إذن «عدم الإزعاج»، فلن يُسكت هاتفك وقت الصلاة.",s:"اضغط الزر، ابحث عن «زاد المسلم» في القائمة، فعّل المفتاح ثم اضغط «السماح» وارجع إلى التطبيق.",bt:"منح إذن عدم الإزعاج"});
+  let ex=true;try{ex=!/غير مسموحة/.test(b.status())}catch(e){}
+  if(!ex)L.push({k:"x",i:"⏰",t:"المنبّهات الدقيقة غير مسموحة",d:"قد يتأخر الصمت أو فكّه بضع دقائق عن وقته.",s:typeof b.askExact==="function"?"اضغط الزر وفعّل «السماح بضبط المنبّهات والتذكيرات».":"الإعدادات ← التطبيقات ← زاد المسلم ← المنبّهات والتذكيرات ← السماح.",bt:"السماح بالمنبّهات الدقيقة"})}
+ return L}
+function pbHtml(){if(!PB.length)return"";const f=PB[0];return `<div class="pbar" onclick="pbl()"><span class="pbi">⚠</span><span class="pbt"><b>${f.t}</b><span>${PB.length>1?"و"+AD(PB.length-1)+" مشكلة أخرى · اضغط للحل":"اضغط هنا للحل"}</span></span><span class="pbg">حلّ ←</span></div>`}
+function pbPaint(){try{document.querySelectorAll(".pbslot").forEach(e=>{e.innerHTML=pbHtml()})}catch(e){}if(document.getElementById("pbl"))pbDraw()}
+async function pbScan(){try{PB=await pbList()}catch(e){PB=[]}pbPaint();
+ /* إشعار في الستارة مرة يوميًا إن وُجدت مشكلة والتطبيق ليس أمامك */
+ try{if(PB.length&&document.visibilityState!="visible"&&ntPerm()=="granted"){const dk=new Date().toDateString(),hr=new Date().getHours();
+  if(S.pbDay!==dk&&hr>=8&&hr<22){S.pbDay=dk;save();ntFire("⚠ "+PB[0].t,PB[0].d+" اضغط لفتح صفحة الحل.","pb","pb")}}}catch(e){}}
+function pbDraw(){const e=document.getElementById("pbl");if(!e)return;
+ e.innerHTML=PB.length?PB.map(p=>`<div class="card pbc"><div class="set" style="margin:0;align-items:flex-start"><span style="font-size:1.8em;line-height:1">${p.i}</span><span style="flex:1"><b>${p.t}</b><div class="mu" style="margin:4px 0;line-height:1.8">${p.d}</div><div style="font-size:.85em;line-height:1.8">${p.s}</div></span></div><button class="gdl" style="width:100%;margin-top:10px" onclick="pbFix('${p.k}')">${p.bt}</button></div>`).join(""):`<div class="card" style="text-align:center"><div style="font-size:2.2em">✅</div><b>لا توجد مشاكل</b><div class="mu" style="margin-top:4px">كل الأذونات اللازمة ممنوحة.</div></div>`}
+function pbl(){cur="set";SUBV="set";nav();$("#m").innerHTML=`<div class="card"><div class="set" style="margin:0"><h1 style="margin:0">حل المشاكل</h1><button onclick="pbScan()">🔄 فحص</button></div><div class="mu" style="margin-top:4px">الأذونات والإعدادات التي تمنع التطبيق من العمل كاملًا.</div></div><div id="pbl"></div>`;pbDraw();pbScan()}
+async function pbFix(k){window.__pbAsk=1;const b=slB();
+ try{if(k=="n"){if(typeof Notification!="undefined"&&Notification.permission=="denied"){qtoast("فعّل الإشعارات من إعدادات الهاتف ← التطبيقات ← زاد المسلم ← الإشعارات",7000)}else await pmOne("n")}
+  else if(k=="g")await pmOne("g");
+  else if(k=="d"&&b)b.ask();
+  else if(k=="x"&&b){if(typeof b.askExact==="function")b.askExact();else qtoast("الإعدادات ← التطبيقات ← زاد المسلم ← المنبّهات والتذكيرات",7000)}}catch(e){}
+ setTimeout(pbScan,800)}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible"){setTimeout(pbScan,500)}else setTimeout(pbScan,45000)});
+setInterval(pbScan,60000);setTimeout(pbScan,1500);
+
+/* ---- ورد اليوم: ٢٠ ذكرًا من الأذكار الصحيحة (نصوصها وتخريجها من «حصن المسلم» ومن كتب السنة في تراث)، لكل ذكر مسبحة ١٠٠ ويستمر العدّ بعدها ---- */
+const WRD=[
+["لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ","«مَنْ قَالَ لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ، وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ عَشْرَ مِرَارٍ، كَانَ كَمَنْ أَعْتَقَ أَرْبَعَةَ أَنْفُسٍ مِنْ وَلَدِ إِسْمَاعِيلَ»","البخاري ٦٤٠٤، ومسلم ٢٦٩٣"],
+["أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ الَّذِي لاَ إِلَهَ إِلاَّ هُوَ الْحَيَّ الْقَيُّومَ وَأَتُوبُ إِلَيْهِ","من قاله «غَفَرَ اللَّهُ لَهُ وَإِنْ كَانَ فَرَّ مِنَ الزَّحْفِ»","أبو داود ١٥١٧، والترمذي ٣٥٧٧، وصححه الحاكم ووافقه الذهبي وصححه الألباني"],
+["سُبْحَانَ اللَّهِ وَبِحَمْدِهِ","«مَنْ قَالَ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ فِي يَوْمٍ مِائَةَ مَرَّةٍ حُطَّتْ خَطَايَاهُ وَلَوْ كَانَتْ مِثْلَ زَبَدِ الْبَحْرِ»","البخاري ٦٤٠٥، ومسلم ٢٦٩١"],
+["سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ","«كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ، حَبِيبَتَانِ إِلَى الرَّحْمَنِ»","متفق عليه، ومسلم ٢٦٩٤"],
+["سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ","«مَنْ قَالَ: سُبْحَانَ اللَّهِ الْعَظِيمِ وَبِحَمْدِهِ غُرِسَتْ لَهُ نَخْلَةٌ فِي الْجَنَّةِ»","الترمذي ٣٤٦٤، وصححه الحاكم ووافقه الذهبي"],
+["سُبْحَانَ اللَّهِ وَبِحَمْدِهِ عَدَدَ خَلْقِهِ وَرِضَا نَفْسِهِ وَزِنَةَ عَرْشِهِ وَمِدَادَ كَلِمَاتِهِ","«لَقَدْ قُلْتُ بَعْدَكِ أَرْبَعَ كَلِمَاتٍ ثَلاَثَ مَرَّاتٍ لَوْ وُزِنَتْ بِمَا قُلْتِ مُنْذُ الْيَوْمِ لَوَزَنَتْهُنَّ»","مسلم ٢٧٢٦"],
+["لاَ حَوْلَ وَلاَ قُوَّةَ إِلاَّ بِاللَّهِ","«أَلاَ أَدُلُّكَ عَلَى كَنْزٍ مِنْ كُنُوزِ الْجَنَّةِ؟ قُلْ: لاَ حَوْلَ وَلاَ قُوَّةَ إِلاَّ بِاللَّهِ»","متفق عليه، ومسلم ٢٧٠٤"],
+["سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ","«لَأَنْ أَقُولَ سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ، أَحَبُّ إِلَيَّ مِمَّا طَلَعَتْ عَلَيْهِ الشَّمْسُ»","مسلم ٢٦٩٥"],
+["لاَ إِلَهَ إِلاَّ اللَّهُ","«وَأَفْضَلَ الذِّكْرِ لاَ إِلَهَ إِلاَّ اللَّهُ»","الترمذي ٣٣٨٣، وابن ماجه ٣٨٠٠، وصححه الحاكم ووافقه الذهبي"],
+["الْحَمْدُ لِلَّهِ","«إِنَّ أَفْضَلَ الدُّعَاءِ الْحَمْدُ لِلَّهِ»","الترمذي ٣٣٨٣، وابن ماجه ٣٨٠٠، وصححه الحاكم ووافقه الذهبي"],
+["اللَّهُ أَكْبَرُ","«أَحَبُّ الْكَلاَمِ إِلَى اللَّهِ أَرْبَعٌ: سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ، لاَ يَضُرُّكَ بِأَيِّهِنَّ بَدَأتَ»","مسلم ٢١٣٧"],
+["أَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ","«وَاللَّهِ إِنِّي لأَسْتَغْفِرُ اللَّهَ وَأَتُوبُ إِلَيْهِ فِي الْيَوْمِ أَكْثَرَ مِنْ سَبْعِينَ مَرَّةٍ»","البخاري ٦٣٠٧"],
+["رَبِّ اغْفِرْ لِي، وَتُبْ عَلَيَّ، إِنَّكَ أَنْتَ التَّوَّابُ الغَفُورُ","عَنِ ابْنِ عُمَرَ: «كَانَ يُعَدُّ لِرَسُولِ اللَّهِ ﷺ فِي الْمَجْلِسِ الوَاحِدِ مِائَةُ مَرَّةٍ مِنْ قَبْلِ أَنْ يَقُومَ»","الترمذي ٣٤٣٤، وابن ماجه ٣٨١٤، وصححه الألباني"],
+["لاَ إِلَهَ إِلاَّ أَنْتَ سُبْحَانَكَ إِنِّي كُنْتُ مِنَ الظَّالِمِينَ","«دَعْوَةُ ذِي النُّونِ إِذْ دَعَا وَهُوَ فِي بَطْنِ الْحُوتِ ... فَإِنَّهُ لَمْ يَدْعُ بِهَا رَجُلٌ مُسْلِمٌ فِي شَيْءٍ قَطُّ إِلاَّ اسْتَجَابَ اللَّهُ لَهُ»","الترمذي ٣٥٠٥، وصححه الحاكم ووافقه الذهبي"],
+["حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ","قالها إبراهيم ﷺ حين أُلقي في النار، وقالها نبينا ﷺ حين قيل له: إن الناس قد جمعوا لكم","البخاري ٤٥٦٣"],
+["يَا مُقَلِّبَ الْقُلُوبِ ثَبِّتْ قَلْبِي عَلَى دِينِكَ","«كَانَ أَكْثَرُ دُعَائِهِ يَا مُقَلِّبَ الْقُلُوبِ ثَبِّتْ قَلْبِي عَلَى دِينِكَ»","الترمذي ٣٥٢٢ و٢١٤٠ (حسن)، والأدب المفرد ٦٨٣ وصححه الألباني"],
+["سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ، أَشْهَدُ أَنْ لاَ إِلَهَ إِلاَّ أَنْتَ، أَسْتَغْفِرُكَ وَأَتُوبُ إِلَيْكَ","كفّارة المجلس: تُقال عند القيام من المجلس","أبو داود ٤٨٥٨، والترمذي ٣٤٣٣، والنسائي ١٣٤٤"],
+["اللَّهُمَّ اغْفِرْ لِي، وَارْحَمْنِي، وَاهْدِنِي، وَعَافِنِي وَارْزُقْنِي","«فَإِنَّ هَؤُلاَءِ تَجْمَعُ لَكَ دُنْيَاكَ وَآخِرَتَكَ»","مسلم ٢٦٩٧"],
+["اللَّهُمَّ أَنْتَ السَّلاَمُ، وَمِنْكَ السَّلاَمُ، تَبَارَكْتَ يَا ذَا الْجَلاَلِ وَالْإِكْرَامِ","تُقال بعد السلام من الصلاة، بعد الاستغفار ثلاثًا","مسلم ٥٩١"],
+["اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ","«مَنْ صَلَّى عَلَيَّ صَلاَةً صَلَّى اللَّهُ عَلَيْهِ بِهَا عَشْرًا»","رواه مسلم"]
+];
+/* آيات وأحاديث تحفّز على الذكر (للتنبيه وللشاشة) */
+const WRH=[
+["a","«فَٱذۡكُرُونِيٓ أَذۡكُرۡكُمۡ وَٱشۡكُرُواْ لِي وَلَا تَكۡفُرُونِ»","سورة البقرة · ١٥٢"],
+["h","«يَقُولُ اللَّهُ: أَنَا عِنْدَ ظَنِّ عَبْدِي بِي وَأَنَا مَعَهُ حِينَ يَذْكُرُنِي، إِنْ ذَكَرَنِي فِي نَفْسِهِ ذَكَرْتُهُ فِي نَفْسِي، وَإِنْ ذَكَرَنِي فِي مَلَإٍ ذَكَرْتُهُ فِي مَلَإٍ هُمْ خَيْرٌ مِنْهُمْ»","رواه مسلم"],
+["h","«سَبَقَ الْمُفَرِّدُونَ». قَالُوا: وَمَا الْمُفَرِّدُونَ يَا رَسُولَ اللَّهِ؟ قَالَ: «الذَّاكِرُونَ اللَّهَ كَثِيرًا وَالذَّاكِرَاتُ»","رواه مسلم"],
+["h","«لاَ يَزَالُ لِسَانُكَ رَطْبًا مِنْ ذِكْرِ اللَّهِ»","رواه الترمذي ٣٣٧٥"],
+["h","«مَثَلُ الَّذِي يَذْكُرُ رَبَّهُ وَالَّذِي لاَ يَذْكُرُ رَبَّهُ، مَثَلُ الْحَيِّ وَالْمَيِّتِ»","رواه البخاري"],
+["h","«كَلِمَتَانِ خَفِيفَتَانِ عَلَى اللِّسَانِ، ثَقِيلَتَانِ فِي الْمِيزَانِ، حَبِيبَتَانِ إِلَى الرَّحْمَنِ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ»","متفق عليه"],
+["h","«أَيَعْجِزُ أَحَدُكُم أَنْ يَكْسِبَ كُلَّ يَوْمٍ أَلْفَ حَسَنَةٍ؟» قَالَ: «يُسَبِّحُ مِائَةَ تَسْبِيحَةٍ، فَيُكْتَبُ لَهُ أَلْفُ حَسَنَةٍ أَوْ يُحَطُّ عَنْهُ أَلْفُ خَطِيئَةٍ»","رواه مسلم ٢٦٩٨"],
+["h","«مَنْ قَالَ: سُبْحَانَ اللَّهِ وَبِحَمْدِهِ فِي يَوْمٍ مِائَةَ مَرَّةٍ حُطَّتْ خَطَايَاهُ وَلَوْ كَانَتْ مِثْلَ زَبَدِ الْبَحْرِ»","متفق عليه"],
+["h","«أَحَبُّ الْكَلاَمِ إِلَى اللَّهِ أَرْبَعٌ: سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكْبَرُ، لاَ يَضُرُّكَ بِأَيِّهِنَّ بَدَأتَ»","رواه مسلم ٢١٣٧"]
+];
+/* رسائل تذكير الورد: آيات وعبارات مسجوعة مرغِّبة في الذكر */
+const WRM=[
+["«أَلَا بِذِكۡرِ ٱللَّهِ تَطۡمَئِنُّ ٱلۡقُلُوبُ»","سورة الرعد · ٢٨"],
+["اِملأ دقائقك بالاستغفار، يملأ الله قلبك بالأنوار."],
+["«فَٱذۡكُرُونِيٓ أَذۡكُرۡكُمۡ»","سورة البقرة · ١٥٢"],
+["لسانٌ رطبٌ بالذكر، وقلبٌ عامرٌ بالشكر."],
+["«وَٱذۡكُرُواْ ٱللَّهَ كَثِيرٗا لَّعَلَّكُمۡ تُفۡلِحُونَ»","سورة الجمعة · ١٠"],
+["ذكرُ الله حياةٌ للقلوب، وجلاءٌ للكروب، ومَحوٌ للذنوب."],
+["سبِّح تسترح، واستغفر تفلح، وصلِّ على النبي تربح."],
+["«يَـٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ ٱذۡكُرُواْ ٱللَّهَ ذِكۡرٗا كَثِيرٗا»","سورة الأحزاب · ٤١"],
+["بالذكر تُشرق الأرواح، وبالاستغفار تُفتح الأبواب."],
+["دقائقُ مع التسبيح، تشرح الصدر وتُريح."],
+["«وَلَذِكۡرُ ٱللَّهِ أَكۡبَرُ»","سورة العنكبوت · ٤٥"],
+["اجعل لقلبك وردًا، يُؤنسك وحدةً ويُغنيك زادًا."],
+["قليلٌ دائمٌ، خيرٌ من كثيرٍ منقطع، فاثبت على وردك."],
+["طيّب لسانك بالذكر، وطهّر قلبك بالاستغفار."]
+];
+function wdMsg(k){const dn=Math.floor(Date.now()/864e5),m=WRM[(dn*3+(k||0))%WRM.length];
+ const hd=["","ورد اليوم ما زال ينتظرك.","آخر تذكير لك اليوم، فأتمّ وردك."][k||0]||"";
+ const st=!k?AD(WRD.length)+" ذكرًا، لكل ذكر مسبحة "+AD(100)+". اضغط لتبدأ.":"أتمّ وردك واطمئنّ بالذكر.";
+ return (hd?hd+"\n":"")+m[0]+(m[1]?"\n— "+m[1]:"")+"\n"+st}
+function wdSet(){const w=ntS("wird"),n=Math.max(1,Math.min(3,+w.n||3));
+ return `<div class="card"><div class="lh">ورد اليوم</div>
+ <div class="set"><span>تفعيل تذكير الورد</span><input type="checkbox" ${w.on?"checked":""} onchange="ntSet('wird','on',this.checked?1:0,1)" style="width:24px;height:24px"></div>
+ ${w.on?`<div class="set"><span>التذكير الأول</span><input type="time" value="${w.t}" onchange="ntSet('wird','t',this.value,1)"></div>
+ <div class="set"><span>عدد التذكيرات يوميًا (ما لم تُتمّ الورد)</span><select onchange="ntSet('wird','n',+this.value,1)">${[[1,"مرة واحدة"],[2,"مرتان"],[3,"ثلاث مرات"]].map(o=>`<option value="${o[0]}" ${n==o[0]?"selected":""}>${o[1]}</option>`).join("")}</select></div>
+ ${n>1?`<div class="set"><span>${n>2?"التذكير الثاني والثالث":"التذكير الثاني"}</span><span style="display:flex;gap:6px"><input type="time" value="${w.t2||"15:00"}" onchange="ntSet('wird','t2',this.value,1)">${n>2?`<input type="time" value="${w.t3||"20:00"}" onchange="ntSet('wird','t3',this.value,1)">`:""}</span></div>`:""}
+ <div class="mu">يصلك التذكير بآية أو عبارة مرغِّبة في الذكر، ولا يصلك بعد أن تُتمّ ورد اليوم. والضغط عليه يفتح الورد.</div>`:`<div class="mu">التذكير متوقف. يبقى الورد متاحًا في الشاشة الرئيسية.</div>`}</div>`}
+const wdK=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+function wdS(){const k=wdK();S.wd=S.wd||{};
+ if(S.wd.d!==k||!Array.isArray(S.wd.c)||S.wd.c.length!=WRD.length){
+  if(S.wd.d&&Array.isArray(S.wd.c)){S.wdH=S.wdH||{};S.wdH[S.wd.d]=[S.wd.c.filter(x=>x>=100).length,S.wd.c.reduce((p,x)=>p+x,0)];const ks=Object.keys(S.wdH).sort();while(ks.length>120)delete S.wdH[ks.shift()]}
+  S.wd={d:k,c:WRD.map(()=>0)};try{save()}catch(e){}}
+ return S.wd}
+const wdTot=s=>s.c.reduce((p,x)=>p+x,0),wdFin=s=>s.c.filter(x=>x>=100).length;
+function wdDone(){const w=S.wd;return !!(w&&w.d===wdK()&&Array.isArray(w.c)&&w.c.length==WRD.length&&w.c.every(x=>x>=100))}
+function wdStreak(){const s=wdS(),H=S.wdH||{};let n=0,d=new Date();if(wdTot(s)>0)n=1;
+ for(let i=0;i<120;i++){d.setDate(d.getDate()-1);const k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");if(H[k]&&H[k][1]>0)n++;else break}
+ return n}
+function wdCard(o){const s=wdS(),f=wdFin(s),t=wdTot(s),st=t==0?0:f>=WRD.length?2:1,sk=wdStreak(),pct=Math.round(s.c.reduce((p,x)=>p+Math.min(x,100),0)/(WRD.length*100)*100);
+ const bd=st==0?`<span class="wdb r"><i></i>لم تدخل وردك اليوم</span>`:st==1?`<span class="wdb a">أكملت ${AD(f)} من ${AD(WRD.length)}</span>`:`<span class="wdb g">✓ أتممت ورد اليوم</span>`;
+ return `<div class="wdc st${st}" onclick="wd(${o?"'m'":"'h'"})" role="button"><div class="wdh"><span class="wdt">📿 ورد اليوم</span>${bd}</div><div class="wdp"><i style="width:${pct}%"></i></div><div class="wdm"><span>${AD(WRD.length)} ذكرًا · لكل ذكر ${AD(100)} مرة</span><span>${t?AD(t)+" تسبيحة":""}${sk>1?" · 🔥 "+AD(sk)+" أيام":""}</span></div><div class="wdgo">${st==0?"ابدأ وردك الآن ←":st==1?"أكمل وردك ←":"افتح الورد ←"}</div></div>`}
+function wd(o){wdIn=0;clearInterval(tick);if(o==="m")wdFrom="menu";else if(o==="h")wdFrom="home";cur="home";SUBV=wdFrom;nav();
+ const s=wdS(),f=wdFin(s),t=wdTot(s),sk=wdStreak(),pct=Math.round(s.c.reduce((p,x)=>p+Math.min(x,100),0)/(WRD.length*100)*100),h=WRH[Math.floor(Date.now()/864e5)%WRH.length];
+ const rows=WRD.map((d,i)=>{const c=s.c[i],ok=c>=100;return `<div class="wdi${ok?" ok":""}" onclick="wdOpen(${i})"><span class="wdn">${ok?"✓":AD(i+1)}</span><span class="wdx"><span class="wdtxt">${d[0]}</span><span class="wdbar"><i style="width:${Math.min(100,c)}%"></i></span></span><span class="wdc2">${AD(c)}<small>/${AD(100)}</small></span></div>`}).join("");
+ $("#m").innerHTML=`<div class="card"><div class="set" style="margin:0"><h1 style="margin:0">📿 ورد اليوم</h1><span class="mu">${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</span></div>
+ <div class="wdp lg"><i style="width:${pct}%"></i></div>
+ <div class="wdm"><span>${t==0?'<b style="color:#e53935">● لم تدخل وردك اليوم</b>':f>=WRD.length?'<b style="color:var(--ac)">✓ أتممت ورد اليوم</b>':"أكملت "+AD(f)+" من "+AD(WRD.length)+" ذكرًا"}</span><span>${AD(t)} تسبيحة${sk>1?" · 🔥 "+AD(sk)+" أيام متتالية":""}</span></div></div>
+ <div class="card wdq"><div class="lh">${h[0]=="a"?"آية":"حديث"} يُحفّز على الذكر</div><div class="wdqt">${h[1]}</div><div class="mu">— ${h[2]}</div></div>
+ <div class="card"><div class="lh">أذكار الورد · اضغط الذكر ثم عُدّ</div>${rows}<div class="mu" style="margin-top:6px">لكل ذكر مسبحة من ${AD(100)}، وإذا أتممتها يستمر العدّ (${AD(101)}، ${AD(102)}…) بلا حدّ.</div></div>
+ <details class="card"><summary class="lh" style="cursor:pointer">آيات وأحاديث في فضل الذكر (${AD(WRH.length)})</summary>${WRH.map(x=>`<div class="wdqi"><div class="wdqt">${x[1]}</div><div class="mu">— ${x[2]}</div></div>`).join("")}</details>`}
+var wdIn=0,wdFrom="home";
+function wdBack(){wdIn=0;wd()}
+function wdOpen(i,again){if(!again&&!wdIn){wdIn=1;qpush(wdBack)}
+ const s=wdS(),d=WRD[i];
+ $("#m").innerHTML=`<div class="card" style="text-align:center"><div class="set" style="margin:0"><button onclick="qpop()">→ القائمة</button><span class="mu">الذكر ${AD(i+1)} من ${AD(WRD.length)}</span><span style="width:70px"></span></div>
+ <div class="wdtx">${d[0]}</div><div class="wdfd">${d[1]}</div><div class="mu" style="font-size:.78em;margin-bottom:6px">${d[2]}</div>
+ <button class="wdbig" id="wdb" onclick="wdTap(${i})" aria-label="عدّ"><svg viewBox="0 0 220 220" width="236" height="236" aria-hidden="true"><circle cx="110" cy="110" r="96" fill="none" stroke="var(--ac2)" stroke-width="12"/><circle id="wdr" cx="110" cy="110" r="96" fill="none" stroke="var(--ac)" stroke-width="12" stroke-linecap="round" stroke-dasharray="603.2" stroke-dashoffset="603.2" transform="rotate(-90 110 110)"/></svg><span class="wdcn" id="wdn">٠</span><small id="wdl"></small></button>
+ <div class="wdctl"><button onclick="wdUndo(${i})">− تراجع</button><button onclick="wdOpen(${(i+WRD.length-1)%WRD.length},1)">السابق</button><button onclick="wdOpen(${(i+1)%WRD.length},1)">التالي</button><button onclick="wdReset(${i})">إعادة</button></div></div>`;wdPaint(i)}
+function wdPaint(i){const s=wdS(),c=s.c[i],r=document.getElementById("wdr"),n=document.getElementById("wdn"),l=document.getElementById("wdl");if(!n)return;
+ n.textContent=AD(c);r.style.strokeDashoffset=603.2*(1-Math.min(c,100)/100);r.style.stroke=c>=100?"#d4a017":"var(--ac)";
+ l.textContent=c<100?"بقي "+AD(100-c):c==100?"✓ أتممت "+AD(100):"✓ فوق "+AD(100)+" بـ "+AD(c-100)}
+const wdSv=()=>{clearTimeout(wdSv.t);wdSv.t=setTimeout(()=>{try{save()}catch(e){}},400)};
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState!="visible"){clearTimeout(wdSv.t);try{save()}catch(e){}}});
+function wdTap(i){const s=wdS(),was=wdDone();s.c[i]++;const c=s.c[i];wdPaint(i);
+ try{if(S.vib!==false&&navigator.vibrate)navigator.vibrate(c==100?[60,40,60]:c>100&&c%100==0?[40,30,40]:12)}catch(e){}
+ if(c==100)qtoast("✓ أتممت "+AD(100)+" — يمكنك المتابعة وسيستمر العدّ",2600);
+ if(!was&&wdDone()){qtoast("🎉 أتممت ورد اليوم، تقبّل الله منك",3500);try{window.zadResched&&window.zadResched()}catch(e){}}
+ wdSv()}
+function wdUndo(i){const s=wdS();if(s.c[i]>0){s.c[i]--;wdPaint(i);wdSv()}}
+function wdReset(i){if(!confirm("إعادة عدّ هذا الذكر إلى الصفر؟"))return;wdS().c[i]=0;wdPaint(i);wdSv()}
+
 /* ---- الوضع الصامت أثناء الصلاة ---- */
 const SLN=[[0,"الفجر"],[2,"الظهر"],[3,"العصر"],[4,"المغرب"],[5,"العشاء"]];
 const SLP=[[15,25],[10,20],[10,20],[1,15],[15,25]];
@@ -2758,7 +3063,7 @@ const SLD=[[10,"قليل"],[20,"وسط"],[40,"كثير"]];
 function slWin(dt0){const dt=dt0||new Date(),t=times(dt),c=slS(),fri=dt.getDay()==5;return SLN.map((p,i)=>{const jm=fri&&i==1&&(c.mode=="all"||c.fr.on),q=jm?c.fr:c.mode=="all"?(c.auto?{m:SLP[i][0],d:SLP[i][1]}:c.g):c.pr[i],s=new Date(+t[p[0]]+Math.max(1,q.m)*6e4);return{n:jm?"الجمعة":p[1],s,e:new Date(+s+Math.max(jm?90:1,q.d)*6e4),on:c.mode=="all"||jm?1:q.on}})}
 function slGo(st,w){const b=slB();
  if(b){let ok=false;try{ok=st?b.start():b.end()}catch(e){}
-  if(!ok)ntFire(st?"تعذّر تفعيل الوضع الصامت":"تعذّرت استعادة وضع الهاتف",st?"امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.":"أعد وضع الهاتف يدويًا من الإعدادات.","sil","nt");
+  if(!ok)ntFire(st?"تعذّر تفعيل الوضع الصامت":"تعذّرت استعادة وضع الهاتف",st?"امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.":"أعد وضع الهاتف يدويًا من الإعدادات.","pb","pb");
   else if(st)ntFire("وقت صلاة "+w.n,"تم تفعيل الوضع الصامت، وسيعود هاتفك لوضعه بعد انتهاء المدة.","sil","nt")}
  else ntFire(st?"وقت صلاة "+w.n:"انتهى وقت الصمت",st?"فعّل الوضع الصامت يدويًا. التطبيق لا يستطيع تغيير وضع الهاتف من النسخة الحالية.":"يمكنك إعادة صوت الهاتف.","sil","nt")}
 function slTest(){const b=slB();if(!b){qtoast("هذه النسخة لا تستطيع تغيير وضع الهاتف",5000);return}
@@ -2797,7 +3102,7 @@ function slTick(){const b=slB();
   const c=slS();slPush();try{b.reconcile()}catch(e){}
   if(c.on){let h=false;try{h=b.has()}catch(e){}
    if(!h){const n=Date.now(),w=slAll(0).find(x=>n>=x[0]&&n<x[1]);
-    const dk=new Date().toDateString();if(w&&S.silWarn!==dk){S.silWarn=dk;save();ntFire("تعذّر تفعيل الوضع الصامت","امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.","sil","nt")}}}
+    const dk=new Date().toDateString();if(w&&S.silWarn!==dk){S.silWarn=dk;save();ntFire("⚠ الوضع الصامت للصلوات لا يعمل","امنح التطبيق إذن «عدم الإزعاج». اضغط لفتح صفحة الحل.","pb","pb")}}}
   return}
  const c=slS(),n=new Date(),w=c.on?slWin().find(x=>x.on&&n>=x.s&&n<x.e):null;
  if(w&&!S.silOn){S.silOn=1;save();slGo(1,w)}else if(!w&&S.silOn){S.silOn=0;save();slGo(0)}}
@@ -2824,14 +3129,14 @@ function sl(){
  const mn=m=>AD(m)+" د";
  const chip=!b?`<span class="slc w">تذكير فقط</span>`:h?`<span class="slc g">✓ الإذن ممنوح</span>`:`<span class="slc w">⚠ الإذن غير ممنوح</span>`;
  const head=`<div class="card slh${c.on?" on":""}"><div class="set" style="margin:0"><span class="slt1"><b>الصمت التلقائي وقت الصلاة</b><span class="mu">${c.on?"يعمل تلقائيًا بعد كل أذان، وتوقفه متى شئت":"متوقف — لن يغيّر التطبيق وضع هاتفك"}</span></span>${sw(c.on,"slSet('on',this.checked?1:0,1)")}</div>${c.on?`<div style="margin-top:8px">${chip}</div>`:""}</div>`;
- if(!c.on){$("#m").innerHTML=`<div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}<div class="mu" style="padding:4px 10px;line-height:1.9">فعّل المفتاح ليُسكت التطبيق هاتفك بعد الأذان بدقائق، ثم يعيد وضعه الأصلي بعد انتهاء المدة.</div>`;return}
+ if(!c.on){$("#m").innerHTML=`<div class="pbslot">${pbHtml()}</div><div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}<div class="mu" style="padding:4px 10px;line-height:1.9">فعّل المفتاح ليُسكت التطبيق هاتفك بعد الأذان بدقائق، ثم يعيد وضعه الأصلي بعد انتهاء المدة.</div>`;return}
  const au=c.auto?SLN.map((p,i)=>`<div class="slr"><b>${p[1]}</b><span>بعد الأذان بـ${mn(SLP[i][0])}</span><i>صمت ${mn(SLP[i][1])}</i></div>`).join(""):"";
  const tools=b&&typeof b.release==="function"?`<div class="card"><div class="slbt"><button class="gdl" onclick="slRel()">🔓 فك الصمت الآن</button><button onclick="slSt()">ℹ حالة الجدولة</button></div><div class="mu" style="margin-top:6px">إن بقي هاتفك صامتًا بعد وقت الصلاة اضغط «فك الصمت الآن».</div></div>`:"";
  const ps=c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة</span>${sw(c.auto,"slSet('auto',this.checked?1:0,1)")}</div>${c.auto?`<div class="slt">${au}</div><div class="mu" style="margin-top:6px">المغرب بعد الأذان مباشرة، والظهر والعصر أطول، والعشاء والفجر أطول منهما.</div>`:slCtl(c.g,"slG")}</div>`
   :SLN.map((p,i)=>{const q=c.pr[i];return`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">${p[1]}</span>${sw(q.on,"slP("+i+",'on',this.checked?1:0)")}</div>${q.on?`<div style="margin-top:8px">${slCtl(q,"slP.bind(null,"+i+")")}</div>`:""}</div>`}).join("");
  const fr=`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">الجمعة <span class="mu">(بدل الظهر)</span></span>${c.mode=="each"?sw(c.fr.on,"slF('on',this.checked?1:0)"):""}</div>${c.mode=="all"||c.fr.on?`<div style="margin-top:8px">${slFc(c.fr)}</div>`:""}</div>`;
  const today=`<div class="card"><div class="lh">أوقات اليوم · ${S.city}</div><div class="slt">${slWin().map(x=>`<div class="slr${x.on?"":" off"}"><b>${x.n}</b><span>${fmt(x.s)} – ${fmt(x.e)}</span><i>${mn(Math.round((x.e-x.s)/6e4))}</i></div>`).join("")}</div><div class="mu" style="margin-top:6px">تُحدَّث تلقائيًا عند تغيير المدينة أو طريقة الحساب.</div></div>`;
- $("#m").innerHTML=`<div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}${b&&!h?slGuide():""}
+ $("#m").innerHTML=`<div class="pbslot">${pbHtml()}</div><div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}${b&&!h?slGuide():""}
  <div class="card"><div class="lh">نوع الضبط</div><div class="seg">${md("all","كلي · لكل الصلوات")}${md("each","جزئي · لكل صلاة")}</div></div>
  ${ps}${fr}${today}${tools}${slCompat()}`}
 
@@ -2839,33 +3144,61 @@ function sl(){
 /* ---- الأذان ---- */
 const ADM=[["mala","علي بن أحمد ملا — الحرم المكي",119],["ramadan","محمد رمضان سعد — الحرم المكي",54],["nayf","نايف فيده — الحرم المكي",127],["bukhari","عصام بخاري — الحرم المدني",129],["aqsa","ناجي قزاز — المسجد الأقصى",151],["afasy","مشاري العفاسي",130],["basit","عبد الباسط عبد الصمد",134],["minshawi","محمد صديق المنشاوي",143],["nuinaa","أحمد نعينع",146],["qazabri","عمر القزابري",103],["dosari","ياسر الدوسري",94],["noreen","نورين محمد صديق — رحمه الله",0]];
 const ADN=[[0,"الفجر"],[2,"الظهر"],[3,"العصر"],[4,"المغرب"],[5,"العشاء"]];
-const adS=()=>{if(!S.ad)S.ad={on:0,m:"mala",pr:[1,1,1,1,1],vol:1,fn:""};if(!S.ad.m||(S.ad.m=="custom"&&!S.ad.fn))S.ad.m="mala";return S.ad};
+const adS=()=>{if(!S.ad)S.ad={on:0,m:"noreen",pr:[1,1,1,1,1],vol:1,fn:""};if(!S.ad.m||(S.ad.m=="custom"&&!S.ad.fn))S.ad.m="noreen";return S.ad};
+const adNat=()=>!!window.__adNat&&typeof ADEMB!="undefined"&&!!ADEMB[adS().m];
 const ADA=new Audio();ADA.preload="none";let adUrl="",adPlaying=0;
 function adBtn(on){let b=$("#adstop");if(!b){b=document.createElement("button");b.id="adstop";b.textContent="⏹ إيقاف الأذان";b.onclick=adStop;document.body.appendChild(b)}b.classList.toggle("on",!!on);try{if(window.AdhanNative)AdhanNative.setPlaying(!!on)}catch(e){}}
 function adStop(){try{ADA.pause();ADA.removeAttribute("src");ADA.load()}catch(e){}adPlaying=0;adBtn(0);if(adUrl){try{URL.revokeObjectURL(adUrl)}catch(e){}adUrl=""}}
 ADA.onended=()=>{adPlaying=0;adBtn(0)};window.adStopNative=function(){if(adPlaying)adStop();return 1};
-ADA.onerror=()=>{if(!adPlaying)return;adPlaying=0;adBtn(0);qtoast("تعذّر تشغيل صوت الأذان. تأكد من الاتصال بالإنترنت أو اختر «ملف من جهازك» من إعدادات الأذان.",8000)};
-async function adSrc(){const c=adS();if(c.m=="custom"){try{const b=await idbGet("adhan:custom");if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}return ""}const m=ADM.find(x=>x[0]==c.m)||ADM[0];try{const b=await idbGet("adhan:c:"+m[0]);if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}if(typeof ADEMB!="undefined"&&ADEMB[m[0]]){adUrl=URL.createObjectURL(adBlob(m[0]));return adUrl}return "https://www.assabile.com/download/adhan/"+m[2]}
+let adFb=0;
+async function adFallback(){adFb=1;adStop();qtoast("تعذّر تحميل صوت هذا المؤذن من الإنترنت، فشُغِّل أذان نورين المضمّن بدلًا منه.",7000);
+ if(typeof ADEMB=="undefined"||!ADEMB.noreen)return false;
+ const u=URL.createObjectURL(adBlob("noreen"));adUrl=u;ADA.src=u;ADA.volume=Math.max(0,Math.min(1,adS().vol==null?1:adS().vol));adPlaying=1;
+ try{await ADA.play();adBtn(1);return true}catch(e){adPlaying=0;adBtn(0);return false}}
+ADA.onerror=()=>{if(!adPlaying)return;if(!adFb&&/^https?:/.test(ADA.src||"")){adFallback();return}adPlaying=0;adBtn(0);qtoast("تعذّر تشغيل صوت الأذان. تأكد من الاتصال بالإنترنت أو اختر «ملف من جهازك» من إعدادات الأذان.",8000)};
+/* ---- تنزيل المؤذنين من الإنترنت وحفظهم (يعمل بعدها دون إنترنت) ---- */
+const adRemote=m=>"https://www.assabile.com/download/adhan/"+m[2];
+async function adOk(b){try{if(!b||b.size<8000)return false;const u=new Uint8Array(await b.slice(0,4).arrayBuffer());return !(u[0]==60||u[0]==123||u[0]==10||u[0]==32)}catch(e){return false}}
+const adMime=b=>/^audio\//.test(b.type||"")?b:new Blob([b],{type:"audio/mpeg"});
+async function adFetch1(u){const ac=new AbortController(),t=setTimeout(()=>ac.abort(),30000);try{const r=await fetch(u,{signal:ac.signal,credentials:"omit",cache:"no-store"});if(!r.ok)return null;const b=await r.blob();return await adOk(b)?adMime(b):null}catch(e){return null}finally{clearTimeout(t)}}
+async function adFetchNat(u){try{const H=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp;if(!H||!H.request)return null;const r=await H.request({method:"GET",url:u,responseType:"blob",headers:{"Referer":"https://www.assabile.com/","User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36","Accept":"audio/*,*/*"},connectTimeout:20000,readTimeout:60000});if(!r||r.status!=200||!r.data||typeof r.data!="string")return null;const bin=atob(r.data),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);const b=new Blob([a],{type:"audio/mpeg"});return await adOk(b)?b:null}catch(e){return null}}
+const ADINF={};
+async function adDl(id,quiet){
+ const m=ADM.find(x=>x[0]==id);if(!m||!m[2])return null;
+ if(ADINF[id])return ADINF[id];
+ return ADINF[id]=(async()=>{try{
+  if(!quiet)qtoast("جارٍ تحميل صوت المؤذن…");
+  const u=adRemote(m);let b=null;
+  for(let i=0;i<2&&!b;i++){b=await adFetch1(u);if(!b)b=await adFetchNat(u);if(!b&&i==0)await new Promise(r=>setTimeout(r,1200))}
+  if(!b){if(!quiet)qtoast("تعذّر تحميل صوت هذا المؤذن. تحقق من الاتصال ثم أعد المحاولة، أو اختر مؤذنًا آخر.",6000);return null}
+  try{await idbSet("adhan:c:"+id,b);S.adc=S.adc||{};S.adc[id]=1;save()}catch(e){}
+  if(!quiet)qtoast("تم تحميل الصوت ✓ — يعمل الآن دون إنترنت");
+  if(document.getElementById("m")&&cur=="set"&&typeof adR=="function"&&adS().on)setTimeout(adR,0);
+  return b}finally{delete ADINF[id]}})()}
+async function adSrc(){const c=adS();if(c.m=="custom"){try{const b=await idbGet("adhan:custom");if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}return ""}const m=ADM.find(x=>x[0]==c.m)||ADM.find(x=>x[0]=="noreen")||ADM[0];try{const b=await idbGet("adhan:c:"+m[0]);if(b&&await adOk(b)){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}if(typeof ADEMB!="undefined"&&ADEMB[m[0]]){adUrl=URL.createObjectURL(adBlob(m[0]));return adUrl}
+ const nb=await adDl(m[0],1);if(nb){adUrl=URL.createObjectURL(nb);return adUrl}return adRemote(m)}
 async function adPlay(label){const c=adS();adStop();const u=await adSrc();if(!u){qtoast("لم تختر ملف أذان من جهازك بعد؛ افتح إعدادات الأذان واختر ملفًا أو اختر مؤذنًا من القائمة.",7000);return false}
- ADA.src=u;ADA.volume=Math.max(0,Math.min(1,c.vol==null?1:c.vol));adPlaying=1;
- try{await ADA.play();adBtn(1);return true}catch(e){adPlaying=0;adBtn(0);ntFire("حان وقت صلاة "+(label||""),"افتح التطبيق لتشغيل الأذان؛ المتصفح يمنع تشغيل الصوت تلقائيًا قبل التفاعل مع التطبيق.","adhan","nt");return false}}
+ adFb=0;ADA.src=u;ADA.volume=Math.max(0,Math.min(1,c.vol==null?1:c.vol));adPlaying=1;
+ try{await ADA.play();adBtn(1);return true}catch(e){if(!adFb&&/^https?:/.test(u)&&(e&&e.name!="NotAllowedError"))return await adFallback();adPlaying=0;adBtn(0);ntFire("حان وقت صلاة "+(label||""),"افتح التطبيق لتشغيل الأذان؛ المتصفح يمنع تشغيل الصوت تلقائيًا قبل التفاعل مع التطبيق.","adhan","nt");return false}}
 function adTick(){const c=adS();if(!c.on)return;const n=new Date(),t=times(n),dk=n.toDateString();S.adl=S.adl||{};let ch=0;
- ADN.forEach((p,i)=>{if(!c.pr[i])return;const tm=t[p[0]],d=n-tm,k=dk+"|"+p[0];if(d>=0&&d<9e4&&S.adl[k]!=1){S.adl[k]=1;ch=1;Object.keys(S.adl).forEach(x=>{if(x.split("|")[0]!=dk)delete S.adl[x]});ntFire("حان الآن وقت صلاة "+p[1],"حيّ على الصلاة",k,"nt",true);adPlay(p[1])}});
+ ADN.forEach((p,i)=>{if(!c.pr[i])return;const tm=t[p[0]],d=n-tm,k=dk+"|"+p[0];if(d>=0&&d<9e4&&S.adl[k]!=1){S.adl[k]=1;ch=1;Object.keys(S.adl).forEach(x=>{if(x.split("|")[0]!=dk)delete S.adl[x]});ntFire("حان الآن وقت صلاة "+p[1],"حيّ على الصلاة",k,"nt",true);if(!adNat())adPlay(p[1])}});
  if(ch)save()}
 setInterval(adTick,5000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")adTick()});
-function adSet(f,v,r){adS()[f]=v;save();if(f=="on"&&!v)adStop();if(f=="on"&&v&&ntPerm()=="default"){try{Notification.requestPermission()}catch(e){}}if(r)adR()}
+function adSet(f,v,r){adS()[f]=v;save();if(f=="m"&&v!="custom"&&!(typeof ADEMB!="undefined"&&ADEMB[v])&&!(S.adc&&S.adc[v])&&navigator.onLine)adDl(v);if(f=="on"&&!v)adStop();if(f=="on"&&v&&ntPerm()=="default"){try{Notification.requestPermission()}catch(e){}}if(r)adR()}
 async function adFile(inp){const f=inp.files&&inp.files[0];if(!f)return;try{await idbSet("adhan:custom",f);adS().m="custom";adS().fn=f.name;save();qtoast("تم حفظ الملف.");adR()}catch(e){qtoast("تعذّر حفظ الملف على الجهاز.")}}
+function adTestN(){try{new Notification("🕌 تجربة الأذان",{body:"هكذا يصلك تنبيه الأذان بصوت المؤذن وقت الصلاة",tag:"adtest|"+Date.now(),dir:"rtl",lang:"ar"});qtoast("سيصلك إشعار الأذان بعد لحظات")}catch(e){adTest()}}
 function adTest(){const m=adS().m=="custom"?(adS().fn||"ملف من جهازك"):(ADM.find(x=>x[0]==adS().m)||ADM[0])[1];adPlay("(تجربة) "+m)}
 function adR(){if(cur=="home"){clearInterval(tick);home()}else ad()}
 function ad(){cur="set";SUBV="set";nav();$("#m").innerHTML=adBody()}
 function adBody(){
- const c=adS(),emb=id=>typeof ADEMB!="undefined"&&!!ADEMB[id];
+ const c=adS(),emb=id=>(typeof ADEMB!="undefined"&&!!ADEMB[id])||!!(S.adc&&S.adc[id]);
  const opt=m=>`<option value="${m[0]}" ${c.m==m[0]?"selected":""}>${m[1]}${emb(m[0])?" ✓":""}</option>`;
  const first=ADK.map(id=>ADM.find(x=>x[0]==id)),rest=ADM.filter(x=>!ADK.includes(x[0]));
  return `<div class="card"><div class="set" style="margin:0"><b>المواقيت والأذان</b><label style="display:flex;gap:8px;align-items:center">${c.on?"مفعّل":"معطّل"}<input type="checkbox" ${c.on?"checked":""} onchange="adSet('on',this.checked?1:0,1)" style="width:24px;height:24px"></label></div>
  ${c.on?`<div class="set"><select style="max-width:100%;flex:1" onchange="adSet('m',this.value,1)"><optgroup label="تعمل دون إنترنت">${first.map(opt).join("")}</optgroup><optgroup label="تحتاج إنترنت">${rest.map(opt).join("")}</optgroup><option value="custom" ${c.m=="custom"?"selected":""}>ملف من جهازك${c.fn?" — "+c.fn:""}</option></select></div>
  <div class="set"><span>الصوت</span><input type="range" min="0.1" max="1" step="0.1" value="${c.vol==null?1:c.vol}" onchange="adSet('vol',+this.value)"></div>
- <div class="set"><button class="gdl" onclick="adTest()">▶ تجربة</button><button onclick="adStop()">⏹ إيقاف</button></div>
+ ${c.m!="custom"&&!emb(c.m)?`<div class="set"><span>هذا المؤذن يحتاج إنترنت</span><button class="gdl" onclick="adDl(adS().m)">⬇ تحميل للاستماع دون إنترنت</button></div>`:""}<div class="set"><button class="gdl" onclick="adTest()">▶ تجربة الصوت</button>${adNat()?`<button class="gdl" onclick="adTestN()">🔔 تجربة الإشعار</button>`:""}<button onclick="adStop()">⏹ إيقاف</button></div>
+ ${adNat()?`<div class="mu" style="margin:4px 2px 8px;line-height:1.8">يصلك الأذان كصوت إشعار بصوت المؤذن المختار، فيعمل والتطبيق مغلق. يتبع مستوى صوت التنبيهات في هاتفك، وتغيّره من إعدادات الإشعارات ← قناة «الأذان».</div>`:`<div class="mu" style="margin:4px 2px 8px;line-height:1.8">الأذان يُشغَّل والتطبيق مفتوح. الصوت أثناء إغلاق التطبيق يحتاج نسخة APK الأحدث وإذن الإشعارات.</div>`}
  <div class="set"><span>ملف من جهازك</span><input type="file" accept="audio/*" onchange="adFile(this)" style="max-width:55%"></div>
  <div style="display:flex;flex-wrap:wrap;gap:6px 16px">${ADN.map((p,i)=>`<label style="display:flex;gap:6px;align-items:center">${p[1]}<input type="checkbox" ${c.pr[i]?"checked":""} onchange="adS().pr[${i}]=this.checked?1:0;save()" style="width:22px;height:22px"></label>`).join("")}</div>`:""}</div>`}
 
@@ -2968,25 +3301,35 @@ async function hmap(c){
 function hico(){const pl=HP.on&&HP.c==cc&&HP.i==ci&&!HAU.paused;return pl?'<svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>':'<svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>'}
 function hui(){const b=document.getElementById("hpb");if(b){b.innerHTML=hico();b.classList.toggle("on",!!(HP.on&&HP.c==cc&&HP.i==ci&&!HAU.paused))}}
 function hshow(c,i){if(cur=="adhkar"&&inR&&cc==c&&ci!=i){ci=i;rd()}}
+const HPM=new Map();let HPU=null,HPB=0,HPT=0;
+function hpFlush(){try{HPM.forEach(v=>URL.revokeObjectURL(v));HPM.clear();if(HPU){URL.revokeObjectURL(HPU);HPU=null}}catch(e){}}
+async function hpre(){
+ if(HPB||!HP.on||!HP.m||HP.m.c!=HP.c||navigator.onLine===false||Date.now()<HPT)return;HPB=1;
+ try{const c=HP.c,id=HP.t;for(let k=1;k<=4&&HP.on&&HP.t==id;k++){const i=HP.i+k;if(i>=HD[c].length)break;const u0=HP.m.u[i];if(!u0)continue;const u=u0.replace(/^http:/,"https:");if(HPM.has(u))continue;
+  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),25000);
+  try{const r=await fetch(u,{signal:ctl.signal});if(!r.ok)throw 0;const b=await r.blob();if(b.size<500)throw 0;if(HP.on&&HP.t==id){HPM.set(u,URL.createObjectURL(b));if(HPM.size>8){const k2=HPM.keys().next().value;URL.revokeObjectURL(HPM.get(k2));HPM.delete(k2)}}}
+  catch(e){HPT=Date.now()+20000;break}finally{clearTimeout(tm)}}}catch(e){}
+ HPB=0}
+setInterval(()=>{try{if(HP.on&&!HPB)hpre()}catch(e){}},4000);
 async function hplay(c,i){
  if(AP.on)qstop();
  const t=HP.t=Date.now();if(!HP.on||HP.c!=c)HP.any=0;HP.on=1;HP.c=c;HP.i=i;hui();
  let u="";
- try{u=(await hmap(c))[i]||""}catch(e){if(HP.t==t){hstop();qtoast("يلزم اتصال بالإنترنت لتشغيل صوت الأذكار",5000)}return}
+ try{u=(await hmap(c))[i]||""}catch(e){if(HP.t==t)zRetry("h",c+"|"+i,()=>{if(HP.on&&HP.c==c&&HP.i==i)hplay(c,i)});return}
  if(HP.t!=t)return;
  if(!u){if(i<HD[c].length-1){hshow(c,i+1);return hplay(c,i+1)}const a=HP.any;hstop();qtoast(a?"انتهى الباب":"لا يتوفر تسجيل صوتي لهذا الباب",3500);return}
- HP.any=1;HAU.src=u.replace(/^http:/,"https:");HAU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر الاستماع لبدء التشغيل")});
+ HP.any=1;const su=u.replace(/^http:/,"https:"),hpf=HPM.get(su)||null;if(hpf)HPM.delete(su);HAU.src=hpf||su;if(HPU&&HPU!==hpf){try{URL.revokeObjectURL(HPU)}catch(e){}}HPU=hpf;setTimeout(hpre,300);HAU.play().catch(e=>{if(e&&e.name=="NotAllowedError")qtoast("اضغط زر الاستماع لبدء التشغيل")});
  hms();hui()}
 function hms(){if(!HP.on)return;msSet(CHN(HP.c),"حصن المسلم · "+AD(HP.i+1)+" / "+AD(HD[HP.c].length),{play:(()=>{const p=HAU.play();if(p&&p.catch)p.catch(()=>setTimeout(()=>{try{HAU.play().catch(()=>{})}catch(e){}},400))}),pause:()=>{try{HAU.pause()}catch(e){}},prev:()=>{if(HP.i>0){hshow(HP.c,HP.i-1);hplay(HP.c,HP.i-1)}},next:hnext,stop:hstop})}
 function hnext(){if(!HP.on)return;if(HP.i<HD[HP.c].length-1){hshow(HP.c,HP.i+1);hplay(HP.c,HP.i+1)}else{hstop();qtoast("انتهى الباب",3000)}}
-function hstop(){const w=HP.on;HP.on=0;kaOff();HP.t=0;try{HAU.pause();HAU.removeAttribute("src");HAU.load()}catch(e){}hui();if(w&&!AP.on)msClear()}
+function hstop(){const w=HP.on;HP.on=0;kaOff();HP.t=0;try{hpFlush()}catch(e){}try{HAU.pause();HAU.removeAttribute("src");HAU.load()}catch(e){}hui();if(w&&!AP.on)msClear()}
 function hpt(){if(HP.on&&HP.c==cc&&HP.i==ci){HAU.paused?HAU.play():HAU.pause()}else hplay(cc,ci)}
 HAU.onended=()=>hnext();
 HAU.addEventListener("playing",()=>{try{ZR.h&&(ZR.h.n=0);hms();msPS(HAU)}catch(e){}});HAU.onplay=HAU.onpause=()=>{hui();msPS(HAU);if(!HAU.paused)kaOn()};
-HAU.onerror=()=>{if(!HP.on)return;const c=HP.c,i=HP.i;if(zRetry("h",c+"|"+i,()=>{if(!HP.on||HP.c!=c||HP.i!=i)return;hplay(c,i)}))return;hstop();qtoast("تعذّر تشغيل الصوت. تحقق من الاتصال بالإنترنت.",6000)};
+HAU.onerror=()=>{if(!HP.on)return;const c=HP.c,i=HP.i;zRetry("h",c+"|"+i,()=>{if(!HP.on||HP.c!=c||HP.i!=i)return;hplay(c,i)})};
 
 /* ---- حفظ تلقائي: التفاسير الثلاثة + ثلاثة أذانات في ذاكرة التطبيق ---- */
-const ADK=["afasy","mala","bukhari","aqsa","noreen"];
+const ADK=["noreen","afasy","mala","bukhari","aqsa"];
 let TFSEED=0,ADSEED=0;
 function persist(){try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}}
 async function tfSeed(){

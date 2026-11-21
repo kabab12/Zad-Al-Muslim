@@ -144,6 +144,19 @@ public class MainActivity extends BridgeActivity {
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
     }
 
+    /** عند الخروج من التطبيق يبقى جافاسكربت الصفحة يعمل (إعادة محاولة الصوت، الانتقال للآية التالية) ولا يُجمَّد المؤقّت. */
+    @Override
+    public void onPause() {
+        super.onPause();
+        try { getBridge().getWebView().resumeTimers(); } catch (Throwable ignored) { }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        try { getBridge().getWebView().resumeTimers(); } catch (Throwable ignored) { }
+    }
+
     @Override
     public void onDestroy() {
         if (sInst == this) sInst = null;
