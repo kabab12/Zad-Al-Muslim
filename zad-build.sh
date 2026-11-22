@@ -81,6 +81,8 @@ perm() {
 perm ACCESS_FINE_LOCATION
 perm ACCESS_COARSE_LOCATION
 perm POST_NOTIFICATIONS
+# vibration for tasbih / adhkar counters (native ZadVib bridge in MainActivity)
+perm VIBRATE
 # Do Not Disturb access (granted by the user from system settings; the app opens that screen)
 perm ACCESS_NOTIFICATION_POLICY
 # exact alarms + boot: needed by the native prayer-silent scheduler in BOTH variants
