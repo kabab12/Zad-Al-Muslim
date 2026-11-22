@@ -122,6 +122,37 @@ io.open(p, "w", encoding="utf-8").write(m)
 PY
 grep -c "Receiver" "$M" || true
 
+# ---- 4b) notification sounds as raw resources ----
+# Channel sounds (adhan_*.ogg, snd_*.mp3) must exist in res/raw, otherwise the
+# adhan / adhkar notifications arrive in the shade WITHOUT sound.
+mkdir -p "$RES/raw"
+node - "$RES/raw" <<'JS'
+const fs=require('fs'),vm=require('vm'),path=require('path');
+const out=process.argv[2];let n=0;
+function save(name,b64){
+  b64=String(b64||'').replace(/^data:[^,]*,/,'');
+  const buf=Buffer.from(b64,'base64');
+  if(buf.length<1000){console.log('skip tiny',name);return}
+  if(!/^[a-z0-9_]+$/.test(name)){console.log('skip bad name',name);return}
+  const h=buf.slice(0,4).toString('latin1');
+  const ext=h==='OggS'?'ogg':(h==='RIFF'?'wav':'mp3');
+  fs.writeFileSync(path.join(out,name+'.'+ext),buf);n++;
+}
+try{
+  const code=fs.readFileSync('www/adhan-data.js','utf8');
+  const ctx=vm.createContext({window:{},self:{}});
+  const E=vm.runInContext(code+'\n;(typeof ADEMB!=="undefined"?ADEMB:(window.ADEMB||null))',ctx);
+  if(E)Object.keys(E).forEach(k=>save('adhan_'+k,E[k]));
+}catch(e){console.log('WARN adhan-data.js:',e.message)}
+try{
+  const app=fs.readFileSync('www/app.js','utf8');
+  const m=app.match(/const NTA=(\{[^\n]*\});?/);
+  if(m){const A=vm.runInContext('('+m[1]+')',vm.createContext({}));Object.keys(A).forEach(k=>save('snd_'+k,A[k]))}
+}catch(e){console.log('WARN NTA:',e.message)}
+console.log('raw sounds written:',n);
+JS
+ls -la "$RES/raw" || true
+
 # ---- 5) icons ----
 sudo apt-get update -y >/dev/null
 sudo apt-get install -y imagemagick >/dev/null
