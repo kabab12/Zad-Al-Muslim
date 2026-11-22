@@ -135,6 +135,53 @@ done
 mkdir -p "$RES/drawable"
 if [ -f ic_stat_zad.xml ]; then cp ic_stat_zad.xml "$RES/drawable/ic_stat_zad.xml"; fi
 
+# ---- 5b) splash screen: Zad logo on green (replaces Capacitor's default blue logo) ----
+mkdir -p "$RES/drawable" "$RES/values"
+# remove Capacitor's default splash images (all densities / orientations)
+find "$RES" -type f \( -name "splash.png" -o -name "splash.jpg" -o -name "splash.webp" \) -delete
+# logo: app icon centred on a transparent canvas, so Android 12+ circle crop keeps it whole
+$CMD -size 1024x1024 xc:none \( www/icon-512.png -resize 600x600 \) -gravity center -composite "$RES/drawable/zad_splash_logo.png"
+cat > "$RES/values/zad_splash_colors.xml" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="zad_splash_bg">#083f2f</color>
+</resources>
+XML
+# pre-Android-12 / fallback window background: green + centred logo
+cat > "$RES/drawable/zad_splash.xml" <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/zad_splash_bg" />
+    <item android:gravity="center" android:width="160dp" android:height="160dp">
+        <bitmap android:src="@drawable/zad_splash_logo" android:gravity="fill" />
+    </item>
+</layer-list>
+XML
+python3 - "$RES/values/styles.xml" <<'PY'
+import sys, io, re
+p = sys.argv[1]
+s = io.open(p, encoding="utf-8").read()
+m = re.search(r'<style\s+name="AppTheme\.NoActionBarLaunch"\s+parent="([^"]+)"\s*>.*?</style>', s, re.S)
+assert m, "AppTheme.NoActionBarLaunch not found in styles.xml"
+parent = m.group(1)
+if "SplashScreen" in parent:
+    new = f'''<style name="AppTheme.NoActionBarLaunch" parent="{parent}">
+        <item name="windowSplashScreenBackground">@color/zad_splash_bg</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/zad_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:background">@drawable/zad_splash</item>
+    </style>'''
+else:
+    new = f'''<style name="AppTheme.NoActionBarLaunch" parent="{parent}">
+        <item name="android:background">@drawable/zad_splash</item>
+        <item name="android:windowBackground">@drawable/zad_splash</item>
+    </style>'''
+s = s[:m.start()] + new + s[m.end():]
+io.open(p, "w", encoding="utf-8").write(s)
+print("splash style patched, parent =", parent)
+PY
+grep -rn "drawable/splash" "$RES" android/app/src/main/AndroidManifest.xml || echo "no stale splash refs"
+
 # ---- 6) signing key ----
 mkdir -p "$HOME/.android"
 if [ -f zad-debug.keystore ]; then cp zad-debug.keystore "$HOME/.android/debug.keystore"; fi
