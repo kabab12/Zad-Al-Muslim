@@ -92,6 +92,68 @@ public class MainActivity extends BridgeActivity {
         } catch (Throwable ignored) { }
     }
 
+    /** اهتزاز أصلي للمسبحة والأذكار. يعيد حالة نصية: ok / noperm / haptic / err */
+    private class VibBridge {
+        private void haptic() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        View v = getBridge().getWebView();
+                        int flags = android.view.HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING;
+                        v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS, flags);
+                    } catch (Throwable ignored) { }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public String vibrate(String spec) {
+            boolean perm = true;
+            try {
+                perm = checkSelfPermission(android.Manifest.permission.VIBRATE)
+                        == android.content.pm.PackageManager.PERMISSION_GRANTED;
+            } catch (Throwable ignored) { }
+            if (!perm) { haptic(); return "noperm"; }
+            try {
+                long[] pat;
+                String s = spec == null ? "" : spec.trim();
+                if (s.startsWith("[")) {
+                    String[] p = s.substring(1, s.length() - 1).split(",");
+                    pat = new long[p.length + 1];
+                    for (int i = 0; i < p.length; i++) pat[i + 1] = Long.parseLong(p[i].trim());
+                } else {
+                    pat = new long[]{0, Math.max(1L, (long) Double.parseDouble(s))};
+                }
+                android.os.Vibrator v;
+                if (Build.VERSION.SDK_INT >= 31) {
+                    android.os.VibratorManager vm = (android.os.VibratorManager) getSystemService(VIBRATOR_MANAGER_SERVICE);
+                    v = vm.getDefaultVibrator();
+                } else {
+                    v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+                }
+                if (v == null || !v.hasVibrator()) { haptic(); return "haptic"; }
+                if (Build.VERSION.SDK_INT >= 26) {
+                    android.os.VibrationEffect fx = android.os.VibrationEffect.createWaveform(pat, -1);
+                    if (Build.VERSION.SDK_INT >= 33) {
+                        v.vibrate(fx, new android.os.VibrationAttributes.Builder()
+                                .setUsage(android.os.VibrationAttributes.USAGE_TOUCH).build());
+                    } else {
+                        v.vibrate(fx, new android.media.AudioAttributes.Builder()
+                                .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                                .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build());
+                    }
+                } else {
+                    v.vibrate(pat, -1);
+                }
+                return "ok";
+            } catch (Throwable t) {
+                haptic();
+                return "err";
+            }
+        }
+    }
+
     private class OrientBridge {
         @JavascriptInterface
         public void setSensor(final boolean on) {
@@ -120,6 +182,7 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().addJavascriptInterface(new AndroidSilent(this), "AndroidSilent");
             getBridge().getWebView().addJavascriptInterface(new AudioShade(this), "ZadShade");
             getBridge().getWebView().addJavascriptInterface(new DiagBridge(), "ZadDiag");
+            getBridge().getWebView().addJavascriptInterface(new VibBridge(), "ZadVib");
         } catch (Throwable ignored) { }
         // مصالحة الصامت عند كل تشغيل: تصلح أي حالة عالقة وتعيد ضبط المنبّه التالي
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
