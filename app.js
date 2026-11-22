@@ -2274,8 +2274,8 @@ ADA.onerror=()=>{if(!adPlaying)return;if(!adFb&&/^https?:/.test(ADA.src||"")){ad
 const adRemote=m=>"https://www.assabile.com/download/adhan/"+m[2];
 async function adOk(b){try{if(!b||b.size<8000)return false;const u=new Uint8Array(await b.slice(0,4).arrayBuffer());return !(u[0]==60||u[0]==123||u[0]==10||u[0]==32)}catch(e){return false}}
 const adMime=b=>/^audio\//.test(b.type||"")?b:new Blob([b],{type:"audio/mpeg"});
-async function adFetch1(u){const ac=new AbortController(),t=setTimeout(()=>ac.abort(),30000);try{const r=await fetch(u,{signal:ac.signal,credentials:"omit",cache:"no-store"});if(!r.ok)return null;const b=await r.blob();return await adOk(b)?adMime(b):null}catch(e){return null}finally{clearTimeout(t)}}
-async function adFetchNat(u){try{const H=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp;if(!H||!H.request)return null;const r=await H.request({method:"GET",url:u,responseType:"blob",headers:{"Referer":"https://www.assabile.com/","User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36","Accept":"audio/*,*/*"},connectTimeout:20000,readTimeout:60000});if(!r||r.status!=200||!r.data||typeof r.data!="string")return null;const bin=atob(r.data),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);const b=new Blob([a],{type:"audio/mpeg"});return await adOk(b)?b:null}catch(e){return null}}
+async function adFetch1(u){const ac=new AbortController(),t=setTimeout(()=>ac.abort(),30000);try{const r=await fetch(u,{signal:ac.signal,credentials:"omit",cache:"no-store"});if(!r.ok){window.__adErr="web:HTTP "+r.status;return null}const b=await r.blob();if(await adOk(b))return adMime(b);window.__adErr="web:bad file "+b.size+"B";return null}catch(e){window.__adErr="web:"+((e&&e.name)||"err");return null}finally{clearTimeout(t)}}
+async function adFetchNat(u){try{const H=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.CapacitorHttp;if(!H||!H.request){window.__adErr=(window.__adErr||"")+" | no native http";return null}const r=await H.request({method:"GET",url:u,responseType:"blob",headers:{"Referer":"https://www.assabile.com/","User-Agent":"Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Mobile Safari/537.36","Accept":"audio/*,*/*"},connectTimeout:20000,readTimeout:60000});if(!r||r.status!=200||!r.data||typeof r.data!="string"){window.__adErr=(window.__adErr||"")+" | native:HTTP "+(r&&r.status);return null}const bin=atob(r.data),a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);const b=new Blob([a],{type:"audio/mpeg"});if(await adOk(b))return b;window.__adErr=(window.__adErr||"")+" | native:bad file "+b.size+"B";return null}catch(e){window.__adErr=(window.__adErr||"")+" | native:"+((e&&e.message)||"err");return null}}
 const ADINF={};
 async function adDl(id,quiet){
  const m=ADM.find(x=>x[0]==id);if(!m||!m[2])return null;
@@ -2283,8 +2283,8 @@ async function adDl(id,quiet){
  return ADINF[id]=(async()=>{try{
   if(!quiet)qtoast("جارٍ تحميل صوت المؤذن…");
   const u=adRemote(m);let b=null;
-  for(let i=0;i<2&&!b;i++){b=await adFetch1(u);if(!b)b=await adFetchNat(u);if(!b&&i==0)await new Promise(r=>setTimeout(r,1200))}
-  if(!b){if(!quiet)qtoast("تعذّر تحميل صوت هذا المؤذن. تحقق من الاتصال ثم أعد المحاولة، أو اختر مؤذنًا آخر.",6000);return null}
+  window.__adErr="";for(let i=0;i<2&&!b;i++){b=await adFetch1(u);if(!b)b=await adFetchNat(u);if(!b&&i==0)await new Promise(r=>setTimeout(r,1200))}
+  if(!b){if(!quiet)qtoast("تعذّر تحميل صوت هذا المؤذن. تحقق من الاتصال ثم أعد المحاولة، أو اختر مؤذنًا آخر.\n["+(window.__adErr||"?")+"]",9000);return null}
   try{await idbSet("adhan:c:"+id,b);S.adc=S.adc||{};S.adc[id]=1;save()}catch(e){}
   if(!quiet)qtoast("تم تحميل الصوت ✓ — يعمل الآن دون إنترنت");
   if(document.getElementById("m")&&cur=="set"&&typeof adR=="function"&&adS().on)setTimeout(adR,0);
