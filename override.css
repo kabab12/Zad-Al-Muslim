@@ -22,3 +22,39 @@
 .hz>.hzt{grid-column:2;grid-row:2;align-self:stretch;flex:none}
 }
 .hm .wdc{margin-bottom:0}
+
+/* تصغير عدّاد رمضان والورد اليومي في الشاشة الرئيسية */
+.rmc{padding:8px 12px 8px;margin-bottom:8px;border-radius:18px}
+.rmc .rmm{margin-top:2px;line-height:0;animation:rmg 3.6s ease-in-out infinite!important}.rmc .rmm svg{width:100px!important;height:100px!important}
+.rmc .rmt1{font-size:.76em}.rmc .rmb1{font-size:1em;margin-top:0}.rmc .rmf1{font-size:.62em;margin-top:4px}
+.rmc .rmbar{height:5px;margin:6px 6px 0}
+.hm-wird,.hm-az{padding:8px 12px!important;gap:10px;border-radius:16px}
+.hm-wi,.hm-ai{width:34px;height:34px;border-radius:11px;font-size:1.1em}.hm-wi svg{width:19px;height:19px}
+.hm-wt b,.hm-at b{font-size:.92em!important}.hm-wt span,.hm-at span{font-size:.7em!important}
+.hm-bar{height:4px;margin-top:4px}.hm-go{font-size:1.3em}
+
+/* عدّاد رمضان: هلال ذهبي، الرقم في تجويفه، حركة خفيفة، والنص يظهر بعد 5 ث ويبقى 10 ث */
+.rmp{display:flex;align-items:center;direction:rtl;margin:0 4px 6px 0;-webkit-tap-highlight-color:transparent}
+.rmp .rmpc{flex:none;position:relative;width:56px;height:50px;animation:rmpf 4.5s ease-in-out infinite;filter:drop-shadow(0 2px 4px rgba(201,146,44,.35))}
+.rmp .rmpc svg{display:block;width:100%;height:100%}
+.rmp .rmpc b{position:absolute;top:0;bottom:0;left:0;width:70%;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-weight:900;font-size:1.25em;color:var(--tx,#1d2b25);font-variant-numeric:tabular-nums}
+.rmp .rmpc b.s{font-size:.8em}
+.rmp .rmpc b small{font-size:.5em;font-weight:800;margin-top:1px;color:var(--tx,#1d2b25)}
+.rmp .rmpt{margin-right:2px;padding:0 12px;height:28px;display:flex;align-items:center;background:var(--card,#fff);color:var(--tx,#1d2b25);border:1px solid var(--bd,rgba(0,0,0,.12));border-radius:99px;font-weight:800;font-size:.78em;box-shadow:0 2px 8px rgba(0,0,0,.08);white-space:nowrap;opacity:0;animation:rmpt 15s linear infinite}
+@keyframes rmpf{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-4px) rotate(3deg)}}
+@keyframes rmpt{0%,33%{opacity:0;transform:translateX(10px)}37%,94%{opacity:1;transform:none}100%{opacity:0;transform:translateX(10px)}}
+@media (prefers-reduced-motion:reduce){.rmp .rmpc{animation:none}}
+
+/* العدّاد داخل البطاقة الخضراء، في الفراغ العلوي بجانب التحية */
+.hm-hero .rmp{position:static;margin:0 0 4px;z-index:2}
+.hm-hero .rmp .rmpc{width:42px;height:38px}
+.hm-hero .rmp .rmpc b{color:#fff;font-size:.92em}
+.hm-hero .rmp .rmpc b small{color:#ffe9a8;font-size:.5em;margin-top:0}
+.hm-hero .rmp .rmpt{height:22px;padding:0 8px;font-size:.64em;margin-right:0;background:rgba(255,255,255,.16);color:#fff;border-color:rgba(255,255,255,.3);box-shadow:none;backdrop-filter:blur(2px)}
+
+/* الورد اليومي: بطاقة مصغّرة بلا أحمر وعبارة متغيّرة */
+.wdc{padding:9px 13px!important;border-radius:16px!important;margin-bottom:10px!important;border:1px solid rgba(255,255,255,.14)!important;box-shadow:0 3px 10px rgba(13,59,58,.22)!important}
+.wdc .wdh{gap:10px}.wdc .wdt{font-size:.92em;white-space:nowrap}
+.wdc .wdphr{font-size:.78em;font-weight:700;color:#ffe9a8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;animation:wdph .6s ease}
+@keyframes wdph{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.wdc .wdp{height:4px;margin:7px 0 0}

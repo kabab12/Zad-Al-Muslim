@@ -128,10 +128,9 @@ function menu(){
  const chips=P.idx.map(k=>{const st=k===P.ni?"nx":(P.t[k]<new Date()?"ps":"");return `<div class="hm-pc ${st}"><span>${NAMES[k]}</span><b>${fmt(P.t[k])}</b></div>`}).join("");
  $("#m").innerHTML=`<div class="hm">${needLoc()}
  <section class="hm-hero"><svg class="hm-pat" viewBox="0 0 200 200" aria-hidden="true"><defs><pattern id="hmp" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M25 3l5.800 12.200L44 17l-10 9.400 2.600 13.600L25 33.500 13.400 40 16 26.400 6 17l13.200-1.800z" fill="none" stroke="#fff" stroke-width="1"/></pattern></defs><rect width="200" height="200" fill="url(#hmp)"/></svg>
-  <div class="hm-top"><div class="hm-gr"><small>${hmGreet()}</small><h2>${hmA(hijri().replace(/^[^ ]+ /,"").replace(/\s*هـ\s*$/,"")+" هـ")}</h2><span>${hmA(hijri().split(" ")[0]+" · "+greg().replace(/^[^،]+،\s*/,""))}${city?" · "+esc(city):""}</span></div><div class="hm-lg">${LOGO(54)}</div></div>
+  <div class="hm-top"><div class="hm-gr">${ramCard()}<h2>${hmA(hijri().replace(/^[^ ]+ /,"").replace(/\s*هـ\s*$/,"")+" هـ")}</h2><span>${hmA(hijri().split(" ")[0]+" · "+greg().replace(/^[^،]+،\s*/,""))}${city?" · "+esc(city):""}</span></div><div class="hm-lg">${LOGO(54)}</div></div>
   <div class="hm-next"><div class="hm-nl"><small>الصلاة القادمة</small><b>${NAMES[P.ni]}</b><span>${fmt(P.next)}</span></div><div class="hm-cd" id="hmc"></div></div>
   <div class="hm-prog"><i id="hmp2"></i></div></section>
- ${ramCard()}
  <div class="hm-grid">${[["quran","القرآن الكريم"],["adhkar","حصن المسلم"],["tasbih","المسبحة"],["qibla","القبلة"],["home","المواقيت والأذان"],["set","الإعدادات"]].map(a=>`<button onclick="go('${a[0]}')"><span class="hm-ic"><svg viewBox="0 0 24 24">${NI[a[0]]}</svg></span><b>${a[1]}</b></button>`).join("")}</div>
  <div class="hm-ps">${chips}</div>
  ${wdCard(1)}
@@ -144,17 +143,14 @@ function menu(){
 /* عدّاد رمضان التنازلي: يظهر قبل رمضان بـ٩٠ يومًا (ثلاثة أشهر) حسب التقويم الهجري في التطبيق */
 function ramCard(){try{
  const n=new Date(),tt=Date.UTC(n.getFullYear(),n.getMonth(),n.getDate(),12),[hy,hm,hd]=todayH();
- const card=(top,num,sub,lbl,pct,foot)=>{const nz=String(num).length>2?34:String(num).length>1?42:50;
-  return `<div class="rmc"><div class="rmst"><i style="top:10%;right:9%;font-size:15px">✦</i><i style="top:34%;right:86%;font-size:10px;animation-delay:.7s">✦</i><i style="top:72%;right:12%;font-size:11px;animation-delay:1.2s">✦</i><i style="top:16%;right:66%;font-size:9px;animation-delay:1.8s">✦</i><i style="top:78%;right:84%;font-size:14px;animation-delay:.3s">✦</i><i style="top:50%;right:94%;font-size:8px;animation-delay:1.5s">✦</i></div>
-  <div class="rmt1">${top}</div>
-  <div class="rmm"><svg viewBox="0 0 160 160" width="176" height="176" aria-hidden="true"><defs><linearGradient id="rmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff4b8"/><stop offset=".55" stop-color="#f4c542"/><stop offset="1" stop-color="#c98a16"/></linearGradient><mask id="rmk"><rect width="160" height="160" fill="#fff"/><circle cx="104" cy="68" r="50" fill="#000"/></mask></defs><circle cx="80" cy="80" r="64" fill="url(#rmg)" mask="url(#rmk)"/><circle cx="80" cy="80" r="70" fill="none" stroke="#f4c542" stroke-opacity=".22" stroke-dasharray="2 6" mask="url(#rmk)"/><text x="92" y="${num=="اليوم"?76:num.length>2?78:80}" text-anchor="middle" dominant-baseline="middle" font-size="${num=="اليوم"?26:nz}" font-weight="800" fill="#fff" style="paint-order:stroke;stroke:#a86f0a;stroke-width:1.5px">${num}</text><text x="92" y="${num=="اليوم"?100:104}" text-anchor="middle" font-size="14" font-weight="700" fill="#ffe9a6">${sub}</text></svg></div>
-  <div class="rmb1">${lbl}</div>${pct==null?"":`<div class="rmbar"><i style="width:${pct}%"></i></div>`}<div class="rmf1">${foot}</div></div>`};
- if(hm==9)return card("🌙 رمضان مبارك",AD(hd),"من "+AD(mlen(hy,9)),"اليوم "+AD(hd)+" من "+AD(mlen(hy,9)),Math.round(hd/mlen(hy,9)*100),"تقبّل الله صيامكم وقيامكم");
+ const card=(top,num,sub,lbl,pct,foot)=>{const s=String(num).length>2||num=="اليوم";
+  return `<div class="rmp" role="status"><div class="rmpc"><svg viewBox="0 0 72 64" aria-hidden="true"><defs><linearGradient id="rmg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset="1" stop-color="#c9922c"/></linearGradient><mask id="rmm"><rect width="72" height="64" fill="#fff"/><circle cx="29" cy="32" r="25" fill="#000"/></mask></defs><circle cx="40" cy="32" r="30" fill="url(#rmg)" mask="url(#rmm)"/></svg><b${s?' class="s"':""}>${num}${s?"":"<small>يوم</small>"}</b></div><div class="rmpt">${lbl}</div></div>`};
+ if(hm==9)return card("🌙 رمضان مبارك",AD(hd),"من "+AD(mlen(hy,9)),"رمضان مبارك · من "+AD(mlen(hy,9))+" يومًا",Math.round(hd/mlen(hy,9)*100),"تقبّل الله صيامكم وقيامكم");
  const Y=hm>9?hy+1:hy,start=mstart(Y,9),df=Math.round((start-tt)/DAY);
  if(df<0||df>90)return"";
  const pct=Math.max(0,Math.min(100,Math.round((90-df)/90*100)));
  const gd=new Intl.DateTimeFormat("ar",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}).format(start);
- const lbl=df==0?"رمضان يبدأ اليوم 🌙":df==1?"بقي يوم واحد على رمضان":df==2?"بقي يومان على رمضان":"بقي "+AD(df)+(df<=10?" أيام":" يومًا")+" على رمضان";
+ const lbl=df==0?"رمضان يبدأ اليوم 🌙":df==1?"بقي يوم واحد على رمضان":df==2?"بقي يومان على رمضان":(df<=10?"أيام متبقية على رمضان":"يومًا متبقيًا على رمضان");
  return card("🌙 العدّ التنازلي لرمضان "+AD(Y)+" هـ",df==0?"اليوم":AD(df),df==0?"رمضان":df==1?"يوم":df<=10?"أيام":"يومًا",lbl,pct,"يبدأ تقريبًا "+gd+" (حسب التقويم، ويتبع تعديل رؤية الهلال)")
 }catch(e){return""}}
 function home(){
@@ -1957,7 +1953,7 @@ NTP.tabkeer={a:"nl",keep:1,i:[
 snH("«مَنِ اغْتَسَلَ يَوْمَ الْجُمُعَةِ غُسْلَ الْجَنَابَةِ ثُمَّ رَاحَ فَكَأَنَّمَا قَرَّبَ بَدَنَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الثَّانِيَةِ فَكَأَنَّمَا قَرَّبَ بَقَرَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الثَّالِثَةِ فَكَأَنَّمَا قَرَّبَ كَبْشًا أَقْرَنَ، وَمَنْ رَاحَ فِي السَّاعَةِ الرَّابِعَةِ فَكَأَنَّمَا قَرَّبَ دَجَاجَةً، وَمَنْ رَاحَ فِي السَّاعَةِ الْخَامِسَةِ فَكَأَنَّمَا قَرَّبَ بَيْضَةً، فَإِذَا خَرَجَ الْإِمَامُ حَضَرَتِ الْمَلَائِكَةُ يَسْتَمِعُونَ الذِّكْرَ»","متفق عليه (البخاري ٨٨١ ومسلم ٨٥٠) عن أبي هريرة"),
 snH("«إِذَا كَانَ يَوْمُ الْجُمُعَةِ كَانَ عَلَى كُلِّ بَابٍ مِنْ أَبْوَابِ الْمَسْجِدِ الْمَلَائِكَةُ يَكْتُبُونَ الْأَوَّلَ فَالْأَوَّلَ، فَإِذَا جَلَسَ الْإِمَامُ طَوَوُا الصُّحُفَ وَجَاءُوا يَسْتَمِعُونَ الذِّكْرَ»","رواه البخاري (٩٢٩) عن أبي هريرة")]};
 function nxCfg(){const x=S.nx=S.nx||{};x.q=x.q||{on:1,t:"22:30"};x.h=x.h||{on:1,off:40};x.d=x.d||{on:1,from:"08:00",to:"21:00",every:180,all:0,p:0};return x}
-function nxFlat(c){const NXX=[0,2,26,27],ks=(c.d.all?Object.keys(HD).map(Number).filter(k=>k<EVID):[...Array(34).keys()]).filter(k=>NXX.indexOf(k)<0),L=[];ks.forEach(k=>{if(HD[k])HD[k].forEach((x,i)=>L.push([k,i]))});return L}
+function nxFlat(c){const NXX=[0,2,26,27],ks=(c.d.all?Object.keys(HD).map(Number).filter(k=>k<EVID):[...Array(34).keys()]).filter(k=>NXX.indexOf(k)<0&&!/ثوب|ثياب|لبس/.test(String(CHN(k)))),L=[];ks.forEach(k=>{if(HD[k])HD[k].forEach((x,i)=>L.push([k,i]))});return L}
 function nxQiyam(){ntFire("🌙 قيام الليل",ntMsg("qiyam"),"qiyam","qr")}
 function nxHour(){ntFire("🕌 ساعة الإجابة",ntMsg("jumua"),"jumua","c:"+NXC)}
 function nxDay(t){
@@ -2131,15 +2127,16 @@ function wdDone(){const w=S.wd;return !!(w&&w.d===wdK()&&Array.isArray(w.c)&&w.c
 function wdStreak(){const s=wdS(),H=S.wdH||{};let n=0,d=new Date();if(wdTot(s)>0)n=1;
  for(let i=0;i<120;i++){d.setDate(d.getDate()-1);const k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");if(H[k]&&H[k][1]>0)n++;else break}
  return n}
-function wdCard(o){const s=wdS(),f=wdFin(s),t=wdTot(s),st=t==0?0:f>=WRD.length?2:1,sk=wdStreak(),pct=Math.round(s.c.reduce((p,x)=>p+Math.min(x,100),0)/(WRD.length*100)*100);
- const bd=st==0?`<span class="wdb r"><i></i>لم تدخل وردك اليوم</span>`:st==1?`<span class="wdb a">أكملت ${AD(f)} من ${AD(WRD.length)}</span>`:`<span class="wdb g">✓ أتممت ورد اليوم</span>`;
- return `<div class="wdc st${st}" onclick="wd(${o?"'m'":"'h'"})" role="button"><div class="wdh"><span class="wdt">📿 ورد اليوم</span>${bd}</div><div class="wdp"><i style="width:${pct}%"></i></div><div class="wdm"><span>${AD(WRD.length)} ذكرًا · لكل ذكر ${AD(100)} مرة</span><span>${t?AD(t)+" تسبيحة":""}${sk>1?" · 🔥 "+AD(sk)+" أيام":""}</span></div><div class="wdgo">${st==0?"ابدأ وردك الآن ←":st==1?"أكمل وردك ←":"افتح الورد ←"}</div></div>`}
+function wdCard(o){const s=wdS(),f=wdFin(s),t=wdTot(s),st=t==0?0:f>=WRD.length?2:1,pct=Math.round(s.c.reduce((p,x)=>p+Math.min(x,100),0)/(WRD.length*100)*100);
+ const PH=["ابدأ وردك","ألا بذكر الله تطمئن القلوب","اذكر الله يذكرك","سبحان الله وبحمده","وردك نورٌ لقلبك","قليلٌ دائمٌ خيرٌ من كثير منقطع","خفيفتان على اللسان ثقيلتان في الميزان"],
+  ph=st==0?PH[Math.floor(Date.now()/216e5)%PH.length]:st==1?"أكملت "+AD(f)+" من "+AD(WRD.length):"✓ أتممت ورد اليوم";
+ return `<div class="wdc st${st}" onclick="wd(${o?"'m'":"'h'"})" role="button"><div class="wdh"><span class="wdt">📿 ورد اليوم</span><span class="wdphr">${ph}</span></div>${st?`<div class="wdp"><i style="width:${pct}%"></i></div>`:""}</div>`}
 function wd(o){wdIn=0;clearInterval(tick);if(o==="m")wdFrom="menu";else if(o==="h")wdFrom="home";cur="home";SUBV=wdFrom;nav();
  const s=wdS(),f=wdFin(s),t=wdTot(s),sk=wdStreak(),pct=Math.round(s.c.reduce((p,x)=>p+Math.min(x,100),0)/(WRD.length*100)*100),h=WRH[Math.floor(Date.now()/864e5)%WRH.length];
  const rows=WRD.map((d,i)=>{const c=s.c[i],ok=c>=100;return `<div class="wdi${ok?" ok":""}" onclick="wdOpen(${i})"><span class="wdn">${ok?"✓":AD(i+1)}</span><span class="wdx"><span class="wdtxt">${d[0]}</span><span class="wdbar"><i style="width:${Math.min(100,c)}%"></i></span></span><span class="wdc2">${AD(c)}<small>/${AD(100)}</small></span></div>`}).join("");
  $("#m").innerHTML=`<div class="card"><div class="set" style="margin:0"><h1 style="margin:0">📿 ورد اليوم</h1><span class="mu">${new Date().toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"})}</span></div>
  <div class="wdp lg"><i style="width:${pct}%"></i></div>
- <div class="wdm"><span>${t==0?'<b style="color:#e53935">● لم تدخل وردك اليوم</b>':f>=WRD.length?'<b style="color:var(--ac)">✓ أتممت ورد اليوم</b>':"أكملت "+AD(f)+" من "+AD(WRD.length)+" ذكرًا"}</span><span>${AD(t)} تسبيحة${sk>1?" · 🔥 "+AD(sk)+" أيام متتالية":""}</span></div></div>
+ <div class="wdm"><span>${t==0?'<b>ابدأ وردك الآن</b>':f>=WRD.length?'<b style="color:var(--ac)">✓ أتممت ورد اليوم</b>':"أكملت "+AD(f)+" من "+AD(WRD.length)+" ذكرًا"}</span><span>${AD(t)} تسبيحة${sk>1?" · 🔥 "+AD(sk)+" أيام متتالية":""}</span></div></div>
  <div class="card wdq"><div class="lh">${h[0]=="a"?"آية":"حديث"} يُحفّز على الذكر</div><div class="wdqt">${h[1]}</div><div class="mu">— ${h[2]}</div></div>
  <div class="card"><div class="lh">أذكار الورد · اضغط الذكر ثم عُدّ</div>${rows}<div class="mu" style="margin-top:6px">لكل ذكر مسبحة من ${AD(100)}، وإذا أتممتها يستمر العدّ (${AD(101)}، ${AD(102)}…) بلا حدّ.</div></div>
  <details class="card"><summary class="lh" style="cursor:pointer">آيات وأحاديث في فضل الذكر (${AD(WRH.length)})</summary>${WRH.map(x=>`<div class="wdqi"><div class="wdqt">${x[1]}</div><div class="mu">— ${x[2]}</div></div>`).join("")}</details>`}
