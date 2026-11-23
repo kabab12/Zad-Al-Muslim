@@ -154,6 +154,107 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    /** أذونات الخلفية: استثناء البطارية + فتح شاشات التشغيل التلقائي/النوافذ المنبثقة (شاومي وغيرها). */
+    private class PermBridge {
+        private boolean go(android.content.Intent i) {
+            try {
+                i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+                return true;
+            } catch (Throwable t) {
+                return false;
+            }
+        }
+
+        private boolean appSettings() {
+            android.content.Intent i = new android.content.Intent(
+                    android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    android.net.Uri.parse("package:" + getPackageName()));
+            return go(i);
+        }
+
+        @JavascriptInterface
+        public String oem() {
+            return (Build.MANUFACTURER == null ? "" : Build.MANUFACTURER) + " " + (Build.BRAND == null ? "" : Build.BRAND);
+        }
+
+        @JavascriptInterface
+        public boolean battery() {
+            try {
+                if (Build.VERSION.SDK_INT < 23) return true;
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                return pm.isIgnoringBatteryOptimizations(getPackageName());
+            } catch (Throwable t) {
+                return true;
+            }
+        }
+
+        @JavascriptInterface
+        public boolean askBattery() {
+            try {
+                if (Build.VERSION.SDK_INT < 23) return true;
+                android.content.Intent i = new android.content.Intent(
+                        android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        android.net.Uri.parse("package:" + getPackageName()));
+                if (go(i)) return true;
+                return go(new android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        || appSettings();
+            } catch (Throwable t) {
+                return appSettings();
+            }
+        }
+
+        @JavascriptInterface
+        public boolean overlay() {
+            try {
+                if (Build.VERSION.SDK_INT < 23) return true;
+                return android.provider.Settings.canDrawOverlays(MainActivity.this);
+            } catch (Throwable t) {
+                return true;
+            }
+        }
+
+        @JavascriptInterface
+        public boolean askOverlay() {
+            try {
+                android.content.Intent i = new android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        android.net.Uri.parse("package:" + getPackageName()));
+                if (go(i)) return true;
+            } catch (Throwable ignored) { }
+            return appSettings();
+        }
+
+        @JavascriptInterface
+        public boolean openAutostart() {
+            String[][] c = {
+                {"com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"},
+                {"com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"},
+                {"com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity"},
+                {"com.oppo.safe", "com.oppo.safe.permission.startup.StartupAppListActivity"},
+                {"com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"},
+                {"com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity"}
+            };
+            for (String[] x : c) {
+                android.content.Intent i = new android.content.Intent();
+                i.setClassName(x[0], x[1]);
+                if (go(i)) return true;
+            }
+            return appSettings();
+        }
+
+        @JavascriptInterface
+        public boolean openPopup() {
+            try {
+                android.content.Intent i = new android.content.Intent("miui.intent.action.APP_PERM_EDITOR");
+                i.setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity");
+                i.putExtra("extra_pkgname", getPackageName());
+                if (go(i)) return true;
+            } catch (Throwable ignored) { }
+            return appSettings();
+        }
+    }
+
     private class OrientBridge {
         @JavascriptInterface
         public void setSensor(final boolean on) {
@@ -183,6 +284,7 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().addJavascriptInterface(new AudioShade(this), "ZadShade");
             getBridge().getWebView().addJavascriptInterface(new DiagBridge(), "ZadDiag");
             getBridge().getWebView().addJavascriptInterface(new VibBridge(), "ZadVib");
+            getBridge().getWebView().addJavascriptInterface(new PermBridge(), "ZadPerm");
         } catch (Throwable ignored) { }
         // مصالحة الصامت عند كل تشغيل: تصلح أي حالة عالقة وتعيد ضبط المنبّه التالي
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }

@@ -1316,22 +1316,25 @@ async function pmState(){const r={};
  r.n=typeof Notification=="undefined"?"na":(Notification.permission=="default"?"prompt":Notification.permission);
  try{r.g=(await navigator.permissions.query({name:"geolocation"})).state}catch(e){r.g=navigator.geolocation?"prompt":"na"}
  try{r.s=navigator.storage&&navigator.storage.persisted?((await navigator.storage.persisted())?"granted":"prompt"):"na"}catch(e){r.s="na"}
- r.m=(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)?(S.pmm?"granted":"prompt"):"na";return r}
-const PMI={n:["🔔","الإشعارات","تذكير الأذكار والصلاة والآيات"],g:["📍","الموقع","مواقيت الصلاة واتجاه القبلة"],s:["💾","التخزين الدائم","حفظ التنزيلات والتفاسير والأصوات دون إنترنت"],m:["🧭","الحركة والاتجاه","تشغيل البوصلة"]};
+ r.m=(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)?(S.pmm?"granted":"prompt"):"na";
+ const zp=window.ZadPerm;if(zp){try{r.b=zp.battery()?"granted":"prompt";r.o=zp.overlay()?"granted":"prompt";r.a=S.pma?"granted":"info";if(/xiaomi|redmi|poco/.test(String(zp.oem()||"").toLowerCase()))r.p=S.pmp?"granted":"info"}catch(e){}}
+ return r}
+const PMI={n:["🔔","الإشعارات","تذكير الأذكار والصلاة والآيات"],g:["📍","الموقع","مواقيت الصلاة واتجاه القبلة"],s:["💾","التخزين الدائم","حفظ التنزيلات والتفاسير والأصوات دون إنترنت"],m:["🧭","الحركة والاتجاه","تشغيل البوصلة"],b:["🔋","التشغيل في الخلفية","حتى يصلك الأذان والتنبيهات والتطبيق مغلق (استثناء من توفير البطارية)"],a:["🚀","التشغيل التلقائي","يمنع هاتفك من إيقاف التطبيق وهو مغلق: اضغط «فتح» ثم فعّله يدويًا"],o:["🖼️","الظهور فوق التطبيقات","يسمح بظهور التنبيهات فوق التطبيقات الأخرى: اضغط «السماح» ثم فعّل المفتاح"],p:["🪟","النوافذ المنبثقة في الخلفية","لهواتف شاومي: يسمح بظهور التنبيه والأذان والتطبيق مغلق. اضغط «فتح» ثم فعّله"]};
 async function pmGate(force){
  if(document.getElementById("pmg"))return;
  const st=await pmState(),need=Object.keys(PMI).filter(k=>st[k]=="prompt"||st[k]=="denied");
- if(!need.length&&!force)return;if(PMS&&!force)return;if(!force){try{localStorage.setItem("zadPmAsked","1")}catch(e){}}
+ if(!need.length&&!force)return;if(PMS&&!force)return;if(!force){try{localStorage.setItem("zadPmAsked","1");localStorage.setItem("zadPmAsked2","1")}catch(e){}}
  const d=document.createElement("div");d.id="pmg";
  d.style.cssText="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl";
  d.innerHTML='<div class="card" style="max-width:420px;width:100%;margin:0;max-height:92%;overflow:auto"><h1 style="margin-top:0">أذونات التطبيق</h1><div class="mu" style="margin-bottom:8px">يحتاج «زاد المسلم» هذه الأذونات ليعمل كاملًا من أول مرة.</div><div id="pmr"></div><button class="gdl" id="pmall" style="width:100%;margin-top:10px" onclick="pmAll()">السماح بكل الأذونات</button><button id="pmlt" style="width:100%;margin-top:8px" onclick="pmClose(1)">لاحقًا</button><div class="mu" id="pmmsg" style="margin-top:8px;font-size:.85em"></div></div>';
  document.body.appendChild(d);pmDraw(st)}
+document.addEventListener("visibilitychange",async()=>{if(!document.hidden&&document.getElementById("pmg")){try{pmDraw(await pmState())}catch(e){}}});
 function pmClose(skip){if(skip)PMS=1;const d=document.getElementById("pmg");if(d)d.remove()}
 function pmDraw(st){const e=document.getElementById("pmr");if(!e)return;
  const lb={granted:"✅ ممنوح",prompt:"⏳ لم يُطلب بعد",denied:"⛔ مرفوض",na:"— غير متاح هنا"};
- e.innerHTML=Object.keys(PMI).filter(k=>st[k]!="na").map(k=>`<div class="set" style="align-items:flex-start"><span><b>${PMI[k][0]} ${PMI[k][1]}</b><br><span class="mu" style="font-size:.8em">${PMI[k][2]}</span><br><span style="font-size:.85em">${lb[st[k]]||""}</span></span>${st[k]=="granted"?"":`<button class="gdl" onclick="pmOne('${k}')">السماح</button>`}</div>`).join("");
+ e.innerHTML=Object.keys(PMI).filter(k=>st[k]!=null&&st[k]!="na").map(k=>`<div class="set" style="align-items:flex-start"><span><b>${PMI[k][0]} ${PMI[k][1]}</b><br><span class="mu" style="font-size:.8em">${PMI[k][2]}</span><br><span style="font-size:.85em">${(k=="a"||k=="p")?(st[k]=="granted"?"☑ فُتحت الإعدادات (لا يمكن للتطبيق التحقق تلقائيًا)":"⚙ يحتاج تفعيلًا يدويًا"):(lb[st[k]]||"")}</span></span>${(st[k]=="granted"&&k!="a"&&k!="p")?"":`<button class="gdl" onclick="pmOne('${k}')">${(k=="a"||k=="p")?"فتح":"السماح"}</button>`}</div>`).join("");
  const left=Object.keys(PMI).filter(k=>st[k]=="prompt"||st[k]=="denied");
- const b=document.getElementById("pmall");if(b)b.style.display=left.length?"":"none";
+ const b=document.getElementById("pmall");if(b)b.style.display=left.filter(k=>k!="b"&&k!="o").length?"":"none";
  const m=document.getElementById("pmmsg");
  if(m)m.textContent=st.n=="denied"||st.g=="denied"?"إذن مرفوض: اضغط على رمز القفل بجانب عنوان الموقع (أو إعدادات التطبيق في الهاتف ← الأذونات) وفعّله، ثم ارجع واضغط «السماح» مرة أخرى.":"";
  const lt=document.getElementById("pmlt");if(lt)lt.textContent=left.length?"لاحقًا":"تم"}
@@ -1341,10 +1344,14 @@ async function pmOne(k){
   else if(k=="g")await new Promise(res=>{try{navigator.geolocation.getCurrentPosition(p=>{if(!S.chosen){S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city=locName(p.coords.latitude,p.coords.longitude);S.chosen=1;S.gps=1;save()}res()},er=>{try{qtoast(er&&er.code==1?"الموقع غير مسموح هنا. جرّب من تطبيق زاد المسلم (APK) أو من متصفح Chrome، أو اختر مدينتك من الإعدادات.":"تعذّر تحديد الموقع. تأكد من تشغيل GPS، أو اختر مدينتك من الإعدادات.",6000)}catch(x){}res()},{timeout:20000,maximumAge:60000})}catch(e){res()}});
   else if(k=="s"&&navigator.storage&&navigator.storage.persist)await navigator.storage.persist();
   else if(k=="m"&&window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){if(await DeviceOrientationEvent.requestPermission()=="granted"){S.pmm=1;save()}}
+   else if(k=="b"&&window.ZadPerm){ZadPerm.askBattery()}
+   else if(k=="o"&&window.ZadPerm){ZadPerm.askOverlay()}
+   else if(k=="a"&&window.ZadPerm){ZadPerm.openAutostart();S.pma=1;save()}
+   else if(k=="p"&&window.ZadPerm){ZadPerm.openPopup();S.pmp=1;save()}
  }catch(e){}
  const st=await pmState();pmDraw(st);
  if(!Object.keys(PMI).some(x=>st[x]=="prompt"||st[x]=="denied")){setTimeout(()=>pmClose(),700);try{qtoast("تم منح الأذونات ✓")}catch(e){}}}
-async function pmAll(){const st=await pmState();for(const k of Object.keys(PMI))if(st[k]=="prompt"||st[k]=="denied")await pmOne(k)}
+async function pmAll(){const st=await pmState();for(const k of Object.keys(PMI))if(k!="b"&&k!="o"&&(st[k]=="prompt"||st[k]=="denied"))await pmOne(k)}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&document.getElementById("pmg"))pmState().then(pmDraw)});
 
 function qdiag0(){
@@ -2328,7 +2335,7 @@ function slCompat(){
  return `<div class="card"><div class="lh">التوافق مع جهازك</div><div class="mu">${st}</div><div class="mu" style="margin-top:6px">${alt}</div>${and&&vt[v]?`<div class="mu" style="margin-top:6px">لضمان وصول التذكيرات في الخلفية — ${vt[v]}</div>`:""}<div class="mu" style="margin-top:6px">حالة الاختبار: هذه الخاصية لم تُختبر بعد على أجهزة Android حقيقية (Samsung وHuawei وXiaomi وRedmi وHonor وغيرها) ولا على إصدارات Android المختلفة، فلا تُعدّ مكتملة. التذكير اليدوي هو المضمون على كل الأجهزة.</div></div>`}
 
 try{if(S.city==="موقعي الحالي"&&S.chosen&&S.lat!=null){S.gps=1;const n=locName(S.lat,S.lng);if(n!=="موقعي الحالي"){S.city=n;save()}}}catch(e){}
-apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();setTimeout(locAuto,1500);setTimeout(()=>{try{if(!localStorage.getItem("zadPmAsked"))pmGate()}catch(e){}},900);
+apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();setTimeout(locAuto,1500);setTimeout(()=>{try{if(!localStorage.getItem("zadPmAsked"))pmGate();else if(window.ZadPerm&&!localStorage.getItem("zadPmAsked2")){localStorage.setItem("zadPmAsked2","1");pmGate(1)}}catch(e){}},900);
 
 /* ---- حفظ مكان التلاوة ومتابعتها ---- */
 function saveRes(){try{if(!AP||!AP.s||!QD||!QD.names)return;if(!AP.on&&!AP.res)return;const f=S.qrec||RLD[0],sur=!!SUD[f];S.qres={s:AP.s,a:AP.a,f,t:sur&&AU.currentTime>1?Math.floor(AU.currentTime):0,u:Date.now()};if(AP.on)S.ql={s:AP.s,a:AP.a,p:qPageOf(AP.s,AP.a),u:Date.now()};save()}catch(e){}}

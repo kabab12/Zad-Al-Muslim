@@ -113,8 +113,8 @@
           if(typeof ADEMB==="undefined"||!LN.createChannel)return Promise.resolve();
           var nm={};try{ADM.forEach(function(m){nm[m[0]]=m[1]})}catch(e){}
           return Promise.all(Object.keys(ADEMB).map(function(id){
-            try{if(LN.deleteChannel)LN.deleteChannel({id:"zad_adhan_"+id}).catch(function(){})}catch(e){}
-            return LN.createChannel({id:"zad_adhan_v2_"+id,name:"الأذان — "+(nm[id]||id),description:"صوت الأذان وقت الصلاة",importance:5,visibility:1,vibration:true,sound:"adhan_"+id+".ogg"}).catch(function(){})
+            try{if(LN.deleteChannel){LN.deleteChannel({id:"zad_adhan_"+id}).catch(function(){});LN.deleteChannel({id:"zad_adhan_v2_"+id}).catch(function(){})}}catch(e){}
+            return LN.createChannel({id:"zad_adhan_v3_"+id,name:"الأذان — "+(nm[id]||id),description:"صوت الأذان وقت الصلاة",importance:5,visibility:1,vibration:true,sound:"adhan_"+id+".ogg"}).catch(function(){})
           })).then(function(){
             if(!LN.listChannels)return;
             return LN.listChannels().then(function(r){window.__adNat=((r&&r.channels)||[]).some(function(c){return /^zad_adhan_/.test(c.id)})}).catch(function(){})
@@ -124,7 +124,7 @@
         try{
           if(!window.__adNat||!/\|/.test(String(tag||"")))return null;
           var c=S.ad;if(!c||!c.on||S.ntSnd===false)return null;
-          return (typeof ADEMB!=="undefined"&&ADEMB[c.m])?"zad_adhan_v2_"+c.m:null
+          return (typeof ADEMB!=="undefined"&&ADEMB[c.m])?"zad_adhan_v3_"+c.m:null
         }catch(e){return null}};
       /* أصوات خاصة (عصافير الأذكار، وتلاوة «إن الله وملائكته يصلون على النبي») كأصوات قنوات إشعار */
       var soundChannels=function(){
@@ -132,18 +132,18 @@
           if(!LN.createChannel)return Promise.resolve();
           var defs=[["bird","الأذكار والختمة (عصافير)"],["ayah","الصلاة على النبي ﷺ (تلاوة)"]];
           return Promise.all(defs.map(function(d){
-            try{if(LN.deleteChannel)LN.deleteChannel({id:"zad_snd_"+d[0]}).catch(function(){})}catch(e){}
-            return LN.createChannel({id:"zad_snd2_"+d[0],name:d[1],description:"صوت خاص للتنبيه",importance:4,visibility:1,vibration:true,sound:"snd_"+d[0]+".mp3"}).catch(function(){})
+            try{if(LN.deleteChannel){LN.deleteChannel({id:"zad_snd_"+d[0]}).catch(function(){});LN.deleteChannel({id:"zad_snd2_"+d[0]}).catch(function(){})}}catch(e){}
+            return LN.createChannel({id:"zad_snd3_"+d[0],name:d[1],description:"صوت خاص للتنبيه",importance:4,visibility:1,vibration:true,sound:"snd_"+d[0]+".mp3"}).catch(function(){})
           })).then(function(){
             if(!LN.listChannels)return;
-            return LN.listChannels().then(function(r){var ids=((r&&r.channels)||[]).map(function(c){return c.id});window.__sdNat=ids.indexOf("zad_snd2_bird")>=0&&ids.indexOf("zad_snd2_ayah")>=0}).catch(function(){})
+            return LN.listChannels().then(function(r){var ids=((r&&r.channels)||[]).map(function(c){return c.id});window.__sdNat=ids.indexOf("zad_snd3_bird")>=0&&ids.indexOf("zad_snd3_ayah")>=0}).catch(function(){})
           })
         }catch(e){return Promise.resolve()}};
       var sdCh=function(tag){
         try{
           if(!window.__sdNat||typeof S==="undefined"||S.ntSnd===false||S.ntCs===0)return null;
           var c=ntCat(String(tag||""),"");if(!c||c==="adhan"||c==="custom")return null;
-          var s=NTP[c]&&NTP[c].snd;return s?("zad_snd2_"+s):null
+          var s=NTP[c]&&NTP[c].snd;return s?("zad_snd3_"+s):null
         }catch(e){return null}};
       window.__sdCh=sdCh;
       var adTried=false;
