@@ -83,6 +83,10 @@ perm ACCESS_COARSE_LOCATION
 perm POST_NOTIFICATIONS
 # vibration for tasbih / adhkar counters (native ZadVib bridge in MainActivity)
 perm VIBRATE
+# lets the app ask the user to exempt it from battery optimisation (adhan while the app is closed)
+perm REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+# "display over other apps" row in the in-app permissions screen
+perm SYSTEM_ALERT_WINDOW
 # Do Not Disturb access (granted by the user from system settings; the app opens that screen)
 perm ACCESS_NOTIFICATION_POLICY
 # exact alarms + boot: needed by the native prayer-silent scheduler in BOTH variants
