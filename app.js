@@ -128,7 +128,7 @@ function hmThought(){
 function hmNextSeason(){try{const m=snNext().match(/<span>([^<]*)<\/span><span class="mu">([^<]*)<\/span>/);return m?`<div class="hm-ns"><b>${m[1]}</b><span>${hmA(m[2])}</span></div>`:""}catch(e){return""}}
 function menu(){
  const P=hmPrayers(),az=hmAdhkar(),city=S.city||"";
- const chips=P.idx.map(k=>{const st=k===P.ni?"nx":(P.t[k]<new Date()?"ps":"");return `<div class="hm-pc ${st}"><span>${NAMES[k]}</span><b>${fmt(P.t[k])}</b></div>`}).join("");
+ const chips=[0,1,2,3,4,5].map(k=>{const ps=P.t[k]<new Date()?"ps":"",st=k===1?("sr "+ps):(k===P.ni?"nx":ps);return `<div class="hm-pc ${st}"><span>${NAMES[k]}</span><b>${fmt(P.t[k])}</b></div>`}).join("");
  $("#m").innerHTML=`<div class="hm">${needLoc()}
  <section class="hm-hero"><svg class="hm-pat" viewBox="0 0 200 200" aria-hidden="true"><defs><pattern id="hmp" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M25 3l5.800 12.200L44 17l-10 9.400 2.600 13.600L25 33.500 13.400 40 16 26.400 6 17l13.200-1.800z" fill="none" stroke="#fff" stroke-width="1"/></pattern></defs><rect width="200" height="200" fill="url(#hmp)"/></svg>
   <div class="hm-top"><div class="hm-gr">${ramCard()}<h2>${hmA(hijri().replace(/^[^ ]+ /,"").replace(/\s*هـ\s*$/,"")+" هـ")}</h2><span>${hmA(hijri().split(" ")[0]+" · "+greg().replace(/^[^،]+،\s*/,""))}${city?" · "+esc(city):""}</span></div><div class="hm-lg">${LOGO(54)}</div></div>
@@ -824,7 +824,7 @@ function qkash(tx){
   if(!tw||!ws.length)return;
   const sum=()=>[...ln.children].reduce((s,c)=>s+c.getBoundingClientRect().width,0);
   const want=tw-(ln.children.length-1)*f*.24,need=want-sum();if(need<wt*.7)return;
-  const W=ws.map(e=>{const o=e.textContent,sp=[],nk=!!e.querySelector(".lg")||o.replace(new RegExp(M.source,"g"),"")=="ولا";for(let i=0;i<o.length&&!nk;i++){if(J.test(o[i])){let j=i+1;while(j<o.length&&M.test(o[j]))j++;if(j<o.length&&L.test(o[j]))sp.push(j)}}return{e,o,sp,c:sp.map(()=>0)}});
+  const W=ws.map(e=>{const o=e.textContent,sp=[],nk=!!e.querySelector(".lg")||o.replace(new RegExp(M.source,"g"),"")=="ولا";for(let i=0;i<o.length&&!nk;i++){if(J.test(o[i])){let j=i+1;while(j<o.length&&M.test(o[j]))j++;if(j<o.length&&L.test(o[j])){if(o[i]=="\u0644"&&/[\u0627\u0622\u0623\u0625\u0671\u0672\u0673]/.test(o[j]))continue;if(o[i]=="\u0644"&&o[j]=="\u0644"){let q=j+1;while(q<o.length&&M.test(o[q]))q++;if(o[q]=="\u0647")continue}sp.push(j)}}}return{e,o,sp,c:sp.map(()=>0)}});
   const put=w=>{let r="";for(let i=0;i<w.o.length;i++){const k=w.sp.indexOf(i);if(k>=0)r+="\u0640".repeat(w.c[k]);r+=w.o[i]}w.e.textContent=r};
   const order=[];for(let r=0;r<9;r++)W.forEach((w,wi)=>{if(w.sp.length)order.push([wi,r%w.sp.length])});
   let k=Math.min(Math.floor(need/wt+.3),order.length);const ch=new Set(),log=[];
@@ -2176,12 +2176,15 @@ function wdReset(i){if(!confirm("إعادة عدّ هذا الذكر إلى ال
 
 /* ---- الوضع الصامت أثناء الصلاة ---- */
 const SLN=[[0,"الفجر"],[2,"الظهر"],[3,"العصر"],[4,"المغرب"],[5,"العشاء"]];
-const SLP=[[15,25],[10,20],[10,20],[1,15],[15,25]];
-const slS=()=>{let c=S.sil=S.sil||{};if(c.v!==2&&c.v!==3){const o=c,g={w:"a",m:Math.max(1,o.after!=null?o.after:5),d:o.dur||20};S.sil={v:3,on:o.on||0,mode:o.all===0?"each":"all",auto:1,fr:{on:1,m:1,d:90},g,pr:[0,1,2,3,4].map(i=>({on:o.pr?o.pr[i]:1,w:"a",m:SLP[i][0],d:SLP[i][1]}))};c=S.sil}else if(c.v===2){c.v=3;c.auto=1;c.fr={on:1,m:1,d:90}}
- if(!c.dm){c.dm=1;c.on=1;try{save()}catch(e){}}return c};
+const SLP=[[15,25],[10,20],[10,20],[5,30],[15,25]];
+const slS=()=>{let c=S.sil=S.sil||{};if(c.v!==2&&c.v!==3){const o=c,g={w:"a",m:Math.max(5,o.after!=null?o.after:5),d:o.dur||20};S.sil={v:3,on:o.on||0,mode:o.all===0?"each":"all",auto:1,fr:{on:1,m:10,d:90},g,pr:[0,1,2,3,4].map(i=>({on:o.pr?o.pr[i]:1,w:"a",m:SLP[i][0],d:SLP[i][1]}))};c=S.sil}else if(c.v===2){c.v=3;c.auto=1;c.fr={on:1,m:10,d:90}}
+ if(!c.dm){c.dm=1;c.on=1;try{save()}catch(e){}}
+if(!c.dv){c.dv=2;try{if(c.pr&&c.pr[3]&&c.pr[3].m<=1&&c.pr[3].d==15){c.pr[3].m=5;c.pr[3].d=30}if(c.fr&&c.fr.m<=1&&c.fr.d==90){c.fr.m=10;c.fr.d=90}}catch(e){}try{save()}catch(e){}}
+if(c.dv!==3){c.dv=3;try{if(c.fr&&c.fr.m==10&&c.fr.d==80)c.fr.d=90}catch(e){}try{save()}catch(e){}}
+const fx=q=>{if(q&&!(q.m>=5))q.m=5};fx(c.g);fx(c.fr);(c.pr||[]).forEach(fx);return c};
 const slB=()=>window.AndroidSilent||null;
 const SLD=[[10,"قليل"],[20,"وسط"],[40,"كثير"]];
-function slWin(dt0){const dt=dt0||new Date(),t=times(dt),c=slS(),fri=dt.getDay()==5;return SLN.map((p,i)=>{const jm=fri&&i==1&&(c.mode=="all"||c.fr.on),q=jm?c.fr:c.mode=="all"?(c.auto?{m:SLP[i][0],d:SLP[i][1]}:c.g):c.pr[i],s=new Date(+t[p[0]]+Math.max(1,q.m)*6e4);return{n:jm?"الجمعة":p[1],s,e:new Date(+s+Math.max(jm?90:1,q.d)*6e4),on:c.mode=="all"||jm?1:q.on}})}
+function slWin(dt0){const dt=dt0||new Date(),t=times(dt),c=slS(),fri=dt.getDay()==5;return SLN.map((p,i)=>{const jm=fri&&i==1&&(c.mode=="all"||c.fr.on),q=jm?c.fr:c.mode=="all"?(c.auto?{m:SLP[i][0],d:SLP[i][1]}:c.g):c.pr[i],s=new Date(+t[p[0]]+Math.max(5,q.m)*6e4);return{n:jm?"الجمعة":p[1],s,e:new Date(+s+Math.max(jm?30:1,q.d)*6e4),on:c.mode=="all"||jm?1:q.on}})}
 function slGo(st,w){const b=slB();
  if(b){let ok=false;try{ok=st?b.start():b.end()}catch(e){}
   if(!ok)ntFire(st?"تعذّر تفعيل الوضع الصامت":"تعذّرت استعادة وضع الهاتف",st?"امنح التطبيق إذن الوصول إلى «عدم الإزعاج» من الإعدادات.":"أعد وضع الهاتف يدويًا من الإعدادات.","pb","pb");
@@ -2232,11 +2235,16 @@ function slSet(f,v,r){const c=slS();c[f]=v;save();slSync();if(f=="on"){if(v){con
 function slG(f,v){slS().g[f]=v;save();slSync();sl()}
 function slP(i,f,v){slS().pr[i][f]=v;save();slSync();sl()}
 function slF(f,v){slS().fr[f]=v;save();slSync();sl()}
-function slMo(q,fn){return `<div class="set"><span>يبدأ الصمت بعد الأذان بـ</span><select onchange="${fn}('m',+this.value)">${[1,2,3,5,10,15,20,30,45,60].map(m=>`<option value="${m}" ${Math.max(1,q.m)==m?"selected":""}>${m==1?"دقيقة":m+" دقيقة"}</option>`).join("")}</select></div>`}
+function slMo(q,fn){const qm=Math.max(5,q.m);return `<div class="set"><span>يبدأ الصمت بعد الأذان بـ</span><select onchange="${fn}('m',+this.value)">${[...new Set([5,10,15,20,30,45,60,qm])].sort((a,b)=>a-b).map(m=>`<option value="${m}" ${qm==m?"selected":""}>${m} دقيقة</option>`).join("")}</select></div>
+<div class="set"><span>أو اكتبه يدويًا (٥ دقائق فأكثر)</span><span><input type="number" inputmode="numeric" min="5" max="180" value="${qm}" style="width:76px;text-align:center" onchange="${fn}('m',Math.min(180,Math.max(5,Math.round(+this.value)||5)))"> دقيقة</span></div>`}
+
 function slCtl(q,fn){return slMo(q,fn)+`
  <div class="set"><span>مدة الصمت</span><span>${SLD.map(d=>`<button class="gdl" style="${q.d==d[0]?"":"opacity:.45"}" onclick="${fn}('d',${d[0]})">${d[1]}</button>`).join(" ")}</span></div>
- <div class="set"><span>أو حدّد المدة بدقة</span><select onchange="${fn}('d',+this.value)">${[...new Set([5,10,15,20,25,30,40,45,60,90,q.d])].sort((a,b)=>a-b).map(m=>`<option value="${m}" ${q.d==m?"selected":""}>${m} دقيقة</option>`).join("")}</select></div>`}
-function slFc(q){return slMo(q,"slF")+`<div class="set"><span>مدة الصمت (ساعة ونصف على الأقل)</span><select onchange="slF('d',+this.value)">${[90,105,120,150,180].map(m=>`<option value="${m}" ${Math.max(90,q.d)==m?"selected":""}>${m==90?"ساعة ونصف":m==120?"ساعتان":m==150?"ساعتان ونصف":m==180?"ثلاث ساعات":m+" دقيقة"}</option>`).join("")}</select></div>`}
+ <div class="set"><span>أو حدّد المدة بدقة</span><select onchange="${fn}('d',+this.value)">${[...new Set([5,10,15,20,25,30,40,45,60,90,q.d])].sort((a,b)=>a-b).map(m=>`<option value="${m}" ${q.d==m?"selected":""}>${m} دقيقة</option>`).join("")}</select></div>
+ <div class="set"><span>أو اكتب المدة يدويًا</span><span><input type="number" inputmode="numeric" min="1" max="300" value="${q.d}" style="width:76px;text-align:center" onchange="${fn}('d',Math.min(300,Math.max(1,Math.round(+this.value)||1)))"> دقيقة</span></div>`}
+function slFc(q){const fd=Math.max(30,q.d),lab=m=>m==60?"ساعة":m==80?"ساعة وعشرون دقيقة":m==90?"ساعة ونصف":m==120?"ساعتان":m==150?"ساعتان ونصف":m==180?"ثلاث ساعات":m+" دقيقة";return slMo(q,"slF")+`<div class="set"><span>مدة الصمت</span><select onchange="slF('d',+this.value)">${[...new Set([60,80,90,105,120,150,180,fd])].sort((a,b)=>a-b).map(m=>`<option value="${m}" ${fd==m?"selected":""}>${lab(m)}</option>`).join("")}</select></div>
+<div class="set"><span>أو اكتب المدة يدويًا (٣٠ دقيقة فأكثر)</span><span><input type="number" inputmode="numeric" min="30" max="300" value="${fd}" style="width:76px;text-align:center" onchange="slF('d',Math.min(300,Math.max(30,Math.round(+this.value)||30)))"> دقيقة</span></div>`}
+
 /* شرح مبسّط لمنح إذن «عدم الإزعاج»: يظهر فقط حين لا يكون الإذن ممنوحًا */
 function slGuide(){return `<div class="card"><div class="lh">🔓 كيف أمنح الإذن؟ (مرة واحدة فقط)</div>
  <div class="mu" style="line-height:2">لا يسمح أندرويد لأي تطبيق بتغيير وضع الصمت إلا بعد أن تسمح له أنت، ولا يمكن تجاوز ذلك. والتطبيق لا يستخدم الإذن لشيء آخر.</div>
@@ -2253,7 +2261,7 @@ function sl(){
  if(!c.on){$("#m").innerHTML=`<div class="pbslot">${pbHtml()}</div><div class="card"><h1 style="margin:0">الوضع الصامت</h1></div>${head}<div class="mu" style="padding:4px 10px;line-height:1.9">فعّل المفتاح ليُسكت التطبيق هاتفك بعد الأذان بدقائق، ثم يعيد وضعه الأصلي بعد انتهاء المدة.</div>`;return}
  const au=c.auto?SLN.map((p,i)=>`<div class="slr"><b>${p[1]}</b><span>بعد الأذان بـ${mn(SLP[i][0])}</span><i>صمت ${mn(SLP[i][1])}</i></div>`).join(""):"";
  const tools=b&&typeof b.release==="function"?`<div class="card"><div class="slbt"><button class="gdl" onclick="slRel()">🔓 فك الصمت الآن</button><button onclick="slSt()">ℹ حالة الجدولة</button></div><div class="mu" style="margin-top:6px">إن بقي هاتفك صامتًا بعد وقت الصلاة اضغط «فك الصمت الآن».</div></div>`:"";
- const ps=c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة</span>${sw(c.auto,"slSet('auto',this.checked?1:0,1)")}</div>${c.auto?`<div class="slt">${au}</div><div class="mu" style="margin-top:6px">المغرب بعد الأذان مباشرة، والظهر والعصر أطول، والعشاء والفجر أطول منهما.</div>`:slCtl(c.g,"slG")}</div>`
+ const ps=c.mode=="all"?`<div class="card"><div class="lh">الضبط الكلي</div><div class="set"><span>الأوقات المقترحة لكل صلاة</span>${sw(c.auto,"slSet('auto',this.checked?1:0,1)")}</div>${c.auto?`<div class="slt">${au}</div><div class="mu" style="margin-top:6px">أقل بدء للصمت بعد الأذان ٥ دقائق. المغرب بعد الأذان بـ٥ دقائق ويستمر ٣٠ دقيقة، والجمعة بعد الأذان بـ١٠ دقائق وتستمر ساعة ونصف.</div>`:slCtl(c.g,"slG")}</div>`
   :SLN.map((p,i)=>{const q=c.pr[i];return`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">${p[1]}</span>${sw(q.on,"slP("+i+",'on',this.checked?1:0)")}</div>${q.on?`<div style="margin-top:8px">${slCtl(q,"slP.bind(null,"+i+")")}</div>`:""}</div>`}).join("");
  const fr=`<div class="card"><div class="set" style="margin:0"><span class="lh" style="margin:0">الجمعة <span class="mu">(بدل الظهر)</span></span>${c.mode=="each"?sw(c.fr.on,"slF('on',this.checked?1:0)"):""}</div>${c.mode=="all"||c.fr.on?`<div style="margin-top:8px">${slFc(c.fr)}</div>`:""}</div>`;
  const today=`<div class="card"><div class="lh">أوقات اليوم · ${S.city}</div><div class="slt">${slWin().map(x=>`<div class="slr${x.on?"":" off"}"><b>${x.n}</b><span>${fmt(x.s)} – ${fmt(x.e)}</span><i>${mn(Math.round((x.e-x.s)/6e4))}</i></div>`).join("")}</div><div class="mu" style="margin-top:6px">تُحدَّث تلقائيًا عند تغيير المدينة أو طريقة الحساب.</div></div>`;

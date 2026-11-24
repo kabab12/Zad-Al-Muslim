@@ -58,3 +58,8 @@
 .wdc .wdphr{font-size:.78em;font-weight:700;color:#ffe9a8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;animation:wdph .6s ease}
 @keyframes wdph{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .wdc .wdp{height:4px;margin:7px 0 0}
+
+/* الشروق في الشاشة الرئيسية: ست خانات بدل خمس */
+.hm-ps .hm-pc{font-size:.66em!important;padding:9px 0!important}
+.hm-pc.sr{background:transparent!important;border-style:dashed!important}
+.hm-pc.sr span::before{content:"☀ ";font-size:.9em}
