@@ -226,6 +226,40 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public boolean exact() {
+            try {
+                if (Build.VERSION.SDK_INT < 31) return true;
+                android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
+                return am.canScheduleExactAlarms();
+            } catch (Throwable t) {
+                return true;
+            }
+        }
+
+        @JavascriptInterface
+        public boolean askExact() {
+            try {
+                if (Build.VERSION.SDK_INT >= 31) {
+                    android.content.Intent i = new android.content.Intent(
+                            android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            android.net.Uri.parse("package:" + getPackageName()));
+                    if (go(i)) return true;
+                }
+            } catch (Throwable ignored) { }
+            return appSettings();
+        }
+
+        @JavascriptInterface
+        public boolean openNotif() {
+            try {
+                android.content.Intent i = new android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                i.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
+                if (go(i)) return true;
+            } catch (Throwable ignored) { }
+            return appSettings();
+        }
+
+        @JavascriptInterface
         public boolean openAutostart() {
             String[][] c = {
                 {"com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity"},

@@ -96,7 +96,7 @@ let ready=0,inR=0,SUBV=null;
 function tbar(){const e=$("#tbar");if(!e)return;const sh=cur!=="menu"&&!inQ&&!$("#qv");e.style.display=sh?"flex":"none";if(sh&&!e.firstChild)e.innerHTML='<button onclick="uiBack()" aria-label="رجوع">→ رجوع</button><span class="sp"></span><button onclick="goHome()" aria-label="القائمة الرئيسية">🏠 القائمة الرئيسية</button>'}
 function uiBack(){if(qst.length){qpop();return}if(inQ){qx();return}if(inR){bk();return}if(SUBV){const t=SUBV;SUBV=null;go(t);return}if(cur!=="menu")go("menu")}
 function goHome(){qst=[];if($("#qv"))qshut();go("menu")}
-function go(t){wdIn=0;qst=qst.filter(f=>f!==wdBack);wakeOff();rotOff();SUBV=null;if(ready&&t!=="menu"&&!(history.state&&history.state.t)){try{history.pushState({t:1},"")}catch(e){}}inR=0;inQ=0;cur=t;nav();if(ready&&t==="menu")hClean();stopCmp();clearInterval(tick);({quran,adhkar,home,qibla,tasbih,set,menu}[t])();if(ready&&!S.chosen&&(t=="home"||t=="qibla"))askLoc()}
+function go(t){wdIn=0;qst=qst.filter(f=>f!==wdBack);wakeOff();rotOff();SUBV=null;if(ready&&t!=="menu"&&!(history.state&&history.state.t)){try{history.pushState({t:1},"")}catch(e){}}inR=0;inQ=0;cur=t;nav();if(ready&&t==="menu")hClean();stopCmp();clearInterval(tick);window.__adchkOpen=0;({quran,adhkar,home,qibla,tasbih,set,menu,adchk}[t])();if(t==="menu")setTimeout(adwDraw,80);if(ready&&!S.chosen&&(t=="home"||t=="qibla"))askLoc()}
 /* ======== الشاشة الرئيسية: لوحة أنيقة (تاريخ هجري، الصلاة القادمة، ورد اليوم، ذكر الوقت، اختصارات) ======== */
 const hmA=s=>String(s).replace(/\d/g,d=>"٠١٢٣٤٥٦٧٨٩"[d]);
 function hmGreet(){const h=new Date().getHours();return h<4?"طاب ليلك":h<11?"صباح الخير":h<15?"طاب يومك":h<18?"مساء الخير":"مساؤك طيّب"}
@@ -133,7 +133,7 @@ function menu(){
  <section class="hm-hero"><svg class="hm-pat" viewBox="0 0 200 200" aria-hidden="true"><defs><pattern id="hmp" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M25 3l5.800 12.200L44 17l-10 9.400 2.600 13.600L25 33.500 13.400 40 16 26.400 6 17l13.200-1.800z" fill="none" stroke="#fff" stroke-width="1"/></pattern></defs><rect width="200" height="200" fill="url(#hmp)"/></svg>
   <div class="hm-top"><div class="hm-gr">${ramCard()}<h2>${hmA(hijri().replace(/^[^ ]+ /,"").replace(/\s*هـ\s*$/,"")+" هـ")}</h2><span>${hmA(hijri().split(" ")[0]+" · "+greg().replace(/^[^،]+،\s*/,""))}${city?" · "+esc(city):""}</span></div><div class="hm-lg">${LOGO(54)}</div></div>
   <div class="hm-next"><div class="hm-nl"><small>الصلاة القادمة</small><b>${NAMES[P.ni]}</b><span>${fmt(P.next)}</span></div><div class="hm-cd" id="hmc"></div></div>
-  <div class="hm-prog"><i id="hmp2"></i></div></section>
+  <div class="hm-prog"><i id="hmp2"></i></div></section><div id="adw"></div>
  <div class="hm-grid">${[["quran","القرآن الكريم"],["adhkar","حصن المسلم"],["tasbih","المسبحة"],["qibla","القبلة"],["home","المواقيت والأذان"],["set","الإعدادات"]].map(a=>`<button onclick="go('${a[0]}')"><span class="hm-ic"><svg viewBox="0 0 24 24">${NI[a[0]]}</svg></span><b>${a[1]}</b></button>`).join("")}</div>
  <div class="hm-ps">${chips}</div>
  ${wdCard(1)}
@@ -2319,6 +2319,40 @@ function adTestN(){try{new Notification("🕌 تجربة الأذان",{body:"ه
 function adTest(){const m=adS().m=="custom"?(adS().fn||"ملف من جهازك"):(ADM.find(x=>x[0]==adS().m)||ADM[0])[1];adPlay("(تجربة) "+m)}
 function adR(){if(cur=="home"){clearInterval(tick);home()}else ad()}
 function ad(){cur="set";SUBV="set";nav();$("#m").innerHTML=adBody()}
+async function adCheck(){
+ const c=adS(),zp=window.ZadPerm,r=[],LN=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications;
+ const add=(lv,t,d,fl,fn)=>r.push({lv,t,d:d||"",fl:fl||"",fn:fn||""});
+ const chk=(ok,lv,tOk,tBad,d,fl,fn)=>ok?add("ok",tOk):add(lv,tBad,d,fl,fn);
+ if(!c.on){add("bad","الأذان معطّل","فعّله ليصلك الأذان عند كل صلاة.","تفعيل","adSet('on',1);adchk()");return r}
+ add("ok","الأذان مفعّل");
+ const st=await pmState();
+ if(st.n=="granted")add("ok","إذن الإشعارات ممنوح");
+ else if(st.n!="na")add("bad","إذن الإشعارات غير ممنوح","من دونه لا يصلك أي أذان في الستارة.","السماح","pmOne('n')");
+ const emb=typeof ADEMB!="undefined"&&!!ADEMB[c.m];
+ if(zp){
+  chk(st.b=="granted","bad","التشغيل في الخلفية مفعّل","التشغيل في الخلفية غير مفعّل","من دونه قد يوقف الهاتف التطبيق وهو مغلق فلا يصلك الأذان.","السماح","pmOne('b')");
+  chk(st.o=="granted","warn","الظهور فوق التطبيقات مفعّل","الظهور فوق التطبيقات غير مفعّل","يساعد على ظهور التنبيه وتشغيل الأذان في بعض الهواتف.","السماح","pmOne('o')");
+  try{chk(zp.exact(),"bad","المنبّهات الدقيقة مسموحة","المنبّهات الدقيقة غير مسموحة","من دونها قد يتأخر الأذان عن وقته أو لا يصل.","السماح","ZadPerm.askExact()")}catch(e){}
+  if(st.p)add("info","إعدادات هاتف شاومي","فعّل «التشغيل التلقائي» و«النوافذ المنبثقة في الخلفية»، وثبّت التطبيق في قائمة التطبيقات الأخيرة. لا يستطيع التطبيق التحقق منها.","فتح","pmOne('a')");
+  chk(emb,"warn","المؤذن المختار يعمل والتطبيق مغلق","المؤذن المختار يعمل والتطبيق مفتوح فقط","هذا المؤذن يُشغَّل من داخل التطبيق ولا يصل كصوت إشعار. اختر أحد المؤذنين المضمَّنين.","اختيار مؤذن مضمَّن","adSet('m','noreen');adchk()");
+  if(emb&&LN&&LN.listChannels){try{const ch=((await LN.listChannels()).channels||[]).find(x=>x.id=="zad_adhan_v3_"+c.m);
+   if(!ch)add("warn","قناة الأذان لم تُنشأ بعد","افتح التطبيق مرة بعد منح الأذونات ثم أعد الفحص.","إعادة الفحص","adchk()");
+   else if(!ch.sound)add("bad","قناة الأذان بلا صوت","النسخة المثبّتة قديمة أو بُنيت بلا ملفات الأذان: احذف التطبيق ثم ثبّت أحدث نسخة.");
+   else if(ch.importance<4)add("bad","صوت قناة الأذان مخفوض","فعّل الصوت والأهمية العالية لقناة «الأذان» من إعدادات الإشعارات.","فتح الإعدادات","ZadPerm.openNotif()");
+   else add("ok","قناة الأذان سليمة وبها صوت");
+  }catch(e){}}
+  if(emb&&!window.__adNat)add("warn","جدولة الأذان الأصلية لم تبدأ","افتح التطبيق مرة بعد منح الأذونات، ثم أعد الفحص.","إعادة الفحص","adchk()");
+ }
+ return r}
+async function adwDraw(){const e=document.getElementById("adw");if(!e)return;try{const r=await adCheck(),n=r.filter(x=>x.lv=="bad"||x.lv=="warn").length;if(!n||(S.adwH&&Date.now()-S.adwH<432e5)){e.innerHTML="";return}e.innerHTML=`<div class="adw" onclick="go('adchk')"><span>⚠ قد لا يصلك الأذان والتطبيق مغلق (${n==1?"مشكلة واحدة":n+" مشاكل"}) — اضغط للتفاصيل</span><i onclick="event.stopPropagation();S.adwH=Date.now();save();this.closest('.adw').remove()" aria-label="إخفاء">✕</i></div>`}catch(x){}}
+async function adchk(){cur="set";SUBV="set";nav();window.__adchkOpen=1;
+ $("#m").innerHTML=`<div class="card"><h1>فحص الأذان</h1><div class="mu">جارٍ الفحص…</div></div>`;
+ const r=await adCheck();if(!window.__adchkOpen)return;
+ const ic={ok:"✅",bad:"🔴",warn:"🟠",info:"ℹ️"},n=r.filter(x=>x.lv=="bad"||x.lv=="warn").length;
+ $("#m").innerHTML=`<div class="card"><h1>فحص الأذان</h1><div class="mu" style="line-height:1.9">${n?("وجدتُ "+(n==1?"مشكلة قد تمنع":"مشاكل قد تمنع")+" وصول الأذان. أصلحها بالأزرار ثم ارجع للتطبيق وسيُعاد الفحص تلقائيًا."):"كل الفحوص سليمة. وإن بقي الأذان لا يصل فجرّب «تجربة الإشعار» من صفحة المواقيت."}</div></div>`+
+  r.map(x=>`<div class="card adc ${x.lv}"><div class="set" style="margin:0"><span>${ic[x.lv]} <b>${esc(x.t)}</b></span>${x.fn?`<button class="gdl" onclick="${x.fn}">${x.fl}</button>`:""}</div>${x.d?`<div class="mu" style="margin-top:4px;line-height:1.8">${esc(x.d)}</div>`:""}</div>`).join("")+
+  `<div class="card"><button class="gdl" onclick="adchk()">🔄 إعادة الفحص</button></div>`}
+document.addEventListener("visibilitychange",()=>{if(document.hidden)return;try{if(window.__adchkOpen)adchk();else if(cur=="menu")adwDraw()}catch(e){}});
 function adBody(){
  const c=adS(),emb=id=>(typeof ADEMB!="undefined"&&!!ADEMB[id])||!!(S.adc&&S.adc[id]);
  const opt=m=>`<option value="${m[0]}" ${c.m==m[0]?"selected":""}>${m[1]}${emb(m[0])?" ✓":""}</option>`;
@@ -2329,7 +2363,7 @@ function adBody(){
  ${c.m!="custom"&&!emb(c.m)?`<div class="set"><span>هذا المؤذن يحتاج إنترنت</span><button class="gdl" onclick="adDl(adS().m)">⬇ تحميل للاستماع دون إنترنت</button></div>`:""}<div class="set"><button class="gdl" onclick="adTest()">▶ تجربة الصوت</button>${adNat()?`<button class="gdl" onclick="adTestN()">🔔 تجربة الإشعار</button>`:""}<button onclick="adStop()">⏹ إيقاف</button></div>
  ${adNat()?`<div class="mu" style="margin:4px 2px 8px;line-height:1.8">يصلك الأذان كصوت إشعار بصوت المؤذن المختار، فيعمل والتطبيق مغلق. يتبع مستوى صوت التنبيهات في هاتفك، وتغيّره من إعدادات الإشعارات ← قناة «الأذان».</div>`:`<div class="mu" style="margin:4px 2px 8px;line-height:1.8">الأذان يُشغَّل والتطبيق مفتوح. الصوت أثناء إغلاق التطبيق يحتاج نسخة APK الأحدث وإذن الإشعارات.</div>`}
  <div class="set"><span>ملف من جهازك</span><input type="file" accept="audio/*" onchange="adFile(this)" style="max-width:55%"></div>
- <div style="display:flex;flex-wrap:wrap;gap:6px 16px">${ADN.map((p,i)=>`<label style="display:flex;gap:6px;align-items:center">${p[1]}<input type="checkbox" ${c.pr[i]?"checked":""} onchange="adS().pr[${i}]=this.checked?1:0;save()" style="width:22px;height:22px"></label>`).join("")}</div>`:""}</div>`}
+ <div style="display:flex;flex-wrap:wrap;gap:6px 16px">${ADN.map((p,i)=>`<label style="display:flex;gap:6px;align-items:center">${p[1]}<input type="checkbox" ${c.pr[i]?"checked":""} onchange="adS().pr[${i}]=this.checked?1:0;save()" style="width:22px;height:22px"></label>`).join("")}</div>`:""}<div class="set"><button class="gdl" onclick="go('adchk')">🩺 فحص مشاكل الأذان</button></div></div>`}
 
 function slCompat(){
  const ua=navigator.userAgent||"",ios=/iPhone|iPad|iPod/i.test(ua),and=/Android/i.test(ua),b=slB();
