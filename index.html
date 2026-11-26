@@ -943,6 +943,16 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 .wdc .wdphr{font-size:.78em;font-weight:700;color:#ffe9a8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;animation:wdph .6s ease}
 @keyframes wdph{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .wdc .wdp{height:4px;margin:7px 0 0}
+
+/* وضوح أرقام الآيات: رقم أكبر وأثقل بلا حدّ خارجي، وتباين مضمون في كل الأوضاع */
+#qtx .vn,#qtx .vn b{-webkit-text-stroke:0!important}
+#qv .vn,#qtx .vn{width:1.18em!important;height:1.32em!important}
+#qv .vn b,#qtx .vn b,.vn b{font:800 .46em "Noto Naskh Arabic","Noto Sans Arabic",Tahoma,sans-serif!important;color:#2a1c0e;letter-spacing:0;padding-top:.04em;text-shadow:none}
+/* دائرة فاتحة (الوضع الفاتح والمصحف القديم بأي مظهر): رقم داكن */
+#qv.qold .vn b,#qv.qold #qtx .vn b{color:#2a1c0e!important}
+/* دائرة داكنة (المظهر المظلم بالمصحف الجديد): رقم فاتح */
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) #qv:not(.qold) .vn b{color:#fff!important}}
+:root[data-theme="dark"] #qv:not(.qold) .vn b{color:#fff!important}
 </style><style id="qcol-css">/* ألوان المصحف: الأبيض هو الأساس */
 html:root #qv[data-qc="white"]{--qbg:#ffffff;--qtx:#000;--qg:#8d6c49;--qg2:#d9d2c6;--qfill:#efeae2;--qcart:#f7f4ee;--qhd:#8d6c49;--qmk:#3d2b1d;--qsel:rgba(141,108,73,.22);--qpl:rgba(15,107,79,.22);}
 html:root #qv[data-qc="cream"]{--qbg:#fff9f1;--qtx:#17140f;--qg:#a98b5d;--qg2:#d2c09d;--qfill:#eadfca;--qcart:#f6efe1;--qhd:#b09b74;--qmk:#4b3b24;--qsel:rgba(169,139,93,.30);--qpl:rgba(15,107,79,.24);}

@@ -70,3 +70,13 @@
 .adc.bad{border-inline-start:3px solid #c62828}.adc.warn{border-inline-start:3px solid #e08a00}.adc.ok{border-inline-start:3px solid #2e9e6b}.adc.info{border-inline-start:3px solid #4a7fb5}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .adw{color:#ffb4ab;background:rgba(255,120,110,.1);border-color:rgba(255,120,110,.3)}}
 :root[data-theme="dark"] .adw{color:#ffb4ab;background:rgba(255,120,110,.1);border-color:rgba(255,120,110,.3)}
+
+/* وضوح أرقام الآيات: رقم أكبر وأثقل بلا حدّ خارجي، وتباين مضمون في كل الأوضاع */
+#qtx .vn,#qtx .vn b{-webkit-text-stroke:0!important}
+#qv .vn,#qtx .vn{width:1.18em!important;height:1.32em!important}
+#qv .vn b,#qtx .vn b,.vn b{font:800 .46em "Noto Naskh Arabic","Noto Sans Arabic",Tahoma,sans-serif!important;color:#2a1c0e;letter-spacing:0;padding-top:.04em;text-shadow:none}
+/* دائرة فاتحة (الوضع الفاتح والمصحف القديم بأي مظهر): رقم داكن */
+#qv.qold .vn b,#qv.qold #qtx .vn b{color:#2a1c0e!important}
+/* دائرة داكنة (المظهر المظلم بالمصحف الجديد): رقم فاتح */
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) #qv:not(.qold) .vn b{color:#fff!important}}
+:root[data-theme="dark"] #qv:not(.qold) .vn b{color:#fff!important}
