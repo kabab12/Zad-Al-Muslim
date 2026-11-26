@@ -409,7 +409,7 @@
     var r=ref(function(){return(typeof AU!=="undefined"&&AP.on&&(!AU.paused||(typeof ZR!=="undefined"&&ZR.q&&ZR.q.tm)))||(typeof HAU!=="undefined"&&HP.on&&(!HAU.paused||(typeof ZR!=="undefined"&&ZR.h&&ZR.h.tm)))});
     if(r){pz=0;return true}
     if(!pz)pz=Date.now();
-    return Date.now()-pz<30000};
+    return Date.now()-pz<1800000};
   var sync=function(){
     if(!window.ZadShade)return;
     try{var hd=hold();if(hd!==wl){wl=hd;if(ZadShade.setPlaying)ZadShade.setPlaying(hd);if(window.__zlog)window.__zlog("wakelock "+(hd?"on":"off"))}}catch(e){}
@@ -1577,7 +1577,53 @@ let TFR=null,TDL=null,ADL=0,ADAC=null,DLP=null,TV={s:1,a:1,t:0};
 /* ---- تخزين محلي (IndexedDB) ---- */
 let _db;function idb(){return _db||(_db=new Promise((res,rej)=>{const r=indexedDB.open("zad",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
 function idbOp(m,...a){return idb().then(db=>new Promise((res,rej)=>{const t=db.transaction("kv",m=="get"||m=="getAllKeys"?"readonly":"readwrite"),q=t.objectStore("kv")[m](...a);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}))}
-const idbGet=k=>idbOp("get",k),idbSet=(k,v)=>idbOp("put",v,k),idbDel=k=>idbOp("delete",k),idbKeys=p=>idbOp("getAllKeys",IDBKeyRange.bound(p,p+"\uffff"));
+/* ---- حفظ دائم: ملفات في مجلد ZadAlMuslim بذاكرة الهاتف (تبقى بعد حذف التطبيق). IndexedDB احتياطي وللبيانات القديمة ---- */
+const nfOk=()=>{try{return !!(window.ZadFiles&&window.ZadFiles.has())}catch(e){return false}};
+const nfEnc=s=>{s=String(s);if(s=="."||s=="..")return s.replace(/\./g,"%2E");return s.replace(/[^A-Za-z0-9_.\-]/g,c=>{const e=encodeURIComponent(c);return e===c?"%"+c.charCodeAt(0).toString(16).toUpperCase().padStart(2,"0"):e})};
+function nfStem(k){k=String(k);let g,r;if(k.startsWith("au:")){g="audio";r=k.slice(3).split("/")}else{const i=k.indexOf(":");if(i<0){g="data";r=[k]}else{g=k.slice(0,i);r=k.slice(i+1).split(":");if(g=="tf")g="tafsir"}}return [g,...r].map(nfEnc).join("/")}
+function nfKey(st){const p=st.split("/").map(decodeURIComponent),g=p[0],r=p.slice(1);if(g=="audio")return"au:"+r.join("/");if(g=="data")return r.join("/");return(g=="tafsir"?"tf":g)+":"+r.join(":")}
+let NFI=null;
+function nfIndex(){if(NFI)return NFI;const m=new Map();try{String(window.ZadFiles.list()||"").split("\n").forEach(p=>{if(!p||/\.tmp$/.test(p))return;const i=p.lastIndexOf(".");if(i<1)return;try{m.set(nfKey(p.slice(0,i)),p)}catch(e){}})}catch(e){}return NFI=m}
+const nfMime={mp3:"audio/mpeg",ogg:"audio/ogg",wav:"audio/wav",m4a:"audio/mp4",bin:""};
+const nfExt=(b,k)=>{const t=(b.type||"").toLowerCase();return/mpeg|mp3/.test(t)?"mp3":/ogg/.test(t)?"ogg":/wav/.test(t)?"wav":/mp4|m4a|aac/.test(t)?"m4a":String(k).startsWith("au:")?"mp3":"bin"};
+async function nfB64(b){const u=new Uint8Array(await b.arrayBuffer());let s="";for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)}
+async function nfPut(k,v){
+ const ix=nfIndex(),isB=typeof Blob!="undefined"&&v instanceof Blob,ext=isB?nfExt(v,k):"json",rel=nfStem(k)+"."+ext;
+ let b64;if(isB)b64=await nfB64(v);else{const j=JSON.stringify(v);if(j===undefined)throw 0;b64=await nfB64(new Blob([j]))}
+ if(window.ZadFiles.write(rel,b64)!==true)throw 0;
+ const old=ix.get(k);if(old&&old!==rel){try{window.ZadFiles.remove(old)}catch(e){}}
+ ix.set(k,rel)}
+async function nfGet(k){
+ const rel=nfIndex().get(k);if(!rel)return undefined;
+ const b64=window.ZadFiles.read(rel);if(!b64)return undefined;
+ const bin=atob(b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+ const ext=rel.slice(rel.lastIndexOf(".")+1);
+ if(ext=="json"){try{return JSON.parse(new TextDecoder().decode(u))}catch(e){return undefined}}
+ return new Blob([u],{type:nfMime[ext]||""})}
+const nfSkip=k=>{try{const m=/^adhan:c:(.+)$/.exec(k);return!!(m&&typeof ADEMB!="undefined"&&ADEMB[m[1]])}catch(e){return false}};
+const idbGet=async k=>{if(nfOk()){try{const v=await nfGet(k);if(v!==undefined)return v}catch(e){}}return idbOp("get",k)};
+const idbSet=async(k,v)=>{if(nfOk()&&!nfSkip(k)){try{await nfPut(k,v);try{await idbOp("delete",k)}catch(e){}return}catch(e){}}return idbOp("put",v,k)};
+const idbDel=async k=>{if(nfOk()){try{const ix=nfIndex(),rel=ix.get(k);if(rel){window.ZadFiles.remove(rel);ix.delete(k)}}catch(e){}}return idbOp("delete",k)};
+const idbKeys=async p=>{const a=await idbOp("getAllKeys",IDBKeyRange.bound(p,p+"￿"));if(!nfOk())return a;const s=new Set(a);try{nfIndex().forEach((_,k)=>{if(k>=p&&k<=p+"￿")s.add(k)})}catch(e){}return[...s]};
+/* نقل ما نُزّل سابقًا داخل التطبيق إلى المجلد، واسترجاع حالة التنزيلات بعد إعادة التثبيت */
+let NFM=0;
+async function nfSync(){
+ if(NFM||!nfOk())return;NFM=1;let n=0;
+ try{
+  const ks=await idbOp("getAllKeys");
+  for(const k of ks){if(nfSkip(k))continue;try{const v=await idbOp("get",k);if(v===undefined)continue;await nfPut(k,v);await idbOp("delete",k);n++}catch(e){}}
+ }catch(e){}
+ try{const ks=await idbKeys("adhan:c:");S.adc=S.adc||{};ks.forEach(k=>{S.adc[k.slice(8)]=1});save()}catch(e){}
+ try{TFSY=0;await tfsync()}catch(e){}
+ NFM=0;
+ try{if(n)qtoast("نُقل "+AD(n)+" ملفًا إلى مجلد ZadAlMuslim — ستبقى بعد حذف التطبيق",5000)}catch(e){}
+ try{qdrows&&document.getElementById("dlrows")&&qdrows()}catch(e){}}
+function nfCard(){
+ if(!window.ZadFiles)return"";
+ return nfOk()?`<div class="mu" style="margin:8px 0;font-size:.85em">📁 التنزيلات محفوظة في مجلد <b>ZadAlMuslim</b> بذاكرة الهاتف، فتبقى بعد حذف التطبيق وإعادة تثبيته. لا تحذف المجلد أو تنقله من مدير الملفات.</div>`
+ :`<div class="card" style="margin:8px 0"><div class="mu" style="margin-bottom:8px">لتبقى التنزيلات بعد حذف التطبيق، اسمح بحفظها في ذاكرة الهاتف.</div><button class="gdl" onclick="ZadFiles.ask()">📁 السماح بالحفظ الدائم</button></div>`}
+setTimeout(nfSync,1200);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){NFI=null;setTimeout(nfSync,300)}});
 const qnorm=t=>String(t).replace(/[\u064B-\u065F\u0670\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").toLowerCase();
 function qtoast(m,ms){let t=$("#qtoast");if(!t){t=document.createElement("div");t.id="qtoast";document.body.appendChild(t)}t.textContent=m;t.className="on";clearTimeout(t._t);t._t=setTimeout(()=>t.className="",ms||2800)}
 const recname=()=>(RC.find(r=>r[0]==(S.qrec||RLD[0]))||[0,"القارئ"])[1];
@@ -1786,26 +1832,28 @@ function pgStart(dir){
  if(pgf.on||pgf.busy||!$("#qv")||!$("#qtx"))return false;
  const t=qn+dir;if(t<1||t>604)return false;
  if(qm)qmenu(0);
- const cur=pgcl(),keep=cur.cloneNode(true),oth=pgGet(t),box=document.createElement("div");box.id="pgf";
+ const cur=pgcl(),keep=cur.cloneNode(true),oth=pgGet(t),box=document.createElement("div");box.id="pgf";box.style.background="var(--qbg)";
  const top=dir>0?cur:oth,und=dir>0?oth:cur;
- top.classList.add("qtp");und.classList.add("qun");
+ top.classList.add("qtp");und.classList.add("qun");top.style.boxShadow="none";
  
- const sd2=document.createElement("i");sd2.className="qsd2";und.appendChild(sd2);
+ const sd2=document.createElement("i");sd2.className="qsd2";sd2.style.display="none";und.appendChild(sd2);
  box.appendChild(und);box.appendChild(top);$("#qv").appendChild(box);
  pgf={on:1,busy:0,dir,t,top,und,box,sd2,p:0,tm:Date.now(),from:qn,keep};pgSet(0);return true}
-function pgSet(p){const W=pgf.box.clientWidth||innerWidth,d=pgf.dir,tx=d>0?p*W:(1-p)*W;
- pgf.top.style.transform="translate3d("+tx.toFixed(1)+"px,0,0)";
- pgf.sd2.style.opacity=(.35*(d>0?1-p:p)).toFixed(3)}
-function pgMove(dx){if(!pgf.on||pgf.busy)return;const W=pgf.box.clientWidth||innerWidth,p=Math.max(0,Math.min(1,(pgf.dir>0?dx:-dx)/W));pgf.p=p;pgSet(p)}
-function pgEnd(dx){pgFin(true)}
+function pgSet(p){const W=pgf.box.clientWidth||innerWidth,G=10,d=pgf.dir,s=(W+G)*p,c=d>0?s:-s,o=d>0?c-(W+G):c+(W+G),cu=d>0?pgf.top:pgf.und,ot=d>0?pgf.und:pgf.top;
+ cu.style.transform="translate3d("+c.toFixed(1)+"px,0,0)";ot.style.transform="translate3d("+o.toFixed(1)+"px,0,0)"}
+function pgMove(dx){if(!pgf.on||pgf.busy)return;const W=pgf.box.clientWidth||innerWidth,p=Math.max(0,Math.min(1,(pgf.dir>0?dx:-dx)/(W+10))),n=Date.now();
+ if(pgf.pt&&n>pgf.pt){const v=(dx-pgf.px)/(n-pgf.pt);pgf.v=pgf.v==null?v:pgf.v*.4+v*.6}
+ pgf.px=dx;pgf.pt=n;pgf.p=p;pgSet(p)}
+/* عند الإفلات: ننهي الانتقال إن تجاوز الإصبع ربع العرض أو كانت الحركة سريعة، وإلا نرجع للصفحة الحالية */
+function pgEnd(dx){const f=pgf;if(!f.on||f.busy)return;const sg=f.dir>0?1:-1,v=(f.v||0)*sg;pgFin(v>-.35&&(f.p>.25||(v>.35&&f.p>.03)))}
 function pgFin(commit){
  const f=pgf;if(!f.on||f.busy)return;f.busy=1;f.commit=commit;
- const d=f.dir,e=f.top,W=f.box.clientWidth||innerWidth,tx=commit?(d>0?W:0):(d>0?0:W);
- void e.offsetWidth;
- e.style.transition="transform .08s linear";f.sd2.style.transition="opacity .08s";
- e.style.transform="translate3d("+tx+"px,0,0)";f.sd2.style.opacity=commit?(d>0?0:.35):(d>0?.35:0);
- requestAnimationFrame(()=>setTimeout(()=>pgApply(f),0));
- f.tmr=setTimeout(()=>pgDone(f),120)}
+ const d=f.dir,W=f.box.clientWidth||innerWidth,S2=W+10,cu=d>0?f.top:f.und,ot=d>0?f.und:f.top,
+  cT=commit?(d>0?S2:-S2):0,oT=commit?0:(d>0?-S2:S2);
+ void cu.offsetWidth;
+ const tr="transform .27s cubic-bezier(.22,.75,.25,1)";cu.style.transition=tr;ot.style.transition=tr;
+ cu.style.transform="translate3d("+cT+"px,0,0)";ot.style.transform="translate3d("+oT+"px,0,0)";
+ f.tmr=setTimeout(()=>pgDone(f),300)}
 function pgApply(f){if(f.did||!f.commit)return;f.did=1;if($("#qv")){PGC[f.from]={g:pgSig(f.from),n:f.keep};try{qp(f.t)}catch(e){}}}
 function pgDone(f){if(pgf!==f||!f.on)return;clearTimeout(f.tmr);pgApply(f);f.box.remove();pgf={on:0,busy:0};setTimeout(pgWarm,30)}
 function qfit(){qlay()}
@@ -2069,7 +2117,7 @@ const qbsfix=l=>{const f=l.some(x=>x[1]==1&&x[0]!=1&&x[0]!=9);return f&&!l.some(
 let DLF="";
 function qrdlall(id){
  DLF=id||S.qrec||RLD[0];const r=RC.find(x=>x[0]==DLF),nm=r?r[1]:"القارئ";
- qshow("qo-dl","تنزيل — "+nm,`<div class="dlh"><div class="dlt"><span class="dlic">⬇</span><div><b>الاستماع دون إنترنت</b><small>حمّل السور التي تريدها، أو المصحف كاملًا. يُفضّل الواي فاي، ويمكنك الإيقاف والمتابعة لاحقًا.</small></div></div><div class="dlbar"><i id="dlbi"></i></div><div class="dlst" id="adp2"></div><button class="dlgo" id="dlall" onclick="qrdlgo()">⬇ تنزيل كل السور</button></div><div class="dll" id="dlrows"></div>`);qdrows()}
+ qshow("qo-dl","تنزيل — "+nm,`<div class="dlh"><div class="dlt"><span class="dlic">⬇</span><div><b>الاستماع دون إنترنت</b><small>حمّل السور التي تريدها، أو المصحف كاملًا. يُفضّل الواي فاي، ويمكنك الإيقاف والمتابعة لاحقًا.</small></div></div><div class="dlbar"><i id="dlbi"></i></div><div class="dlst" id="adp2"></div><button class="dlgo" id="dlall" onclick="qrdlgo()">⬇ تنزيل كل السور</button></div>${nfCard()}<div class="dll" id="dlrows"></div>`);qdrows()}
 async function qdrows(){
  const ba=$("#dlall");if(ba){ba.textContent=ADL==1?"⏹ إيقاف التنزيل":"⬇ تنزيل كل السور";ba.classList.toggle("stop",ADL==1)}
  const e=$("#dlrows");if(!e)return;const pre="au:"+DLF+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}
@@ -2255,8 +2303,9 @@ async function pmState(){const r={};
  try{r.s=navigator.storage&&navigator.storage.persisted?((await navigator.storage.persisted())?"granted":"prompt"):"na"}catch(e){r.s="na"}
  r.m=(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)?(S.pmm?"granted":"prompt"):"na";
  const zp=window.ZadPerm;if(zp){try{r.b=zp.battery()?"granted":"prompt";r.o=zp.overlay()?"granted":"prompt";r.a=S.pma?"granted":"info";if(/xiaomi|redmi|poco/.test(String(zp.oem()||"").toLowerCase()))r.p=S.pmp?"granted":"info"}catch(e){}}
+ if(window.ZadFiles){try{r.f=ZadFiles.has()?"granted":"prompt"}catch(e){}}
  return r}
-const PMI={n:["🔔","الإشعارات","تذكير الأذكار والصلاة والآيات"],g:["📍","الموقع","مواقيت الصلاة واتجاه القبلة"],s:["💾","التخزين الدائم","حفظ التنزيلات والتفاسير والأصوات دون إنترنت"],m:["🧭","الحركة والاتجاه","تشغيل البوصلة"],b:["🔋","التشغيل في الخلفية","حتى يصلك الأذان والتنبيهات والتطبيق مغلق (استثناء من توفير البطارية)"],a:["🚀","التشغيل التلقائي","يمنع هاتفك من إيقاف التطبيق وهو مغلق: اضغط «فتح» ثم فعّله يدويًا"],o:["🖼️","الظهور فوق التطبيقات","يسمح بظهور التنبيهات فوق التطبيقات الأخرى: اضغط «السماح» ثم فعّل المفتاح"],p:["🪟","النوافذ المنبثقة في الخلفية","لهواتف شاومي: يسمح بظهور التنبيه والأذان والتطبيق مغلق. اضغط «فتح» ثم فعّله"]};
+const PMI={n:["🔔","الإشعارات","تذكير الأذكار والصلاة والآيات"],g:["📍","الموقع","مواقيت الصلاة واتجاه القبلة"],s:["💾","التخزين الدائم","حفظ التنزيلات والتفاسير والأصوات دون إنترنت"],m:["🧭","الحركة والاتجاه","تشغيل البوصلة"],b:["🔋","التشغيل في الخلفية","حتى يصلك الأذان والتنبيهات والتطبيق مغلق (استثناء من توفير البطارية)"],a:["🚀","التشغيل التلقائي","يمنع هاتفك من إيقاف التطبيق وهو مغلق: اضغط «فتح» ثم فعّله يدويًا"],o:["🖼️","الظهور فوق التطبيقات","يسمح بظهور التنبيهات فوق التطبيقات الأخرى: اضغط «السماح» ثم فعّل المفتاح"],f:["📁","حفظ التنزيلات في ذاكرة الهاتف","يحفظ القرآن والتفاسير في مجلد ZadAlMuslim فلا تحتاج لتنزيلها بعد حذف التطبيق وإعادة تثبيته: اضغط «السماح» ثم فعّل المفتاح"],p:["🪟","النوافذ المنبثقة في الخلفية","لهواتف شاومي: يسمح بظهور التنبيه والأذان والتطبيق مغلق. اضغط «فتح» ثم فعّله"]};
 async function pmGate(force){
  if(document.getElementById("pmg"))return;
  const st=await pmState(),need=Object.keys(PMI).filter(k=>st[k]=="prompt"||st[k]=="denied");
@@ -2271,7 +2320,7 @@ function pmDraw(st){const e=document.getElementById("pmr");if(!e)return;
  const lb={granted:"✅ ممنوح",prompt:"⏳ لم يُطلب بعد",denied:"⛔ مرفوض",na:"— غير متاح هنا"};
  e.innerHTML=Object.keys(PMI).filter(k=>st[k]!=null&&st[k]!="na").map(k=>`<div class="set" style="align-items:flex-start"><span><b>${PMI[k][0]} ${PMI[k][1]}</b><br><span class="mu" style="font-size:.8em">${PMI[k][2]}</span><br><span style="font-size:.85em">${(k=="a"||k=="p")?(st[k]=="granted"?"☑ فُتحت الإعدادات (لا يمكن للتطبيق التحقق تلقائيًا)":"⚙ يحتاج تفعيلًا يدويًا"):(lb[st[k]]||"")}</span></span>${(st[k]=="granted"&&k!="a"&&k!="p")?"":`<button class="gdl" onclick="pmOne('${k}')">${(k=="a"||k=="p")?"فتح":"السماح"}</button>`}</div>`).join("");
  const left=Object.keys(PMI).filter(k=>st[k]=="prompt"||st[k]=="denied");
- const b=document.getElementById("pmall");if(b)b.style.display=left.filter(k=>k!="b"&&k!="o").length?"":"none";
+ const b=document.getElementById("pmall");if(b)b.style.display=left.filter(k=>k!="b"&&k!="o"&&k!="f").length?"":"none";
  const m=document.getElementById("pmmsg");
  if(m)m.textContent=st.n=="denied"||st.g=="denied"?"إذن مرفوض: اضغط على رمز القفل بجانب عنوان الموقع (أو إعدادات التطبيق في الهاتف ← الأذونات) وفعّله، ثم ارجع واضغط «السماح» مرة أخرى.":"";
  const lt=document.getElementById("pmlt");if(lt)lt.textContent=left.length?"لاحقًا":"تم"}
@@ -2285,10 +2334,11 @@ async function pmOne(k){
    else if(k=="o"&&window.ZadPerm){ZadPerm.askOverlay()}
    else if(k=="a"&&window.ZadPerm){ZadPerm.openAutostart();S.pma=1;save()}
    else if(k=="p"&&window.ZadPerm){ZadPerm.openPopup();S.pmp=1;save()}
+   else if(k=="f"&&window.ZadFiles){ZadFiles.ask()}
  }catch(e){}
  const st=await pmState();pmDraw(st);
  if(!Object.keys(PMI).some(x=>st[x]=="prompt"||st[x]=="denied")){setTimeout(()=>pmClose(),700);try{qtoast("تم منح الأذونات ✓")}catch(e){}}}
-async function pmAll(){const st=await pmState();for(const k of Object.keys(PMI))if(k!="b"&&k!="o"&&(st[k]=="prompt"||st[k]=="denied"))await pmOne(k)}
+async function pmAll(){const st=await pmState();for(const k of Object.keys(PMI))if(k!="b"&&k!="o"&&k!="f"&&(st[k]=="prompt"||st[k]=="denied"))await pmOne(k)}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&document.getElementById("pmg"))pmState().then(pmDraw)});
 
 function qdiag0(){
@@ -3256,6 +3306,16 @@ function adTestN(){try{new Notification("🕌 تجربة الأذان",{body:"ه
 function adTest(){const m=adS().m=="custom"?(adS().fn||"ملف من جهازك"):(ADM.find(x=>x[0]==adS().m)||ADM[0])[1];adPlay("(تجربة) "+m)}
 function adR(){if(cur=="home"){clearInterval(tick);home()}else ad()}
 function ad(){cur="set";SUBV="set";nav();$("#m").innerHTML=adBody()}
+/* فحص الأذان الذكي: إن وصل أذان فعلًا (إشعار مجدول انطلق وقته) أو أكّد المستخدم ذلك، لا نحذّر من فحوص لا يمكن التحقق منها */
+const adLN=()=>window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications;
+async function adPend(){const LN=adLN();if(!LN||!LN.getPending)return null;try{const r=await LN.getPending();return(r&&r.notifications)||[]}catch(e){return null}}
+async function adRec(){const p=await adPend();if(!p)return null;let o=[];try{o=JSON.parse(localStorage.getItem("zadAdPlan")||"[]")}catch(e){}o=o.filter(x=>x&&x.at>Date.now()-3*864e5);const h=new Set(o.map(x=>x.id));p.forEach(n=>{if(!/وقت صلاة/.test(n.title||""))return;const at=n.schedule&&n.schedule.at?+new Date(n.schedule.at):0;if(at&&!h.has(n.id)){o.push({id:n.id,at});h.add(n.id)}});try{localStorage.setItem("zadAdPlan",JSON.stringify(o.slice(-80)))}catch(e){}return p}
+async function adProof(){const p=await adRec();if(!p)return 0;const ids=new Set(p.map(n=>n.id)),now=Date.now();let o=[],b=0;try{o=JSON.parse(localStorage.getItem("zadAdPlan")||"[]")}catch(e){}o.forEach(x=>{if(x.at<now-9e4&&x.at>now-7*864e5&&!ids.has(x.id)&&x.at>b)b=x.at});return b}
+function adUserOk(){try{const o=JSON.parse(localStorage.getItem("zadAdOk")||"null");return!!(o&&o.m==adS().m&&Date.now()-o.t<30*864e5)}catch(e){return false}}
+function adConfirm(){try{localStorage.setItem("zadAdOk",JSON.stringify({t:Date.now(),m:adS().m}))}catch(e){}adchk()}
+function adUnconfirm(){try{localStorage.removeItem("zadAdOk")}catch(e){}adchk()}
+const ADUNV=/التشغيل في الخلفية|الظهور فوق|المنبّهات الدقيقة|قناة الأذان|جدولة الأذان الأصلية|صوت قناة/;
+setTimeout(adRec,4000);document.addEventListener("visibilitychange",()=>{adRec()});
 async function adCheck(){
  const c=adS(),zp=window.ZadPerm,r=[],LN=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.LocalNotifications;
  const add=(lv,t,d,fl,fn)=>r.push({lv,t,d:d||"",fl:fl||"",fn:fn||""});
@@ -3280,6 +3340,10 @@ async function adCheck(){
   }catch(e){}}
   if(emb&&!window.__adNat)add("warn","جدولة الأذان الأصلية لم تبدأ","افتح التطبيق مرة بعد منح الأذونات، ثم أعد الفحص.","إعادة الفحص","adchk()");
  }
+ let pf=0;try{pf=await adProof()}catch(e){}const uo=adUserOk();
+ if(pf||uo){let dn=0;r.forEach(x=>{if((x.lv=="bad"||x.lv=="warn")&&ADUNV.test(x.t)){x.lv="info";x.t+=" — لكن الأذان يصلك فعليًا";x.fl="";x.fn="";dn++}});
+  if(dn||pf)r.splice(1,0,pf?{lv:"ok",t:"وصلك الأذان فعليًا",d:"آخر أذان انطلق وقته: "+new Date(pf).toLocaleString("ar"),fl:"",fn:""}:{lv:"ok",t:"أكّدتَ أن الأذان يصلك",d:"",fl:"",fn:"adUnconfirm()"});
+  if(uo&&!pf){const q=r.find(x=>x.fn=="adUnconfirm()");if(q){q.fl="إلغاء التأكيد"}}}
  return r}
 async function adwDraw(){const e=document.getElementById("adw");if(!e)return;try{const r=await adCheck(),n=r.filter(x=>x.lv=="bad"||x.lv=="warn").length;if(!n||(S.adwH&&Date.now()-S.adwH<432e5)){e.innerHTML="";return}e.innerHTML=`<div class="adw" onclick="go('adchk')"><span>⚠ قد لا يصلك الأذان والتطبيق مغلق (${n==1?"مشكلة واحدة":n+" مشاكل"}) — اضغط للتفاصيل</span><i onclick="event.stopPropagation();S.adwH=Date.now();save();this.closest('.adw').remove()" aria-label="إخفاء">✕</i></div>`}catch(x){}}
 async function adchk(){cur="set";SUBV="set";nav();window.__adchkOpen=1;
@@ -3287,7 +3351,7 @@ async function adchk(){cur="set";SUBV="set";nav();window.__adchkOpen=1;
  const r=await adCheck();if(!window.__adchkOpen)return;
  const ic={ok:"✅",bad:"🔴",warn:"🟠",info:"ℹ️"},n=r.filter(x=>x.lv=="bad"||x.lv=="warn").length;
  $("#m").innerHTML=`<div class="card"><h1>فحص الأذان</h1><div class="mu" style="line-height:1.9">${n?("وجدتُ "+(n==1?"مشكلة قد تمنع":"مشاكل قد تمنع")+" وصول الأذان. أصلحها بالأزرار ثم ارجع للتطبيق وسيُعاد الفحص تلقائيًا."):"كل الفحوص سليمة. وإن بقي الأذان لا يصل فجرّب «تجربة الإشعار» من صفحة المواقيت."}</div></div>`+
-  r.map(x=>`<div class="card adc ${x.lv}"><div class="set" style="margin:0"><span>${ic[x.lv]} <b>${esc(x.t)}</b></span>${x.fn?`<button class="gdl" onclick="${x.fn}">${x.fl}</button>`:""}</div>${x.d?`<div class="mu" style="margin-top:4px;line-height:1.8">${esc(x.d)}</div>`:""}</div>`).join("")+
+  (n?`<div class="card"><div class="mu" style="margin-bottom:8px">إن كان الأذان يصلك فعلًا ويعمل معك، فهذه التنبيهات قد تكون من فحوص لا يستطيع التطبيق التأكد منها في هاتفك.</div><button class="gdl" onclick="adConfirm()">✔ الأذان يصلني فعلًا — لا تنبّهني</button></div>`:"")+r.map(x=>`<div class="card adc ${x.lv}"><div class="set" style="margin:0"><span>${ic[x.lv]} <b>${esc(x.t)}</b></span>${x.fn?`<button class="gdl" onclick="${x.fn}">${x.fl}</button>`:""}</div>${x.d?`<div class="mu" style="margin-top:4px;line-height:1.8">${esc(x.d)}</div>`:""}</div>`).join("")+
   `<div class="card"><button class="gdl" onclick="adchk()">🔄 إعادة الفحص</button></div>`}
 document.addEventListener("visibilitychange",()=>{if(document.hidden)return;try{if(window.__adchkOpen)adchk();else if(cur=="menu")adwDraw()}catch(e){}});
 function adBody(){
@@ -3377,10 +3441,14 @@ function msGoS(d){try{
 setInterval(()=>{try{if(AP&&AP.on&&!AU.paused){if("mediaSession" in navigator&&!navigator.mediaSession.metadata)qms();msPS(AU);msPos()}}catch(e){}},3000);
 function msPS(a){try{if("mediaSession" in navigator)navigator.mediaSession.playbackState=a.paused?"paused":"playing"}catch(e){}}
 function msClear(){try{if("mediaSession" in navigator){navigator.mediaSession.metadata=null;navigator.mediaSession.playbackState="none"}}catch(e){}}
+function qresume(n){n=n|0;try{if(!AP.on){const r=qlinfo();if(r)qplay(r.s,r.a);return}
+ if(!AU.paused)return;
+ if(!AU.getAttribute("src")||AU.error){aload();return}
+ const p=AU.play();if(p&&p.catch)p.catch(()=>{if(n<6)setTimeout(()=>{try{if(AP.on&&AU.paused)qresume(n+1)}catch(e){}},400*(n+1))})}catch(e){}}
 function qms(){if(!AP.on)return;const sud=!!SUD[S.qrec||RLD[0]],n=QD.text[AP.s-1].length,
  t="سورة "+QD.names[AP.s-1]+(sud?"":(AP.bs?" · البسملة":" · آية "+AD(AP.a)+" من "+AD(n))),r=recname();
  try{const m=navigator.mediaSession.metadata;if(m&&m.title===t&&m.artist===r)return}catch(e){}
- msSet(t,r,{play:(()=>{const p=AU.play();if(p&&p.catch)p.catch(()=>setTimeout(()=>{try{AU.play().catch(()=>{})}catch(e){}},400))}),pause:()=>{try{AU.pause()}catch(e){}},prev:()=>msGoS(-1),next:()=>msGoS(1),stop:qstop,
+ msSet(t,r,{play:()=>qresume(0),pause:()=>{try{AU.pause()}catch(e){}},prev:()=>msGoS(-1),next:()=>msGoS(1),stop:qstop,
   sb:d=>mxBy(-((d&&d.seekOffset)||10)),sf:d=>mxBy((d&&d.seekOffset)||10),
   st:d=>{try{if(d&&d.seekTime!=null)mxSeek(d.seekTime)}catch(e){}}})}
 AU.addEventListener("loadedmetadata",()=>{try{msPos()}catch(e){}});AU.addEventListener("seeked",()=>{try{msPos()}catch(e){}});AU.addEventListener("pause",()=>{try{msPos()}catch(e){}});

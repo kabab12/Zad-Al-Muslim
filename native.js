@@ -374,7 +374,7 @@
     var r=ref(function(){return(typeof AU!=="undefined"&&AP.on&&(!AU.paused||(typeof ZR!=="undefined"&&ZR.q&&ZR.q.tm)))||(typeof HAU!=="undefined"&&HP.on&&(!HAU.paused||(typeof ZR!=="undefined"&&ZR.h&&ZR.h.tm)))});
     if(r){pz=0;return true}
     if(!pz)pz=Date.now();
-    return Date.now()-pz<30000};
+    return Date.now()-pz<1800000};
   var sync=function(){
     if(!window.ZadShade)return;
     try{var hd=hold();if(hd!==wl){wl=hd;if(ZadShade.setPlaying)ZadShade.setPlaying(hd);if(window.__zlog)window.__zlog("wakelock "+(hd?"on":"off"))}}catch(e){}

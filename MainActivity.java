@@ -312,6 +312,7 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         sInst = this;
         try {
+            try { getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false); } catch (Throwable ignored) { }
             getBridge().getWebView().addJavascriptInterface(new AdhanBridge(), "AdhanNative");
             getBridge().getWebView().addJavascriptInterface(new OrientBridge(), "OrientNative");
             getBridge().getWebView().addJavascriptInterface(new AndroidSilent(this), "AndroidSilent");
@@ -319,6 +320,7 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().addJavascriptInterface(new DiagBridge(), "ZadDiag");
             getBridge().getWebView().addJavascriptInterface(new VibBridge(), "ZadVib");
             getBridge().getWebView().addJavascriptInterface(new PermBridge(), "ZadPerm");
+            getBridge().getWebView().addJavascriptInterface(new ZadFiles(this), "ZadFiles");
         } catch (Throwable ignored) { }
         // مصالحة الصامت عند كل تشغيل: تصلح أي حالة عالقة وتعيد ضبط المنبّه التالي
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }

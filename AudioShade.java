@@ -79,10 +79,11 @@ public class AudioShade {
         }
     }
 
-    static void post(Context c, String title) {
+    /** يبني إشعار «إيقاف» (ويُنشئ القناة). */
+    static android.app.Notification build(Context c, String title) {
         try {
             NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm == null) return;
+            if (nm == null) return null;
             if (Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(CH) == null) {
                 NotificationChannel ch = new NotificationChannel(CH, "إيقاف التشغيل الصوتي",
                         NotificationManager.IMPORTANCE_LOW);
@@ -116,13 +117,37 @@ public class AudioShade {
             if (open != null) {
                 b.setContentIntent(PendingIntent.getActivity(c, 7205, open, fl));
             }
-            nm.notify(NID, b.build());
+            return b.build();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    static void notifyPlain(Context c, String title) {
+        try {
+            NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+            android.app.Notification n = build(c, title);
+            if (nm != null && n != null) nm.notify(NID, n);
         } catch (Throwable ignored) {
         }
     }
 
+    /** يُظهر الإشعار عبر خدمة أمامية (تُبقي التطبيق حيًّا والزر يعمل دون فتحه)، وإن تعذّر فإشعار عادي. */
+    static void post(Context c, String title) {
+        try {
+            Intent si = new Intent(c, KeepService.class);
+            si.putExtra("t", title);
+            if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(si);
+            else c.startService(si);
+            return;
+        } catch (Throwable ignored) {
+        }
+        notifyPlain(c, title);
+    }
+
     static void cancel(Context c) {
         wake(c, false);
+        try { c.stopService(new Intent(c, KeepService.class)); } catch (Throwable ignored) { }
         try {
             NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
             if (nm != null) nm.cancel(NID);

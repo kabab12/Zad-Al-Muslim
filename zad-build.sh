@@ -65,7 +65,7 @@ test -f "$AS"
 cp "$AS" "$(dirname "$F")/AndroidSilent.java"
 
 # native: scheduled silent-mode receiver + notification-shade "stop" button for Quran/Hisn audio
-for J in SilentReceiver AudioShade AudioStopReceiver; do
+for J in SilentReceiver AudioShade AudioStopReceiver ZadFiles KeepService; do
   JS_SRC="$J.java"
   if [ -f "native/$J.java" ]; then JS_SRC="native/$J.java"; fi
   test -f "$JS_SRC"
@@ -93,11 +93,14 @@ perm ACCESS_NOTIFICATION_POLICY
 perm USE_EXACT_ALARM
 perm SCHEDULE_EXACT_ALARM
 perm RECEIVE_BOOT_COMPLETED
-if [ "$MODE" = "full" ]; then
-  perm WAKE_LOCK
-  perm FOREGROUND_SERVICE
-  perm FOREGROUND_SERVICE_MEDIA_PLAYBACK
-fi
+# permanent downloads: Quran audio / tafsir / adhan are saved in /sdcard/ZadAlMuslim so they survive uninstall.
+# Android 11+: "All files access"; Android 10 and below: classic storage permission.
+perm MANAGE_EXTERNAL_STORAGE
+perm WRITE_EXTERNAL_STORAGE
+perm READ_EXTERNAL_STORAGE
+perm WAKE_LOCK
+perm FOREGROUND_SERVICE
+perm FOREGROUND_SERVICE_MEDIA_PLAYBACK
 grep -c "uses-permission" "$M" || true
 
 # receivers: prayer-silent alarms/boot + audio stop button
@@ -117,6 +120,8 @@ if "SilentReceiver" not in m:
             </intent-filter>
         </receiver>
 """
+if "KeepService" not in m:
+    add += '        <service android:name=".KeepService" android:exported="false" android:foregroundServiceType="mediaPlayback" />\n'
 if "AudioStopReceiver" not in m:
     add += '        <receiver android:name=".AudioStopReceiver" android:exported="false" />\n'
 if add:
@@ -125,6 +130,18 @@ if add:
 io.open(p, "w", encoding="utf-8").write(m)
 PY
 grep -c "Receiver" "$M" || true
+
+# Android 10: keep classic file access so /sdcard/ZadAlMuslim works (ignored on 11+, where All files access is used)
+python3 - "$M" <<'PY'
+import sys, io
+p = sys.argv[1]
+m = io.open(p, encoding="utf-8").read()
+if "requestLegacyExternalStorage" not in m:
+    assert "<application" in m
+    m = m.replace("<application", '<application android:requestLegacyExternalStorage="true"', 1)
+io.open(p, "w", encoding="utf-8").write(m)
+PY
+grep -c "requestLegacyExternalStorage" "$M" || true
 
 # ---- 4b) notification sounds as raw resources ----
 # Channel sounds (adhan_*.ogg, snd_*.mp3) must exist in res/raw, otherwise the
