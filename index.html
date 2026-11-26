@@ -33,6 +33,8 @@
 #qv.qrd.qold #qtx .ml:not(.qb):not(.qbs){transform:scaleY(1.08)}
 /* «لا» بخط النظام العربي في درجات التكبير ونمط القراءة فقط */
 #qv.qrd #qtx .lg{font-family:"Noto Naskh Arabic","Droid Arabic Naskh","Noto Sans Arabic",serif;font-weight:600;-webkit-text-stroke:0}
+.dlctl{display:flex;gap:8px;padding:6px 4px 10px;flex-wrap:wrap}.dlctl button{flex:1;min-width:90px;border:1.5px solid var(--ac);background:transparent;color:var(--ac);border-radius:12px;padding:9px 6px;font:inherit;font-weight:bold;font-size:.9em}.dlctl button.dlsel{background:var(--ac);color:#fff}.dlctl button:disabled{opacity:.4}.dlck{width:22px;height:22px;accent-color:var(--ac);flex:none;margin:0}
+.dlr{cursor:pointer}.dlr.sel{background:var(--ac2)}.dlr.sel .dln{background:var(--ac);color:#fff}.dlb.dlq{opacity:.65;font-size:15px}
 </style><script id="zadnative">/* زاد المسلم — طبقة التطبيق الأصلي (أندرويد)
    تعمل فقط داخل تطبيق APK (العنوان localhost + وجود Capacitor)، وتبقى خاملة في المتصفح.
    كل جزء محاط بحماية: إن غابت الإضافة الأصلية يعمل التطبيق كما كان. */
@@ -1996,7 +1998,7 @@ async function asur(){
  WF.w=-1;WF.ak="";qhl();qplui();qms()}
 function qplay(s,a){if(HP.on)hstop();if(SUD[S.qrec||RLD[0]]&&a>1)qtoast("هذا القارئ تلاوته سورة كاملة، فتبدأ من أول السورة",5000);AP={on:1,s,a,st:[s,a],bs:(a==1&&s!=1&&s!=9)?1:0};aload()}
 function arep(){const st=AP.st;if(!S.qrep||!st)return 0;AP.s=st[0];AP.a=st[1];AP.bs=(st[1]==1&&st[0]!=1&&st[0]!=9)?1:0;aload();return 1}
-function anext(){if(!AP.on)return;if(SUD[S.qrec||RLD[0]]){const s=AP.s;if(AP.end&&AP.end[0]>s&&s<114){AP.s=s+1;AP.a=1;aload();return}if(arep())return;qstop();qtoast("انتهت السورة");return}if(!AP.bs&&AP.end&&AP.s==AP.end[0]&&AP.a==AP.end[1]){if(arep())return;qstop();return}if(AP.bs){AP.bs=0;aload();return}let s=AP.s,a=AP.a+1;if(a>QD.text[s-1].length){if(arep())return;qstop();qtoast("انتهت السورة");return}AP.s=s;AP.a=a;aload()}
+function anext(){if(!AP.on)return;if(SUD[S.qrec||RLD[0]]){const s=AP.s;if(AP.end&&AP.end[0]>s&&s<114){AP.s=s+1;AP.a=1;aload();return}if(arep())return;qstop();qtoast("انتهت السورة");return}if(!AP.bs&&AP.end&&AP.s==AP.end[0]&&AP.a==AP.end[1]){if(arep())return;qstop();if(AP.end[0]==114)qtoast("تمّت الختمة، تقبّل الله منك");return}if(AP.bs){AP.bs=0;aload();return}let s=AP.s,a=AP.a+1;if(a>QD.text[s-1].length){if(AP.end&&AP.end[0]>s&&s<114){AP.s=s+1;AP.a=1;AP.bs=(s+1!=9)?1:0;aload();return}if(arep())return;qstop();qtoast(AP.end&&AP.end[0]==114?"تمّت الختمة، تقبّل الله منك":"انتهت السورة");return}AP.s=s;AP.a=a;aload()}
 function aprev(){if(!AP.on)return;if(SUD[S.qrec||RLD[0]]){if(AP.s>1){AP.s--;AP.a=1;aload()}return}if(AP.bs)AP.bs=0;else{let s=AP.s,a=AP.a-1;if(a<1){s--;if(s<1)return;a=QD.text[s-1].length}AP.s=s;AP.a=a}aload()}
 function atog(){AU.paused?AU.play():AU.pause()}
 function qstop(){const w=AP.on;try{saveRes()}catch(e){}AP.on=0;kaOff();try{apFlush()}catch(e){}try{AU.pause();AU.removeAttribute("src");AU.load()}catch(e){}qhl();qplui();if(w&&!HP.on)msClear()}
@@ -2158,7 +2160,14 @@ function qrfilter(){
  $("#rl").innerHTML=RC.filter(r=>!have.includes(r[0])&&qnorm(r[1]).includes(q)).map(r=>`<div class="row"><span>${r[1]}</span><button onclick="qradd1('${r[0]}')">إضافة</button></div>`).join("")||`<div class="mu">لا نتائج</div>`}
 function qradd1(id){const l=(S.qrl||RLD).slice();l.push(id);S.qrl=l;save();qtoast("تمت الإضافة");if(document.getElementById("qo-r"))qrpick();else qlisten();qrfilter()}
 const qbsfix=l=>{const f=l.some(x=>x[1]==1&&x[0]!=1&&x[0]!=9);return f&&!l.some(x=>x[0]==1&&x[1]==1)?[[1,1]].concat(l):l};
-let DLF="";
+let DLF="";const DLSEL=new Set(),DLQ=[],DLQS=new Set();
+function dlRow(e,s){if(e&&e.target&&e.target.closest&&e.target.closest("button,.dpw"))return;DLSEL.has(s)?DLSEL.delete(s):DLSEL.add(s);qdrows()}
+function dlUnq(s){for(let i=DLQ.length-1;i>=0;i--){DLQ[i][0]=DLQ[i][0].filter(x=>x[0]!=s);if(!DLQ[i][0].length)DLQ.splice(i,1)}DLQS.delete(s);qdrows()}
+function dlSelAll(){const pre=DLF;const all=[];for(let s=1;s<=114;s++)all.push(s);if(DLSEL.size>=all.length)DLSEL.clear();else all.forEach(s=>DLSEL.add(s));qdrows()}
+function dlSurList(ss){const l=[];ss.forEach(s=>{if(SUD[DLF])l.push([s,1]);else for(let a=1;a<=QD.text[s-1].length;a++)l.push([s,a])});return SUD[DLF]?l:qbsfix(l)}
+function dlMany(ss,label){if(ADL==2){qtoast("جارٍ الإيقاف…");return}if(!ss.length){qtoast("اختر سورة واحدة على الأقل");return}if(!navigator.onLine){qtoast("يلزم اتصال بالإنترنت");return}adlGo(dlSurList(ss),label,DLF)}
+function dlSelGo(){const ss=[...DLSEL].sort((a,b)=>a-b);DLSEL.clear();dlMany(ss,AD(ss.length)+" سور مختارة")}
+async function dlTen(){const pre="au:"+DLF+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});const ss=[];for(let s=1;s<=114&&ss.length<10;s++){const t=SUD[DLF]?1:QD.text[s-1].length;if((c[s]||0)<t)ss.push(s)}if(!ss.length){qtoast("كل السور محمّلة");return}dlMany(ss,"أول "+AD(ss.length)+" سور غير محمّلة")}
 function qrdlall(id){
  DLF=id||S.qrec||RLD[0];const r=RC.find(x=>x[0]==DLF),nm=r?r[1]:"القارئ";
  qshow("qo-dl","تنزيل — "+nm,`<div class="dlh"><div class="dlt"><span class="dlic">⬇</span><div><b>الاستماع دون إنترنت</b><small>حمّل السور التي تريدها، أو المصحف كاملًا. يُفضّل الواي فاي، ويمكنك الإيقاف والمتابعة لاحقًا.</small></div></div><div class="dlbar"><i id="dlbi"></i></div><div class="dlst" id="adp2"></div><button class="dlgo" id="dlall" onclick="qrdlgo()">⬇ تنزيل كل السور</button></div>${nfCard()}<div class="dll" id="dlrows"></div>`);qdrows()}
@@ -2167,8 +2176,8 @@ async function qdrows(){
  const e=$("#dlrows");if(!e)return;const pre="au:"+DLF+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}
  const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});
  const e2=$("#dlrows");if(!e2)return;
- e2.innerHTML=QD.names.map((n,i)=>{const s=i+1,t=SUD[DLF]?1:QD.text[i].length,d=c[s]||0,full=d>=t,run=ADL==1&&DLP&&DLP.t[s];const act=full?`<button class="dlx" onclick="qdd2(${s})" aria-label="حذف">🗑</button>`:run?`<span class="dpw" onclick="adlStop()" title="اضغط للإيقاف"><button class="dpr" id="dp${s}" style="--p:${Math.round(100*(DLP.c[s]||0)/DLP.t[s])}" aria-label="جارٍ التنزيل"></button><i></i></span>`:`<button class="dlb" aria-label="تنزيل" onclick="qdlsur(${s})">⬇</button>`;return `<div class="dlr${full?" ok":""}"><span class="dln">${full?"✓":AD(s)}</span><span class="dli"><b>${n}</b><small>${full?"محمّلة · تعمل دون إنترنت":d?AD(d)+" من "+AD(t)+" آية":AD(t)+" آية"}</small>${d&&!full?`<i class="dlm"><u style="width:${Math.round(100*d/t)}%"></u></i>`:""}</span><span class="dla">${act}</span></div>`}).join("")}
-function adlStop(){if(ADL!=1)return;ADL=2;try{ADAC&&ADAC.abort()}catch(e){}try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}qtoast("أُوقف التنزيل");qdrows()}
+ e2.innerHTML=`<div class="dlctl"><button onclick="dlSelAll()">${DLSEL.size>=114?"إلغاء التحديد":"تحديد الكل"}</button><button onclick="dlTen()">⬇ ١٠ سور</button><button class="dlsel" onclick="dlSelGo()"${DLSEL.size?"":" disabled"}>⬇ المحدد (${AD(DLSEL.size)})</button></div>`+QD.names.map((n,i)=>{const s=i+1,t=SUD[DLF]?1:QD.text[i].length,d=c[s]||0,full=d>=t,run=ADL==1&&DLP&&DLP.t[s];const act=full?`<button class="dlx" onclick="qdd2(${s})" aria-label="حذف">🗑</button>`:run?`<span class="dpw" onclick="adlStop()" title="اضغط للإيقاف"><button class="dpr" id="dp${s}" style="--p:${Math.round(100*(DLP.c[s]||0)/DLP.t[s])}" aria-label="جارٍ التنزيل"></button><i></i></span>`:DLQS.has(s)?`<button class="dlb dlq" aria-label="في الانتظار" onclick="dlUnq(${s})">⏳</button>`:`<button class="dlb" aria-label="تنزيل" onclick="qdlsur(${s})">⬇</button>`;return `<div class="dlr${full?" ok":""}${DLSEL.has(s)?" sel":""}"${full||run?"":` onclick="dlRow(event,${s})"`}><span class="dln">${full?"✓":DLSEL.has(s)?"☑":AD(s)}</span><span class="dli"><b>${n}</b><small>${full?"محمّلة · تعمل دون إنترنت":d?AD(d)+" من "+AD(t)+" آية":AD(t)+" آية"}</small>${d&&!full?`<i class="dlm"><u style="width:${Math.round(100*d/t)}%"></u></i>`:""}</span><span class="dla">${act}</span></div>`}).join("")}
+function adlStop(){if(ADL!=1)return;ADL=2;DLQ.length=0;DLQS.clear();try{ADAC&&ADAC.abort()}catch(e){}try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}qtoast("أُوقف التنزيل");qdrows()}
 function qdlsur(s){adlGo(SUD[DLF]?[[s,1]]:qbsfix(Array.from({length:QD.text[s-1].length},(_,i)=>[s,i+1])),"سورة "+QD.names[s-1],DLF)}
 async function qdd2(s){try{await idbDel("au:"+DLF+"/"+p3(s)+"000")}catch(e){}for(let a=1;a<=QD.text[s-1].length;a++){try{await idbDel("au:"+DLF+"/"+p3(s)+p3(a))}catch(e){}}qdrows();qdlist()}
 function qrdlgo(){
@@ -2183,14 +2192,17 @@ function qdlp(){adlGo(qbsfix(qpv(qn)),"الصفحة "+AD(qn))}
 const adpSet=(h,tx)=>["#adp","#adp2"].forEach(q=>{const e=$(q);if(e){if(tx)e.textContent=h;else e.innerHTML=h}});
 var ADERR="";
 async function adlGo(list,label,fid){
- if(ADL){qtoast("هناك تحميل جارٍ");return}ADERR="";
- ADL=1;ADAC=new AbortController();const f=fid||S.qrec||RLD[0];if(SUD[f]){const u=[];list.forEach(([s0])=>{if(!u.includes(s0))u.push(s0)});list=u.map(s0=>[s0,0])}const n=list.length;let done=0,fail=0,i=0;DLP={t:{},c:{}};list.forEach(([s0])=>{DLP.t[s0]=(DLP.t[s0]||0)+1});
- const upd=()=>{for(const k in DLP.t){const e=document.getElementById("dp"+k);if(e)e.style.setProperty("--p",Math.round(100*(DLP.c[k]||0)/DLP.t[k]))}if(done%25==0)qdrows();const bi=document.getElementById("dlbi");if(bi)bi.style.width=Math.round(100*done/n)+"%";const h=`${label}: ${AD(done)} / ${AD(n)}${fail?` · فشل ${AD(fail)}`:""} <button onclick="adlStop()">إيقاف</button>`;adpSet(h)};
- const w=async()=>{while(ADL==1&&i<n){const [s,a]=list[i++],k="au:"+f+"/"+p3(s)+p3(a);try{if(!(await idbHas(k))){const r=await fetch(SUD[f]?SUD[f][1]+p3(s)+(SUD[f][2]||"")+".mp3":aurl(f,s,a),{signal:ADAC.signal});if(!r.ok)throw new Error("HTTP "+r.status);await idbSet(k,await r.blob())}done++;DLP.c[s]=(DLP.c[s]||0)+1}catch(e){if(ADL!=1)break;fail++;ADERR=String(e&&e.message||e);try{window.__zlog&&window.__zlog("dl fail "+k+": "+ADERR)}catch(x){}if(fail>5)ADL=2}upd()}};
- qdrows();upd();await Promise.all([w(),w(),w()]);
+ if(ADL){if(ADL==1&&(fid||S.qrec||RLD[0])==DLF){DLQ.push([list,label,fid]);list.forEach(x=>DLQS.add(x[0]));qtoast("أُضيفت إلى قائمة الانتظار");qdrows()}else qtoast("هناك تحميل جارٍ");return}ADERR="";
+ ADL=1;ADAC=new AbortController();const f=fid||S.qrec||RLD[0];if(SUD[f]){const u=[];list.forEach(([s0])=>{if(!u.includes(s0))u.push(s0)});list=u.map(s0=>[s0,0])}const n=list.length;let done=0,fail=0,i=0,lu=0,lr=0;DLP={t:{},c:{}};list.forEach(([s0])=>{DLP.t[s0]=(DLP.t[s0]||0)+1});
+ let have=new Set();try{have=new Set(await idbKeys("au:"+f+"/"))}catch(e){}
+ const todo=[];list.forEach(x=>{if(have.has("au:"+f+"/"+p3(x[0])+p3(x[1]))){done++;DLP.c[x[0]]=(DLP.c[x[0]]||0)+1}else todo.push(x)});const m=todo.length;
+ const upd=()=>{const now=Date.now();if(now-lu<300&&done<n)return;lu=now;for(const k in DLP.t){const e=document.getElementById("dp"+k);if(e)e.style.setProperty("--p",Math.round(100*(DLP.c[k]||0)/DLP.t[k]))}if(now-lr>2500){lr=now;qdrows()}const bi=document.getElementById("dlbi");if(bi)bi.style.width=Math.round(100*done/n)+"%";const h=`${label}: ${AD(done)} / ${AD(n)}${fail?` · فشل ${AD(fail)}`:""} <button onclick="adlStop()">إيقاف</button>`;adpSet(h)};
+ const w=async()=>{while(ADL==1&&i<m){const [s,a]=todo[i++],k="au:"+f+"/"+p3(s)+p3(a);try{{const r=await fetch(SUD[f]?SUD[f][1]+p3(s)+(SUD[f][2]||"")+".mp3":aurl(f,s,a),{signal:ADAC.signal});if(!r.ok)throw new Error("HTTP "+r.status);await idbSet(k,await r.blob())}done++;DLP.c[s]=(DLP.c[s]||0)+1}catch(e){if(ADL!=1)break;fail++;ADERR=String(e&&e.message||e);try{window.__zlog&&window.__zlog("dl fail "+k+": "+ADERR)}catch(x){}if(fail>5)ADL=2}upd();await new Promise(r=>setTimeout(r,0))}};
+ qdrows();upd();await Promise.all([w(),w(),w(),w(),w(),w()]);
  const bi=document.getElementById("dlbi");if(bi&&ADL!=1)bi.style.width=ADL==2?bi.style.width:"0%";const ok=ADL==1&&!fail,us=ADL==2&&fail<=5;ADL=0;ADAC=null;DLP=null;
  adpSet(ok?`اكتمل تحميل ${label} — يعمل دون إنترنت`:us?`أُوقف التحميل (${AD(done)} من ${AD(n)}). يمكنك المتابعة لاحقًا.`:`توقّف التحميل (${AD(done)} من ${AD(n)}). تحقق من الاتصال ثم أعد المحاولة.${ADERR?" ["+ADERR+"]":""}`,1);
- qdlist();qdrows()}
+ qdlist();qdrows();
+ if(ok&&DLQ.length){const q=DLQ.shift();DLQS.clear();DLQ.forEach(x=>x[0].forEach(y=>DLQS.add(y[0])));setTimeout(()=>adlGo(q[0],q[1],q[2]),50)}else{DLQ.length=0;DLQS.clear();qdrows()}}
 async function qdlist(){
  const e=$("#adl");if(!e)return;const f=S.qrec||RLD[0],pre="au:"+f+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}
  const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});
@@ -2479,6 +2491,7 @@ function qfavT(){
 function qasEnd(k,n){
  if(k=="p"){const l=qpv(n);return l[l.length-1]}
  if(k=="s")return [n,QD.text[n-1].length];
+ if(k=="q")return [114,QD.text[113].length];
  if(k=="a")return [qas.s,n];
  return null}
 function qplayTo(s,a,e){qplay(s,a);AP.end=e}
@@ -3762,7 +3775,14 @@ async function offLoad(){
  function mk(){
   if(el&&el.isConnected)return el;
   if(!document.getElementById("zbn-css")){const st=document.createElement("style");st.id="zbn-css";st.textContent="#zbn{position:fixed;top:0;left:0;right:0;z-index:2147483000;box-sizing:border-box;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 12px;background:linear-gradient(135deg,#0f6b4f,#1a8f6a);color:#fff;text-align:center;font-size:15px;font-weight:700;line-height:1.8;border-radius:0 0 18px 18px;box-shadow:0 6px 18px rgba(0,0,0,.28);transform:translateY(-120%);transition:transform .35s ease;direction:rtl;cursor:pointer}#zbn.on{transform:translateY(0)}";document.head.appendChild(st)}
-  el=document.createElement("div");el.id="zbn";el.setAttribute("role","status");el.onclick=()=>{el.classList.remove("on")};document.body.appendChild(el);return el};
+  el=document.createElement("div");el.id="zbn";el.setAttribute("role","status");el.onclick=()=>{el.classList.remove("on")};
+  {let x0=0,y0=0,dx=0,dr=0,id=null;const rs=()=>{el.style.transition="";el.style.transform="";el.style.opacity=""};
+   el.style.touchAction="pan-y";
+   el.addEventListener("pointerdown",e=>{x0=e.clientX;y0=e.clientY;dx=0;dr=1;id=e.pointerId;clearTimeout(bt);try{el.setPointerCapture(id)}catch(_){}});
+   el.addEventListener("pointermove",e=>{if(!dr)return;dx=e.clientX-x0;if(Math.abs(dx)>6){el.style.transition="none";el.style.transform="translateX("+dx+"px)";el.style.opacity=String(Math.max(.2,1-Math.abs(dx)/260))}});
+   const end=e=>{if(!dr)return;dr=0;if(Math.abs(dx)>60){el.style.transition="transform .2s ease,opacity .2s ease";el.style.transform="translateX("+(dx>0?"120%":"-120%")+")";el.style.opacity="0";setTimeout(()=>{el.classList.remove("on");rs()},210);el.__sw=1}else{rs();if(e.type=="pointerup"&&Math.abs(dx)<=6)return;bt=setTimeout(()=>el.classList.remove("on"),2500)}};
+   el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end)}
+  document.body.appendChild(el);return el};
  window.zbn=function(k,ms){try{const e=mk();e.textContent=pick(k);void e.offsetWidth;e.classList.add("on");clearTimeout(bt);bt=setTimeout(()=>e.classList.remove("on"),ms||3800)}catch(x){}};
  const ck=c=>c==26?"morn":c==200?"eve":c==27?"sleep":c==0?"wake":c==24?"afterpray":"bab";
  const allDone=c=>{try{return HD[c].every((x,i)=>(S.tas["h"+c+"-"+i]||0)>=x[1])}catch(e){return false}};
