@@ -1,0 +1,42 @@
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        variant: [full, basic]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('zad-build.sh', 'package.json') }}
+          restore-keys: gradle-
+      - name: Build ${{ matrix.variant }}
+        run: |
+          for i in 1 2 3; do
+            bash zad-build.sh ${{ matrix.variant }} && exit 0
+            echo "Attempt $i failed, retrying in 60s..."
+            sleep 60
+          done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zad-${{ matrix.variant }}-apk
+          path: out/zad-${{ matrix.variant }}.apk
