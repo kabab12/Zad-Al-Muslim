@@ -26,7 +26,11 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
                 int idx = in.getIntExtra(AdhanScreen.EXTRA_IDX, -1);
                 long ms = in.getLongExtra("ms", 0);
                 long d = System.currentTimeMillis() - ms;
-                if (idx >= 0 && d > -5000 && d < 10 * 60 * 1000L && !MainActivity.sVisible) show(c, idx);
+                // اللوحة لا تظهر إلا في وقت الأذان نفسه (حتى 90 ثانية تأخيرًا كحدّ أقصى)؛ بعد ذلك لا تُعرض
+                if (idx >= 0 && d > -5000 && d < 90 * 1000L) {
+                    if (MainActivity.sVisible) MainActivity.fireAdhanJs(idx);
+                    else show(c, idx);
+                }
             }
         } catch (Throwable ignored) {
         }
@@ -37,6 +41,19 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
     }
 
     private void show(Context c, int idx) {
+        // يشغّل الشاشة فورًا مهما كانت حالة الهاتف (مطفأة/مقفلة/Doze)
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager) c.getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                @SuppressWarnings("deprecation")
+                android.os.PowerManager.WakeLock wl = pm.newWakeLock(
+                        android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                                | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
+                                | android.os.PowerManager.ON_AFTER_RELEASE, "zad:adhanscreen");
+                wl.acquire(20 * 1000L);
+            }
+        } catch (Throwable ignored) {
+        }
         Intent open = new Intent(c, MainActivity.class)
                 .setAction("com.zadalmuslim.app.OPEN_ADHAN")
                 .putExtra(AdhanScreen.EXTRA_IDX, idx)

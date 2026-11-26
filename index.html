@@ -3467,7 +3467,7 @@ function adScr(i,o){try{o=o||{};if(!adScrOn()&&!o.force)return;if(!ADPIC.mk)retu
  AS.beats=adLay(AS);
  el.querySelector(".x").onclick=()=>adScrClose(0);
  el.querySelector(".stp").onclick=()=>{if(AS&&AS.ended){adScrClose(0)}else adScrClose(1)};
- requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add("on")));
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{el.classList.add("on");try{window.AdhanNative&&AdhanNative.screenShown&&AdhanNative.screenShown()}catch(e){}}));
  AS.tm=setInterval(adScrTick,200);adScrTick();adWl();
  if(!o.demo&&!adDurC[adS().m]){adDurLoad().then(d=>{if(AS&&AS.k==k&&d>20&&!(adPlaying&&isFinite(ADA.duration)&&ADA.duration>20)){AS.dur=d;AS.beats=adLay(AS)}})}
 }catch(e){}}
@@ -3487,8 +3487,8 @@ function adScrClose(stop){const a=AS;if(!a)return;AS=null;clearInterval(a.tm);cl
  a.el.classList.remove("on");setTimeout(()=>{try{a.el.remove()}catch(e){}},750)}
 function adScrNext(){try{const n=new Date(),t=times(n);for(const p of ADN){if(t[p[0]]>n)return p[0]}}catch(e){}return 2}
 function adScrLate(n,t){const c=adS();if(!c.on||!adScrOn()||AS||document.visibilityState!="visible")return;const dk=n.toDateString();
- for(let i=0;i<ADN.length;i++){const p=ADN[i];if(!c.pr[i])continue;const d=n-t[p[0]];if(d>=0&&d<((adDurC[c.m]||150)+15)*1000&&!window.__adDis[dk+"|"+p[0]]){adScr(p[0],{start:+t[p[0]],nat:adNat()});break}}}
-window.adScrNative=function(i){try{const n=new Date(),t=times(n),tm=+t[i];adScr(i,{start:(n-tm>=0&&n-tm<3e5)?tm:Date.now(),nat:1,force:0})}catch(e){}};
+ for(let i=0;i<ADN.length;i++){const p=ADN[i];if(!c.pr[i])continue;const d=n-t[p[0]];if(d>=0&&d<9e4&&!window.__adDis[dk+"|"+p[0]]){adScr(p[0],{start:+t[p[0]],nat:adNat()});break}}}
+window.adScrNative=function(i){try{const n=new Date(),t=times(n),tm=+t[i],d=n-tm;if(!(d>-6e4&&d<9e4))return;adScr(i,{start:d>=0?tm:Date.now(),nat:1,force:0})}catch(e){}};
 setTimeout(()=>{try{const m=/[#?&]adhan=(\d)/.exec(location.href);if(m)window.adScrNative(+m[1])}catch(e){}},1200);
 function adScrSync(){try{const B=window.AdhanScreen;if(!B||!B.set)return;const c=adS(),out=[],now=Date.now();
  if(c.on&&adScrOn()){for(let d=0;d<7;d++){const dt=new Date();dt.setDate(dt.getDate()+d);const t=times(dt);ADN.forEach((p,i)=>{if(!c.pr[i])return;const ms=+t[p[0]];if(ms>now-6e4)out.push([ms,p[0]])})}}
@@ -3503,8 +3503,9 @@ function adScrSet(){const on=adScrOn(),pn=adPnGet();
 function adTick(){const c=adS();if(!c.on)return;const n=new Date(),t=times(n),dk=n.toDateString();S.adl=S.adl||{};let ch=0;
  ADN.forEach((p,i)=>{if(!c.pr[i])return;const tm=t[p[0]],d=n-tm,k=dk+"|"+p[0];if(d>=0&&d<9e4&&S.adl[k]!=1){S.adl[k]=1;ch=1;Object.keys(S.adl).forEach(x=>{if(x.split("|")[0]!=dk)delete S.adl[x]});ntFire("حان الآن وقت صلاة "+p[1],"حيّ على الصلاة",k,"nt",true);if(!adNat())adPlay(p[1]);try{adScr(p[0],{start:+tm,nat:adNat()})}catch(e){}}});
  try{adScrLate(n,t)}catch(e){}try{if(((window.__adc=(window.__adc||0)+1)%12)==1)adScrSync()}catch(e){}
- if(ch)save()}
-setInterval(adTick,5000);document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")adTick()});
+ if(ch)save();try{adArm()}catch(e){}}
+let __adArmT=null;function adArm(){clearTimeout(__adArmT);try{const c=adS();if(!c.on)return;const n=Date.now();let best=0;for(let d=0;d<2;d++){const dt=new Date();dt.setDate(dt.getDate()+d);const t=times(dt);ADN.forEach((p,i)=>{if(!c.pr[i])return;const ms=+t[p[0]];if(ms>n+50&&(!best||ms<best))best=ms})}if(best&&best-n<864e5)__adArmT=setTimeout(adTick,Math.max(0,best-Date.now())+20)}catch(e){}}
+setInterval(adTick,5000);setTimeout(()=>{try{adArm()}catch(e){}},1500);document.addEventListener("visibilitychange",()=>{if(document.visibilityState=="visible")adTick()});
 function adSet(f,v,r){adS()[f]=v;save();if(f=="m"&&v!="custom"&&!(typeof ADEMB!="undefined"&&ADEMB[v])&&!(S.adc&&S.adc[v])&&navigator.onLine)adDl(v);if(f=="on"&&!v)adStop();if(f=="on"&&v&&ntPerm()=="default"){try{Notification.requestPermission()}catch(e){}}try{adScrSync()}catch(e){}if(r)adR()}
 async function adFile(inp){const f=inp.files&&inp.files[0];if(!f)return;try{await idbSet("adhan:custom",f);adS().m="custom";adS().fn=f.name;save();qtoast("تم حفظ الملف.");adR()}catch(e){qtoast("تعذّر حفظ الملف على الجهاز.")}}
 function adTestN(){try{new Notification("🕌 تجربة الأذان",{body:"هكذا يصلك تنبيه الأذان بصوت المؤذن وقت الصلاة",tag:"adtest|"+Date.now(),dir:"rtl",lang:"ar"});qtoast("سيصلك إشعار الأذان بعد لحظات")}catch(e){adTest()}}

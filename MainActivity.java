@@ -32,6 +32,24 @@ public class MainActivity extends BridgeActivity {
     /** هل شاشة التطبيق ظاهرة الآن (لا حاجة لإشعار اللوحة حينها) */
     static volatile boolean sVisible = false;
     private boolean adhanOpened = false;
+    /** غطاء أصلي فوري يظهر لحظة الأذان حتى تُحمَّل صفحة الويب (التحميل البارد يستغرق ثوانٍ) */
+    private android.view.View adhanCover = null;
+    private static final String[] ADHAN_NAMES = {"الفجر", "", "الظهر", "العصر", "المغرب", "العشاء"};
+
+    /** التطبيق ظاهر: نطلب من الصفحة عرض لوحة الأذان في لحظتها بلا انتظار مؤقّت الصفحة. */
+    static void fireAdhanJs(final int idx) {
+        final MainActivity a = sInst;
+        if (a == null) return;
+        a.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    a.getBridge().getWebView().evaluateJavascript(
+                            "window.adScrNative&&window.adScrNative(" + idx + ")", null);
+                } catch (Throwable ignored) { }
+            }
+        });
+    }
 
     /** يُستدعى من زر «إيقاف» في الستارة: يأمر الصفحة بإيقاف كل صوت. */
     static void stopAudioFromShade() {
@@ -62,6 +80,17 @@ public class MainActivity extends BridgeActivity {
                 @Override
                 public void run() {
                     try { getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignored) { }
+                }
+            });
+        }
+
+        /** ظهرت لوحة الصفحة: نزيل الغطاء الأصلي المؤقّت. */
+        @JavascriptInterface
+        public void screenShown() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    removeAdhanCover();
                 }
             });
         }
@@ -406,9 +435,11 @@ public class MainActivity extends BridgeActivity {
             try {
                 ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancel(AdhanScreen.NID);
             } catch (Throwable ignored) { }
+            showAdhanCover(idx);
             final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
             final String js = "window.adScrNative&&window.adScrNative(" + idx + ")";
-            long[] delays = {700, 2500, 6000};
+            // محاولات متقاربة: الصفحة قد تحتاج ثوانٍ للتحميل البارد، فنعرض اللوحة فور جاهزيتها
+            long[] delays = {0, 250, 600, 1000, 1500, 2200, 3000, 4000, 5500, 7500, 10000, 14000, 20000};
             for (long d : delays) {
                 h.postDelayed(new Runnable() {
                     @Override
@@ -420,7 +451,67 @@ public class MainActivity extends BridgeActivity {
         } catch (Throwable ignored) { }
     }
 
+    /** غطاء بسيط فوري (اسم الصلاة) فوق الـWebView لحين ظهور اللوحة المتحركة. */
+    private void showAdhanCover(int idx) {
+        try {
+            removeAdhanCover();
+            String nm = idx >= 0 && idx < ADHAN_NAMES.length ? ADHAN_NAMES[idx] : "";
+            android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+            box.setOrientation(android.widget.LinearLayout.VERTICAL);
+            box.setGravity(android.view.Gravity.CENTER);
+            box.setBackgroundColor(0xFF050806);
+            box.setClickable(true);
+            android.widget.TextView t1 = new android.widget.TextView(this);
+            t1.setText("أذان");
+            t1.setTextColor(0xFFE7CF93);
+            t1.setTextSize(20);
+            t1.setGravity(android.view.Gravity.CENTER);
+            android.widget.TextView t2 = new android.widget.TextView(this);
+            t2.setText(nm);
+            t2.setTextColor(0xFFF0CF7A);
+            t2.setTextSize(58);
+            t2.setGravity(android.view.Gravity.CENTER);
+            android.widget.TextView t3 = new android.widget.TextView(this);
+            t3.setText("حيّ على الصلاة");
+            t3.setTextColor(0xB3F5EAD0);
+            t3.setTextSize(18);
+            t3.setGravity(android.view.Gravity.CENTER);
+            box.addView(t1);
+            box.addView(t2);
+            box.addView(t3);
+            addContentView(box, new android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+            adhanCover = box;
+            // أمان: لا يبقى الغطاء أكثر من 25 ثانية مهما حصل
+            box.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    removeAdhanCover();
+                }
+            }, 25000);
+        } catch (Throwable ignored) { }
+    }
+
+    private void removeAdhanCover() {
+        try {
+            final android.view.View v = adhanCover;
+            adhanCover = null;
+            if (v == null) return;
+            v.animate().alpha(0f).setDuration(500).withEndAction(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        android.view.ViewParent pr = v.getParent();
+                        if (pr instanceof android.view.ViewGroup) ((android.view.ViewGroup) pr).removeView(v);
+                    } catch (Throwable ignored) { }
+                }
+            }).start();
+        } catch (Throwable ignored) { }
+    }
+
     private void endAdhanScreen() {
+        removeAdhanCover();
         if (!adhanOpened) return;
         adhanOpened = false;
         try {

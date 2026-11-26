@@ -123,12 +123,24 @@ public class AdhanScreen {
             }
             it.putExtra(EXTRA_IDX, idx).putExtra("ms", best);
             PendingIntent pi = PendingIntent.getBroadcast(c, REQ_ALARM, it, fl);
-            boolean exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
-            if (Build.VERSION.SDK_INT >= 23) {
-                if (exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, best, pi);
-                else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, best, pi);
-            } else {
-                am.setExact(AlarmManager.RTC_WAKEUP, best, pi);
+            // منبّه الساعة (setAlarmClock): دقيق إلى الثانية ويعمل في وضع Doze ولا يحتاج إذن «المنبّهات الدقيقة»،
+            // فيصل اللوحة في لحظة الأذان لا بعدها. إن تعذّر نرجع للمنبّهات الدقيقة العادية.
+            boolean done = false;
+            try {
+                Intent show = new Intent(c, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                PendingIntent showPi = PendingIntent.getActivity(c, REQ_ALARM + 1, show, fl);
+                am.setAlarmClock(new AlarmManager.AlarmClockInfo(best, showPi), pi);
+                done = true;
+            } catch (Throwable ignored) {
+            }
+            if (!done) {
+                boolean exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms();
+                if (Build.VERSION.SDK_INT >= 23) {
+                    if (exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, best, pi);
+                    else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, best, pi);
+                } else {
+                    am.setExact(AlarmManager.RTC_WAKEUP, best, pi);
+                }
             }
         } catch (Throwable ignored) {
         }
