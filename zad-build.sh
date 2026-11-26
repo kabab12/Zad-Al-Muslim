@@ -65,7 +65,7 @@ test -f "$AS"
 cp "$AS" "$(dirname "$F")/AndroidSilent.java"
 
 # native: scheduled silent-mode receiver + notification-shade "stop" button for Quran/Hisn audio
-for J in SilentReceiver AudioShade AudioStopReceiver ZadFiles KeepService; do
+for J in SilentReceiver AudioShade AudioStopReceiver ZadFiles KeepService AdhanScreen AdhanScreenReceiver; do
   JS_SRC="$J.java"
   if [ -f "native/$J.java" ]; then JS_SRC="native/$J.java"; fi
   test -f "$JS_SRC"
@@ -99,6 +99,8 @@ perm MANAGE_EXTERNAL_STORAGE
 perm WRITE_EXTERNAL_STORAGE
 perm READ_EXTERNAL_STORAGE
 perm WAKE_LOCK
+# adhan panel over the lock screen (full-screen intent; Android 14+: user allows it from app settings)
+perm USE_FULL_SCREEN_INTENT
 perm FOREGROUND_SERVICE
 perm FOREGROUND_SERVICE_MEDIA_PLAYBACK
 grep -c "uses-permission" "$M" || true
@@ -113,6 +115,17 @@ if "SilentReceiver" not in m:
     add += """        <receiver android:name=".SilentReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="com.zadalmuslim.app.SILENT_TICK" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+"""
+if "AdhanScreenReceiver" not in m:
+    add += """        <receiver android:name=".AdhanScreenReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.zadalmuslim.app.ADHAN_SCREEN" />
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />

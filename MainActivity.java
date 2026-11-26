@@ -25,6 +25,9 @@ public class MainActivity extends BridgeActivity {
     private boolean swallowVolume = false;
     private boolean statusBarVisible = false;
     private static MainActivity sInst;
+    /** هل شاشة التطبيق ظاهرة الآن (لا حاجة لإشعار اللوحة حينها) */
+    static volatile boolean sVisible = false;
+    private boolean adhanOpened = false;
 
     /** يُستدعى من زر «إيقاف» في الستارة: يأمر الصفحة بإيقاف كل صوت. */
     static void stopAudioFromShade() {
@@ -45,6 +48,17 @@ public class MainActivity extends BridgeActivity {
         @JavascriptInterface
         public void setPlaying(boolean on) {
             adhanPlaying = on;
+        }
+
+        /** أُغلقت لوحة الأذان: إن كانت فوق القفل نرجع إلى شاشة القفل. */
+        @JavascriptInterface
+        public void screenClosed() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    endAdhanScreen();
+                }
+            });
         }
     }
 
@@ -321,9 +335,12 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().addJavascriptInterface(new VibBridge(), "ZadVib");
             getBridge().getWebView().addJavascriptInterface(new PermBridge(), "ZadPerm");
             getBridge().getWebView().addJavascriptInterface(new ZadFiles(this), "ZadFiles");
+            getBridge().getWebView().addJavascriptInterface(new AdhanScreen(this), "AdhanScreen");
         } catch (Throwable ignored) { }
         // مصالحة الصامت عند كل تشغيل: تصلح أي حالة عالقة وتعيد ضبط المنبّه التالي
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
+        try { AdhanScreen.schedule(this); } catch (Throwable ignored) { }
+        handleAdhanIntent(getIntent());
 
         // ظهور شريط الحالة (سحب الستارة) يوقف الأذان
         ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, insets) -> {
@@ -339,9 +356,68 @@ public class MainActivity extends BridgeActivity {
         }
     }
 
+    /** لوحة الأذان: تظهر فوق قفل الشاشة وتشغّلها، ثم تُعرض اللوحة في الصفحة. */
+    private void handleAdhanIntent(android.content.Intent it) {
+        try {
+            if (it == null || !it.hasExtra(AdhanScreen.EXTRA_IDX)) return;
+            final int idx = it.getIntExtra(AdhanScreen.EXTRA_IDX, -1);
+            it.removeExtra(AdhanScreen.EXTRA_IDX);
+            if (idx < 0) return;
+            adhanOpened = true;
+            if (Build.VERSION.SDK_INT >= 27) {
+                setShowWhenLocked(true);
+                setTurnScreenOn(true);
+            } else {
+                getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                        | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+            }
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            try {
+                ((android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE)).cancel(AdhanScreen.NID);
+            } catch (Throwable ignored) { }
+            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+            final String js = "window.adScrNative&&window.adScrNative(" + idx + ")";
+            long[] delays = {700, 2500, 6000};
+            for (long d : delays) {
+                h.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        try { getBridge().getWebView().evaluateJavascript(js, null); } catch (Throwable ignored) { }
+                    }
+                }, d);
+            }
+        } catch (Throwable ignored) { }
+    }
+
+    private void endAdhanScreen() {
+        if (!adhanOpened) return;
+        adhanOpened = false;
+        try {
+            android.app.KeyguardManager km = (android.app.KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+            boolean locked = km != null && km.isKeyguardLocked();
+            getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            if (locked) moveTaskToBack(true);
+            if (Build.VERSION.SDK_INT >= 27) {
+                setShowWhenLocked(false);
+                setTurnScreenOn(false);
+            } else {
+                getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                        | android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+            }
+        } catch (Throwable ignored) { }
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleAdhanIntent(intent);
+    }
+
     @Override
     public void onResume() {
         super.onResume();
+        sVisible = true;
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
     }
 
@@ -349,6 +425,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onPause() {
         super.onPause();
+        sVisible = false;
         try { getBridge().getWebView().resumeTimers(); } catch (Throwable ignored) { }
     }
 
