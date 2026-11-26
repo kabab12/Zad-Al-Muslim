@@ -1213,13 +1213,13 @@ function dlSelGo(){const ss=[...DLSEL].sort((a,b)=>a-b);DLSEL.clear();dlMany(ss,
 async function dlTen(){const pre="au:"+DLF+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});const ss=[];for(let s=1;s<=114&&ss.length<10;s++){const t=SUD[DLF]?1:QD.text[s-1].length;if((c[s]||0)<t)ss.push(s)}if(!ss.length){qtoast("كل السور محمّلة");return}dlMany(ss,"أول "+AD(ss.length)+" سور غير محمّلة")}
 function qrdlall(id){
  DLF=id||S.qrec||RLD[0];const r=RC.find(x=>x[0]==DLF),nm=r?r[1]:"القارئ";
- qshow("qo-dl","تنزيل — "+nm,`<div class="dlh"><div class="dlt"><span class="dlic">⬇</span><div><b>الاستماع دون إنترنت</b><small>حمّل السور التي تريدها، أو المصحف كاملًا. يُفضّل الواي فاي، ويمكنك الإيقاف والمتابعة لاحقًا.</small></div></div><div class="dlbar"><i id="dlbi"></i></div><div class="dlst" id="adp2"></div><button class="dlgo" id="dlall" onclick="qrdlgo()">⬇ تنزيل كل السور</button></div>${nfCard()}<div class="dll" id="dlrows"></div>`);qdrows()}
+ qshow("qo-dl","تنزيل — "+nm,`<div class="dlh"><div class="dlt"><span class="dlic">⬇</span><div><b>الاستماع دون إنترنت</b><small>حمّل السور التي تريدها، أو المصحف كاملًا. يُفضّل الواي فاي، ويمكنك الإيقاف والمتابعة لاحقًا.</small></div></div><div class="dlbar"><i id="dlbi"></i></div><div class="dlst" id="adp2"></div><button class="dlgo" id="dlall" onclick="qrdlgo()">⬇ تنزيل كل السور</button></div><div class="dll" id="dlrows"></div>`);qdrows()}
 async function qdrows(){
  const ba=$("#dlall");if(ba){ba.textContent=ADL==1?"⏹ إيقاف التنزيل":"⬇ تنزيل كل السور";ba.classList.toggle("stop",ADL==1)}
  const e=$("#dlrows");if(!e)return;const pre="au:"+DLF+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}
  const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});
  const e2=$("#dlrows");if(!e2)return;
- e2.innerHTML=`<div class="dlctl"><button onclick="dlSelAll()">${DLSEL.size>=114?"إلغاء التحديد":"تحديد الكل"}</button><button onclick="dlTen()">⬇ ١٠ سور</button><button class="dlsel" onclick="dlSelGo()"${DLSEL.size?"":" disabled"}>⬇ المحدد (${AD(DLSEL.size)})</button></div>`+QD.names.map((n,i)=>{const s=i+1,t=SUD[DLF]?1:QD.text[i].length,d=c[s]||0,full=d>=t,run=ADL==1&&DLP&&DLP.t[s];const act=full?`<button class="dlx" onclick="qdd2(${s})" aria-label="حذف">🗑</button>`:run?`<span class="dpw" onclick="adlStop()" title="اضغط للإيقاف"><button class="dpr" id="dp${s}" style="--p:${Math.round(100*(DLP.c[s]||0)/DLP.t[s])}" aria-label="جارٍ التنزيل"></button><i></i></span>`:DLQS.has(s)?`<button class="dlb dlq" aria-label="في الانتظار" onclick="dlUnq(${s})">⏳</button>`:`<button class="dlb" aria-label="تنزيل" onclick="qdlsur(${s})">⬇</button>`;return `<div class="dlr${full?" ok":""}${DLSEL.has(s)?" sel":""}"${full||run?"":` onclick="dlRow(event,${s})"`}><span class="dln">${full?"✓":DLSEL.has(s)?"☑":AD(s)}</span><span class="dli"><b>${n}</b><small>${full?"محمّلة · تعمل دون إنترنت":d?AD(d)+" من "+AD(t)+" آية":AD(t)+" آية"}</small>${d&&!full?`<i class="dlm"><u style="width:${Math.round(100*d/t)}%"></u></i>`:""}</span><span class="dla">${act}</span></div>`}).join("")}
+ e2.innerHTML=QD.names.map((n,i)=>{const s=i+1,t=SUD[DLF]?1:QD.text[i].length,d=c[s]||0,full=d>=t,run=ADL==1&&DLP&&DLP.t[s];const act=full?`<button class="dlx" onclick="qdd2(${s})" aria-label="حذف">🗑</button>`:run?`<span class="dpw" onclick="adlStop()" title="اضغط للإيقاف"><button class="dpr" id="dp${s}" style="--p:${Math.round(100*(DLP.c[s]||0)/DLP.t[s])}" aria-label="جارٍ التنزيل"></button><i></i></span>`:DLQS.has(s)?`<span class="dpw" onclick="dlUnq(${s})" title="في الانتظار — اضغط للإلغاء"><button class="dpr" style="--p:0" aria-label="في الانتظار"></button></span>`:`<button class="dlb" aria-label="تنزيل" onclick="qdlsur(${s})">⬇</button>`;return `<div class="dlr${full?" ok":""}"><span class="dln">${full?"✓":AD(s)}</span><span class="dli"><b>${n}</b><small>${full?"محمّلة · تعمل دون إنترنت":d?AD(d)+" من "+AD(t)+" آية":AD(t)+" آية"}</small>${d&&!full?`<i class="dlm"><u style="width:${Math.round(100*d/t)}%"></u></i>`:""}</span><span class="dla">${act}</span></div>`}).join("")}
 function adlStop(){if(ADL!=1)return;ADL=2;DLQ.length=0;DLQS.clear();try{ADAC&&ADAC.abort()}catch(e){}try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}qtoast("أُوقف التنزيل");qdrows()}
 function qdlsur(s){adlGo(SUD[DLF]?[[s,1]]:qbsfix(Array.from({length:QD.text[s-1].length},(_,i)=>[s,i+1])),"سورة "+QD.names[s-1],DLF)}
 async function qdd2(s){try{await idbDel("au:"+DLF+"/"+p3(s)+"000")}catch(e){}for(let a=1;a<=QD.text[s-1].length;a++){try{await idbDel("au:"+DLF+"/"+p3(s)+p3(a))}catch(e){}}qdrows();qdlist()}
@@ -2457,6 +2457,10 @@ const ADCSS=`
 #adscr .ln.fin{font-size:clamp(18px,3.05vh,26px);line-height:1.95;min-height:0}
 #adscr.en .hero{height:min(24vh,calc((100vw - 40px) / var(--ar,1)));transition:height .8s}
 #adscr.en .orn{display:none}
+#adscr .top i.t2{margin-top:0;font-size:clamp(12px,1.9vh,15px);color:rgba(231,207,147,.62)}
+#adscr .orn.ayh{letter-spacing:0;text-indent:0;opacity:1;margin-top:clamp(8px,1.8vh,16px);padding:0 22px;text-align:center;font-family:UthmanHafs,"Amiri Quran","Amiri",serif;font-size:clamp(17px,2.9vh,24px);line-height:1.95;background:linear-gradient(180deg,#fff7da 0,#f1cd7a 55%,#c08e36 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;filter:drop-shadow(0 1px 6px rgba(0,0,0,.55))}
+#adscr .orn.ayh span{opacity:.85}
+#adscr .orn.ayh small{display:block;font-size:.58em;line-height:1.4;letter-spacing:.04em;-webkit-text-fill-color:rgba(231,207,147,.75);font-family:inherit}
 #adscr .txt{overflow:hidden}
 #adscr .ln.fin .w{margin:0 .1em}
 #adscr .rp{height:20px;display:flex;gap:7px;align-items:center;justify-content:center;font-size:13px;color:rgba(240,213,138,.75);font-family:system-ui,sans-serif}
@@ -2499,13 +2503,16 @@ function adScr(i,o){try{o=o||{};if(!adScrOn()&&!o.force)return;if(!ADPIC.mk)retu
  const pk=adPnGet(),P=ADPIC[pk],nt=(i==0||i==4||i==5),vr=nt?(P.x?"x":"d"):(P.d?"d":"x"),ar=P["a"+vr]||1;
  const el=document.createElement("div");el.id="adscr";
  el.innerHTML=`<div class="bg" style="background-image:url(${P[vr]})"></div><div class="pt"></div><div class="sh"></div><button class="x" aria-label="إغلاق">✕</button>
-  <div class="top"><small>أذان</small><b>${ADN[ni][1]}</b><i></i></div>
-  <div class="hero" style="--ar:${ar}"><img alt="" src="${P[vr]}"></div><div class="orn">✦ ✦ ✦</div>
+  <div class="top"><small>أذان</small><b>${ADN[ni][1]}</b><i></i><i class="t2"></i></div>
+  <div class="hero" style="--ar:${ar}"><img alt="" src="${P[vr]}"></div><div class="orn ayh"><span>﴿</span> ${(window.QD&&QD.text&&QD.text[3]&&QD.text[3][102])||"إِنَّ ٱلصَّلَوٰةَ كَانَتْ عَلَى ٱلْمُؤْمِنِينَ كِتَٰبًا مَّوْقُوتًا"} <span>﴾</span><small>سورة النساء · ١٠٣</small></div>
   <div class="txt"><div class="hist"></div><div class="ln"></div><div class="rp"></div><div class="pb"><i></i></div></div>
   <div class="ft"><button class="stp">⏹ إيقاف الأذان</button></div>`;
  document.body.appendChild(el);
  const st=o.start||Date.now();
- try{el.querySelector(".top i").textContent=new Date(st).toLocaleTimeString("ar",{hour:"numeric",minute:"2-digit"})}catch(e){}
+ try{const fm=(d,z)=>{const o={hour:"numeric",minute:"2-digit"};if(z){try{return d.toLocaleTimeString("ar",Object.assign({timeZone:z},o))}catch(e){}}return d.toLocaleTimeString("ar",o)},ti=el.querySelectorAll(".top i");
+  let pt=new Date(st);try{const T=times(new Date(st))[i];if(T&&!isNaN(T))pt=T}catch(e){}
+  ti[0].textContent=fm(pt,S.tz)+(S.city?" · بتوقيت "+S.city:"");
+  if(S.city!="مكة المكرمة"){const sv=[S.lat,S.lng,S.adj];let T2=null;S.lat=21.4225;S.lng=39.8262;S.adj=0;try{T2=times(new Date(st))[i]}catch(e){}S.lat=sv[0];S.lng=sv[1];S.adj=sv[2];if(T2&&!isNaN(T2))ti[1].textContent=fm(T2,"Asia/Riyadh")+" · بتوقيت مكة المكرمة"}}catch(e){}
  AS={i,k,el,start:st,demo:!!o.demo,test:!!o.test,fj:i==0,dur:o.dur||adDurC[adS().m]||150,idx:-2,ended:0,wl:null,tm:null,cl:null};
  AS.beats=adLay(AS);
  el.querySelector(".x").onclick=()=>adScrClose(0);
@@ -2531,7 +2538,7 @@ function adScrClose(stop){const a=AS;if(!a)return;AS=null;clearInterval(a.tm);cl
 function adScrNext(){try{const n=new Date(),t=times(n);for(const p of ADN){if(t[p[0]]>n)return p[0]}}catch(e){}return 2}
 function adScrLate(n,t){const c=adS();if(!c.on||!adScrOn()||AS||document.visibilityState!="visible")return;const dk=n.toDateString();
  for(let i=0;i<ADN.length;i++){const p=ADN[i];if(!c.pr[i])continue;const d=n-t[p[0]];if(d>=0&&d<((adDurC[c.m]||150)+15)*1000&&!window.__adDis[dk+"|"+p[0]]){adScr(p[0],{start:+t[p[0]],nat:adNat()});break}}}
-window.adScrNative=function(i){try{const n=new Date(),t=times(n),tm=+t[i];adScr(i,{start:(n-tm>=0&&n-tm<3e5)?tm:Date.now(),nat:1,force:0})}catch(e){}};
+window.adScrNative=function(i){try{const n=new Date(),t=times(n),tm=+t[i],d=n-tm;if(!(d>-6e4&&d<((adDurC[adS().m]||150)+15)*1000))return;adScr(i,{start:d>=0?tm:Date.now(),nat:1,force:0})}catch(e){}};
 setTimeout(()=>{try{const m=/[#?&]adhan=(\d)/.exec(location.href);if(m)window.adScrNative(+m[1])}catch(e){}},1200);
 function adScrSync(){try{const B=window.AdhanScreen;if(!B||!B.set)return;const c=adS(),out=[],now=Date.now();
  if(c.on&&adScrOn()){for(let d=0;d<7;d++){const dt=new Date();dt.setDate(dt.getDate()+d);const t=times(dt);ADN.forEach((p,i)=>{if(!c.pr[i])return;const ms=+t[p[0]];if(ms>now-6e4)out.push([ms,p[0]])})}}

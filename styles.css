@@ -397,3 +397,5 @@ button.gdl{background:#1e9e57;color:#fff;border-color:#1e9e57;font-weight:bold}b
 .dlctl{display:flex;gap:8px;padding:6px 4px 10px;flex-wrap:wrap}.dlctl button{flex:1;min-width:90px;border:1.5px solid var(--ac);background:transparent;color:var(--ac);border-radius:12px;padding:9px 6px;font:inherit;font-weight:bold;font-size:.9em}.dlctl button.dlsel{background:var(--ac);color:#fff}.dlctl button:disabled{opacity:.4}.dlck{width:22px;height:22px;accent-color:var(--ac);flex:none;margin:0}
 
 .dlr{cursor:pointer}.dlr.sel{background:var(--ac2)}.dlr.sel .dln{background:var(--ac);color:#fff}.dlb.dlq{opacity:.65;font-size:15px}
+
+.dlh{padding:10px 12px 10px!important;margin-bottom:10px!important;border-radius:18px!important}.dlic{width:34px!important;height:34px!important;font-size:17px!important;border-radius:11px!important}.dlt small{display:none!important}.dlbar{margin:8px 0 4px!important}.dlst{min-height:0!important}.dlgo{margin-top:6px!important;padding:8px!important;font-size:.92em!important;border-radius:12px!important}.dlr{cursor:default}
