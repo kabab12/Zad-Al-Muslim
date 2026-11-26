@@ -22,6 +22,10 @@ import com.getcapacitor.BridgeActivity;
  */
 public class MainActivity extends BridgeActivity {
     private volatile boolean adhanPlaying = false;
+    /** مهلة أمان: لا يُوقَف الأذان تلقائيًا (فقدان تركيز/شريط الحالة) في أول ثوانٍ لأن فتح اللوحة نفسه يسبب هذه الأحداث */
+    private volatile long adhanGraceUntil = 0;
+    private volatile long screenEventAt = 0;
+    private android.content.BroadcastReceiver screenRx;
     private boolean swallowVolume = false;
     private boolean statusBarVisible = false;
     private static MainActivity sInst;
@@ -47,7 +51,19 @@ public class MainActivity extends BridgeActivity {
     private class AdhanBridge {
         @JavascriptInterface
         public void setPlaying(boolean on) {
+            if (on) adhanGraceUntil = System.currentTimeMillis() + 7000;
             adhanPlaying = on;
+        }
+
+        /** انتهى الأذان أو أُوقف صوته: تبقى اللوحة ظاهرة حتى يغلقها المستخدم، لكن لا نُبقي الشاشة مضاءة بلا نهاية. */
+        @JavascriptInterface
+        public void screenEnded() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try { getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); } catch (Throwable ignored) { }
+                }
+            });
         }
 
         /** أُغلقت لوحة الأذان: إن كانت فوق القفل نرجع إلى شاشة القفل. */
@@ -341,6 +357,20 @@ public class MainActivity extends BridgeActivity {
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
         try { AdhanScreen.schedule(this); } catch (Throwable ignored) { }
         handleAdhanIntent(getIntent());
+        // زر الطاقة (إطفاء/تشغيل الشاشة) لا يوقف شيئًا: نتجاهل أحداث الشاشة والتركيز المصاحبة له
+        try {
+            screenRx = new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(android.content.Context c, android.content.Intent i) {
+                    screenEventAt = System.currentTimeMillis();
+                }
+            };
+            android.content.IntentFilter sf = new android.content.IntentFilter();
+            sf.addAction(android.content.Intent.ACTION_SCREEN_ON);
+            sf.addAction(android.content.Intent.ACTION_SCREEN_OFF);
+            sf.addAction(android.content.Intent.ACTION_USER_PRESENT);
+            registerReceiver(screenRx, sf);
+        } catch (Throwable ignored) { }
 
         // ظهور شريط الحالة (سحب الستارة) يوقف الأذان
         ViewCompat.setOnApplyWindowInsetsListener(getWindow().getDecorView(), (v, insets) -> {
@@ -364,6 +394,7 @@ public class MainActivity extends BridgeActivity {
             it.removeExtra(AdhanScreen.EXTRA_IDX);
             if (idx < 0) return;
             adhanOpened = true;
+            adhanGraceUntil = System.currentTimeMillis() + 10000;
             if (Build.VERSION.SDK_INT >= 27) {
                 setShowWhenLocked(true);
                 setTurnScreenOn(true);
@@ -438,12 +469,25 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onDestroy() {
         if (sInst == this) sInst = null;
+        try { if (screenRx != null) unregisterReceiver(screenRx); } catch (Throwable ignored) { }
         try { if (isFinishing()) AudioShade.cancel(getApplicationContext()); } catch (Throwable ignored) { }
         super.onDestroy();
     }
 
     private void stopAdhan() {
+        stopAdhan(false);
+    }
+
+    private void stopAdhan(boolean force) {
         if (!adhanPlaying) return;
+        if (!force) {
+            long now = System.currentTimeMillis();
+            if (now < adhanGraceUntil || now - screenEventAt < 4000) return;
+            try {
+                android.os.PowerManager pm = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+                if (pm != null && !pm.isInteractive()) return;
+            } catch (Throwable ignored) { }
+        }
         adhanPlaying = false;
         runOnUiThread(() -> {
             try {
@@ -458,7 +502,7 @@ public class MainActivity extends BridgeActivity {
         if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) {
             if (event.getAction() == KeyEvent.ACTION_DOWN && adhanPlaying) {
                 swallowVolume = true;
-                stopAdhan();
+                stopAdhan(true);
                 return true;
             }
             if (swallowVolume) {
@@ -472,6 +516,6 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (!hasFocus) stopAdhan();
+        // لا يوقف فقدانُ التركيز شيئًا: الإيقاف فقط بأزرار الصوت أو بسحب الستارة (شريط الحالة)
     }
 }

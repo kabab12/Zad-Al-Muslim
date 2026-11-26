@@ -2402,7 +2402,7 @@ const adNat=()=>!!window.__adNat&&typeof ADEMB!="undefined"&&!!ADEMB[adS().m];
 const ADA=new Audio();ADA.preload="none";let adUrl="",adPlaying=0;
 function adBtn(on){let b=$("#adstop");if(!b){b=document.createElement("button");b.id="adstop";b.textContent="⏹ إيقاف الأذان";b.onclick=adStop;document.body.appendChild(b)}b.classList.toggle("on",!!on);try{if(window.AdhanNative)AdhanNative.setPlaying(!!on)}catch(e){}}
 function adStop(){try{ADA.pause();ADA.removeAttribute("src");ADA.load()}catch(e){}adPlaying=0;adBtn(0);if(adUrl){try{URL.revokeObjectURL(adUrl)}catch(e){}adUrl=""}}
-ADA.onended=()=>{adPlaying=0;adBtn(0);try{adScrEnded()}catch(e){}};window.adStopNative=function(){if(adPlaying)adStop();try{adScrClose(0)}catch(e){}return 1};
+ADA.onended=()=>{adPlaying=0;adBtn(0);try{adScrEnded()}catch(e){}};window.adStopNative=function(){if(adPlaying)adStop();try{window.AdhanScreen&&AdhanScreen.stopSound()}catch(e){}try{adScrEnded()}catch(e){}return 1};
 let adFb=0;
 async function adFallback(){adFb=1;adStop();qtoast("تعذّر تحميل صوت هذا المؤذن من الإنترنت، فشُغِّل أذان نورين المضمّن بدلًا منه.",7000);
  if(typeof ADEMB=="undefined"||!ADEMB.noreen)return false;
@@ -2516,7 +2516,7 @@ function adScr(i,o){try{o=o||{};if(!adScrOn()&&!o.force)return;if(!ADPIC.mk)retu
  AS={i,k,el,start:st,demo:!!o.demo,test:!!o.test,fj:i==0,dur:o.dur||adDurC[adS().m]||150,idx:-2,ended:0,wl:null,tm:null,cl:null};
  AS.beats=adLay(AS);
  el.querySelector(".x").onclick=()=>adScrClose(0);
- el.querySelector(".stp").onclick=()=>{if(AS&&AS.ended){adScrClose(0)}else adScrClose(1)};
+ el.querySelector(".stp").onclick=()=>{if(AS&&AS.ended){adScrClose(0)}else{if(adPlaying)adStop();try{window.AdhanScreen&&AdhanScreen.stopSound()}catch(e){}adScrEnded()}};
  requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add("on")));
  AS.tm=setInterval(adScrTick,200);adScrTick();adWl();
  if(!o.demo&&!adDurC[adS().m]){adDurLoad().then(d=>{if(AS&&AS.k==k&&d>20&&!(adPlaying&&isFinite(ADA.duration)&&ADA.duration>20)){AS.dur=d;AS.beats=adLay(AS)}})}
@@ -2531,7 +2531,7 @@ function adScrTick(){const a=AS;if(!a)return;let t;
  pb.style.width=Math.min(100,Math.max(0,t/a.dur*100)).toFixed(1)+"%";
  if(ix!=a.idx){const b=a.beats[ix];a.idx=ix;ln.className="ln";ln.innerHTML=adScrWords(b.t);h.textContent=ix>0?a.beats[ix-1].t:"";
   rp.innerHTML=b.n>1?Array.from({length:b.n},(_,j)=>`<i class="${j<b.k?"on":""}"></i>`).join(""):""}}
-function adScrEnded(){const a=AS;if(!a||a.ended)return;a.ended=1;a.idx=-8;clearTimeout(a.cl);a.cl=setTimeout(()=>{if(AS===a)adScrClose(0)},9e4)}
+function adScrEnded(){const a=AS;if(!a||a.ended)return;a.ended=1;a.idx=-8;clearTimeout(a.cl);try{a.wl&&a.wl.release();a.wl=null}catch(e){}try{window.AdhanNative&&AdhanNative.screenEnded&&AdhanNative.screenEnded()}catch(e){}}
 function adScrClose(stop){const a=AS;if(!a)return;AS=null;clearInterval(a.tm);clearTimeout(a.cl);try{a.wl&&a.wl.release()}catch(e){}
  if(!a.demo)window.__adDis[a.k]=1;if(stop){if(adPlaying){try{adStop()}catch(e){}}try{window.AdhanScreen&&AdhanScreen.stopSound()}catch(e){}}try{window.AdhanNative&&AdhanNative.screenClosed&&AdhanNative.screenClosed()}catch(e){}
  a.el.classList.remove("on");setTimeout(()=>{try{a.el.remove()}catch(e){}},750)}
