@@ -33,6 +33,8 @@ public class MainActivity extends BridgeActivity {
     static volatile boolean sVisible = false;
     /** وقت آخر أذان (يُضبط من AdhanScreenReceiver) */
     static volatile long sAdhanAt = 0;
+    /** وقت آخر إسكات للأذان بزر الصوت (يُضبط من AdhanService) */
+    static volatile long sSilencedAt = 0;
     private boolean adhanOpened = false;
     /** غطاء أصلي فوري يظهر لحظة الأذان حتى تُحمَّل صفحة الويب (التحميل البارد يستغرق ثوانٍ) */
     private android.view.View adhanCover = null;
