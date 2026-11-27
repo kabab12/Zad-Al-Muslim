@@ -420,8 +420,13 @@ public class MainActivity extends BridgeActivity {
         try {
             if (it == null || !it.hasExtra(AdhanScreen.EXTRA_IDX)) return;
             final int idx = it.getIntExtra(AdhanScreen.EXTRA_IDX, -1);
+            final long fms = it.getLongExtra("ms", 0);
             it.removeExtra(AdhanScreen.EXTRA_IDX);
+            it.removeExtra("ms");
             if (idx < 0) return;
+            // لا تُعرض اللوحة إلا في وقت الأذان نفسه؛ نية قديمة (إعادة فتح من التطبيقات الأخيرة…) تُتجاهل
+            long dlt = System.currentTimeMillis() - fms;
+            if (fms <= 0 || dlt < -10000 || dlt > 100000L) return;
             adhanOpened = true;
             adhanGraceUntil = System.currentTimeMillis() + 10000;
             if (Build.VERSION.SDK_INT >= 27) {

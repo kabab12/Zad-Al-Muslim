@@ -29,7 +29,7 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
                 // اللوحة لا تظهر إلا في وقت الأذان نفسه (حتى 90 ثانية تأخيرًا كحدّ أقصى)؛ بعد ذلك لا تُعرض
                 if (idx >= 0 && d > -5000 && d < 90 * 1000L) {
                     if (MainActivity.sVisible) MainActivity.fireAdhanJs(idx);
-                    else show(c, idx);
+                    else show(c, idx, ms);
                 }
             }
         } catch (Throwable ignored) {
@@ -40,7 +40,7 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
         }
     }
 
-    private void show(Context c, int idx) {
+    private void show(Context c, int idx, long ms) {
         // يشغّل الشاشة فورًا مهما كانت حالة الهاتف (مطفأة/مقفلة/Doze)
         try {
             android.os.PowerManager pm = (android.os.PowerManager) c.getSystemService(Context.POWER_SERVICE);
@@ -57,6 +57,7 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
         Intent open = new Intent(c, MainActivity.class)
                 .setAction("com.zadalmuslim.app.OPEN_ADHAN")
                 .putExtra(AdhanScreen.EXTRA_IDX, idx)
+                .putExtra("ms", ms)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         int fl = PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0);
         PendingIntent pi = PendingIntent.getActivity(c, 7410 + idx, open, fl);
