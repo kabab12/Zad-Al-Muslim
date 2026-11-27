@@ -65,7 +65,7 @@ test -f "$AS"
 cp "$AS" "$(dirname "$F")/AndroidSilent.java"
 
 # native: scheduled silent-mode receiver + notification-shade "stop" button for Quran/Hisn audio
-for J in SilentReceiver AudioShade AudioStopReceiver ZadFiles KeepService AdhanScreen AdhanScreenReceiver DlService ZadDl; do
+for J in SilentReceiver AudioShade AudioStopReceiver ZadFiles KeepService AdhanScreen AdhanScreenReceiver AdhanService DlService ZadDl; do
   JS_SRC="$J.java"
   if [ -f "native/$J.java" ]; then JS_SRC="native/$J.java"; fi
   test -f "$JS_SRC"
@@ -139,6 +139,8 @@ if "KeepService" not in m:
     add += '        <service android:name=".KeepService" android:exported="false" android:foregroundServiceType="mediaPlayback" />\n'
 if "DlService" not in m:
     add += '        <service android:name=".DlService" android:exported="false" android:foregroundServiceType="dataSync" />\n'
+if "AdhanService" not in m:
+    add += '        <service android:name=".AdhanService" android:exported="false" android:foregroundServiceType="mediaPlayback" />\n'
 if "AudioStopReceiver" not in m:
     add += '        <receiver android:name=".AudioStopReceiver" android:exported="false" />\n'
 if add:
