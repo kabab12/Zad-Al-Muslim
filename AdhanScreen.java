@@ -48,9 +48,34 @@ public class AdhanScreen {
         }
     }
 
-    /** يوقف صوت إشعار الأذان (زر «إيقاف الأذان» في اللوحة). */
+    /** إعداد الأذان من الصفحة: {m: المؤذن, vol: الصوت 0..1, scr: عرض اللوحة 0/1, ok: تشغيل الأذان من الخدمة الأصلية 0/1} */
+    @JavascriptInterface
+    public void cfg(String json) {
+        try {
+            new org.json.JSONObject(json == null ? "{}" : json);
+            prefs(ctx).edit().putString("cfg", json == null ? "{}" : json).apply();
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** هل صوت هذا المؤذن مضمّن كمورد خام داخل التطبيق (تشغّله الخدمة الأصلية)؟ */
+    @JavascriptInterface
+    public boolean hasRaw(String m) {
+        try {
+            if (m == null || !m.matches("[a-z0-9_]+")) return false;
+            return ctx.getResources().getIdentifier("adhan_" + m, "raw", ctx.getPackageName()) != 0;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** يوقف صوت الأذان: الخدمة الأصلية، وأي إشعار أذان بصوت قناة (زر «إيقاف الأذان» في اللوحة). */
     @JavascriptInterface
     public void stopSound() {
+        try {
+            AdhanService.stop(ctx);
+        } catch (Throwable ignored) {
+        }
         try {
             NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
             if (Build.VERSION.SDK_INT >= 23) {

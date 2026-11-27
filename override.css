@@ -5,7 +5,7 @@
 #qv.qrd #qtx .v{-webkit-text-stroke:.0125em currentColor}
 #qv.qrd.qold #qtx .ml:not(.qb):not(.qbs){transform:scaleY(1.08)}
 /* «لا» بخط النظام العربي في درجات التكبير ونمط القراءة فقط */
-#qv.qrd #qtx .lg{font-family:"Noto Naskh Arabic","Droid Arabic Naskh","Noto Sans Arabic",serif;font-weight:600;-webkit-text-stroke:0}
+#qv.qrd #qtx .lg{font-family:inherit;font-weight:inherit;-webkit-text-stroke:inherit}
 
 /* حصن المسلم: الوضع الأفقي — النص يتمرّر في عموده وزر العدّ بجانبه بدل أن ينكمش النص إلى صفر */
 .hz{display:flex;flex-direction:column;height:100%;min-height:0;gap:8px}

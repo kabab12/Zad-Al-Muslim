@@ -36,6 +36,8 @@ public class AndroidSilent {
     static final String K_FOREIGN = "foreign";  // كان المستخدم نفسه في وضع مساوٍ أو أشد: لا نلمسه
     static final String K_WIN = "win";          // نوافذ الصمت (JSON)
     static final String K_ACTIVE = "active";    // هل نحن الآن داخل نافذة فعّلناها
+    static final String K_TRIES = "tries";      // عدد محاولات الفك الفاشلة المتتالية
+    static final String K_SET = "setours";      // ضبطنا «المنبّهات فقط» ولم نتأكد بعد من الاستعادة
     static final String K_LASTWS = "lastws";    // بداية آخر نافذة فعّلناها (لا نعيد تفعيلها إن ألغاها المستخدم يدويًا)
     static final String ACTION_TICK = "com.zadalmuslim.app.SILENT_TICK";
     static final int REQ_TICK = 7301;
@@ -227,21 +229,40 @@ public class AndroidSilent {
             int ours = NotificationManager.INTERRUPTION_FILTER_ALARMS;
             SharedPreferences s = prefs(c);
             if (s.getInt(K_PREV, -1) == -1) {
+                // إن كان الوضع الحالي «المنبّهات فقط» وكنا نحن من ضبطه سابقًا ولم تتأكد استعادته،
+                // فهو عالق من فكٍّ فاشل (وليس اختيار المستخدم): نعتبر الأصل «الكل» لنفكّه في نهاية النافذة
+                boolean stuck = (cur == ours) && s.getBoolean(K_SET, false);
                 // لو كان المستخدم أصلًا في «المنبّهات فقط» أو «صمت تام» فلا نغيّر شيئًا ولا نستعيد شيئًا
-                boolean foreign = (cur == ours || cur == NotificationManager.INTERRUPTION_FILTER_NONE);
-                int keep = (cur == NotificationManager.INTERRUPTION_FILTER_UNKNOWN)
+                boolean foreign = !stuck && (cur == ours || cur == NotificationManager.INTERRUPTION_FILTER_NONE);
+                int keep = (cur == NotificationManager.INTERRUPTION_FILTER_UNKNOWN || stuck)
                         ? NotificationManager.INTERRUPTION_FILTER_ALL : cur;
                 s.edit().putInt(K_PREV, keep).putBoolean(K_FOREIGN, foreign).apply();
             }
             s.edit().putInt(K_OURS, ours).apply();
             if (s.getBoolean(K_FOREIGN, false)) return true;
-            if (cur != ours) m.setInterruptionFilter(ours);
+            if (cur != ours) {
+                s.edit().putBoolean(K_SET, true).apply();
+                m.setInterruptionFilter(ours);
+            }
             // بعض الهواتف (شاومي/سامسونج) تُرجع قيمة مختلفة عند القراءة بعد الضبط، فلا نعتمد عليها:
-            // يكفي أن الأمر نُفّذ بلا استثناء، ونحتفظ بالحالة لنفكّها في وقتها (كان اشتراط التطابق يجعلنا ننسى الفك)
+            // يكفي أن الأمر نُفّذ بلا استثناء، ونحتفظ بالحالة لنفكّها في وقتها
             return true;
         } catch (Throwable t) {
             return false;
         }
+    }
+
+    /** ينتظر قليلًا (حتى ~1.2 ثانية) ليأخذ النظام الأمر، ويُرجع القراءة الأخيرة */
+    private static int waitFilter(NotificationManager m, int want) {
+        int cur = m.getCurrentInterruptionFilter();
+        for (int i = 0; i < 8 && cur != want; i++) {
+            try {
+                Thread.sleep(150);
+            } catch (Throwable ignored) {
+            }
+            cur = m.getCurrentInterruptionFilter();
+        }
+        return cur;
     }
 
     static boolean endNow(Context c) {
@@ -249,22 +270,35 @@ public class AndroidSilent {
         int prev = s.getInt(K_PREV, -1);
         boolean foreign = s.getBoolean(K_FOREIGN, false);
         if (prev == -1 || foreign) {
-            s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).apply();
+            s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).remove(K_TRIES).remove(K_SET).apply();
             return true;
         }
         try {
             if (!hasAccess(c)) {
                 // لا إذن فلا فائدة من إعادة المحاولة؛ نمسح الحالة حتى لا ندور للأبد
-                s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).apply();
+                s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).remove(K_TRIES).apply();
                 return false;
             }
             NotificationManager m = nm(c);
-            // كنا نستعيد فقط إن كانت القراءة مساوية لما ضبطناه، فيعلق الهاتف في الصمت إن أرجع النظام قيمة أخرى.
-            // الآن نستعيد دائمًا ما لم يكن الوضع الحالي هو الأصلي نفسه.
-            if (m.getCurrentInterruptionFilter() != prev) m.setInterruptionFilter(prev);
-            // نمسح الحالة بعد نجاح الاستعادة فقط؛ وإن فشلت نُبقيها لتُعاد المحاولة
-            s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).apply();
-            return true;
+            int ours = NotificationManager.INTERRUPTION_FILTER_ALARMS;
+            int tries = s.getInt(K_TRIES, 0) + 1;
+            // كان الفك يُنفَّذ فقط إن اختلفت القراءة عن الأصل، وكنا نمسح الحالة ونعلن «انتهى الصمت» دون تحقق؛
+            // فإن لم يأخذ النظام الأمر (أو أرجع قراءة خاطئة) بقي الهاتف صامتًا. الآن نُرسل الأمر دائمًا ونتحقق.
+            m.setInterruptionFilter(prev);
+            int cur = waitFilter(m, prev);
+            if (cur == ours && tries >= 2) {
+                // ما زال عالقًا بعد محاولة سابقة: نعيد «الكل» صراحةً
+                m.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL);
+                cur = waitFilter(m, NotificationManager.INTERRUPTION_FILTER_ALL);
+            }
+            boolean stuck = (cur == ours);
+            if (!stuck || tries >= 5) {
+                s.edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).remove(K_TRIES).remove(K_SET).apply();
+                return true;
+            }
+            // لم يُفكّ: نُبقي الحالة ونعيد المحاولة بعد 30 ثانية (حتى 5 مرات)
+            s.edit().putInt(K_TRIES, tries).apply();
+            return false;
         } catch (Throwable t) {
             return false;
         }
@@ -387,7 +421,7 @@ public class AndroidSilent {
     @JavascriptInterface
     public boolean release() {
         try {
-            prefs(ctx).edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).putBoolean(K_ACTIVE, false).apply();
+            prefs(ctx).edit().remove(K_PREV).remove(K_OURS).remove(K_FOREIGN).remove(K_TRIES).remove(K_SET).putBoolean(K_ACTIVE, false).apply();
             if (!hasAccess(ctx)) return false;
             nm(ctx).setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL);
             return true;

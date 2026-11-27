@@ -28,8 +28,14 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
                 long d = System.currentTimeMillis() - ms;
                 // اللوحة لا تظهر إلا في وقت الأذان نفسه (حتى 90 ثانية تأخيرًا كحدّ أقصى)؛ بعد ذلك لا تُعرض
                 if (idx >= 0 && d > -5000 && d < 90 * 1000L) {
-                    if (MainActivity.sVisible) MainActivity.fireAdhanJs(idx);
-                    else show(c, idx, ms);
+                    MainActivity.sAdhanAt = System.currentTimeMillis();
+                    org.json.JSONObject cfg = cfg(c);
+                    boolean scr = cfg == null || cfg.optInt("scr", 1) != 0;
+                    boolean svc = startService(c, cfg, idx, ms, scr);
+                    if (scr) {
+                        if (MainActivity.sVisible) MainActivity.fireAdhanJs(idx);
+                        else show(c, idx, ms, svc);
+                    }
                 }
             }
         } catch (Throwable ignored) {
@@ -40,7 +46,30 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
         }
     }
 
-    private void show(Context c, int idx, long ms) {
+    private static org.json.JSONObject cfg(Context c) {
+        try {
+            return new org.json.JSONObject(AdhanScreen.prefs(c).getString("cfg", "{}"));
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** الأذان من الخدمة الأصلية (مجرى صوت المنبّه) إن كان المؤذن مضمّنًا */
+    private static boolean startService(Context c, org.json.JSONObject cfg, int idx, long ms, boolean scr) {
+        try {
+            if (cfg == null || cfg.optInt("ok", 0) == 0) return false;
+            String m = cfg.optString("m", "noreen");
+            if (m.length() == 0 || !m.matches("[a-z0-9_]+")) m = "noreen";
+            if (c.getResources().getIdentifier("adhan_" + m, "raw", c.getPackageName()) == 0) return false;
+            float vol = (float) cfg.optDouble("vol", 1.0);
+            AdhanService.start(c, idx, ms, m, vol, scr);
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private void show(Context c, int idx, long ms, boolean svc) {
         // يشغّل الشاشة فورًا مهما كانت حالة الهاتف (مطفأة/مقفلة/Doze)
         try {
             android.os.PowerManager pm = (android.os.PowerManager) c.getSystemService(Context.POWER_SERVICE);
@@ -85,7 +114,7 @@ public class AdhanScreenReceiver extends BroadcastReceiver {
                 .setTimeoutAfter(4 * 60 * 1000L)
                 .setContentIntent(pi)
                 .setFullScreenIntent(pi, true);
-        nm.notify(AdhanScreen.NID, b.build());
+        if (!svc) nm.notify(AdhanScreen.NID, b.build());   // مع الخدمة الأصلية إشعارها نفسه يحمل اللوحة وزر الإيقاف
         // إن كان إذن «الظهور فوق التطبيقات» ممنوحًا يُسمح بفتح الشاشة مباشرة من الخلفية
         try {
             if (Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(c)) c.startActivity(open);

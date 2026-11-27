@@ -21,6 +21,9 @@ import com.getcapacitor.BridgeActivity;
  *  - AudioShade: إشعار «إيقاف» في الستارة يوقف القرآن/الأذكار دون فتح التطبيق.
  */
 public class MainActivity extends BridgeActivity {
+    /** وقت آخر أذان وصل (يضبطه AdhanScreenReceiver) ووقت آخر إيقاف بزر الصوت: لئلا يُعاد الأذان بعد إيقافه */
+    static volatile long sAdhanAt = 0;
+    static volatile long sSilencedAt = 0;
     private volatile boolean adhanPlaying = false;
     /** مهلة أمان: لا يُوقَف الأذان تلقائيًا (فقدان تركيز/شريط الحالة) في أول ثوانٍ لأن فتح اللوحة نفسه يسبب هذه الأحداث */
     private volatile long adhanGraceUntil = 0;
@@ -449,7 +452,12 @@ public class MainActivity extends BridgeActivity {
                 h.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        try { getBridge().getWebView().evaluateJavascript(js, null); } catch (Throwable ignored) { }
+                        try {
+                            // بعد أن أوقف المستخدم الأذان بزر الصوت لا نعيد عرض اللوحة ولا الصوت
+                            String run = (System.currentTimeMillis() - sSilencedAt < 180000L)
+                                    ? js + ";window.__adSilence&&window.__adSilence()" : js;
+                            getBridge().getWebView().evaluateJavascript(run, null);
+                        } catch (Throwable ignored) { }
                     }
                 }, d);
             }
@@ -570,6 +578,14 @@ public class MainActivity extends BridgeActivity {
         super.onDestroy();
     }
 
+    private void silenceAdhanJs() {
+        runOnUiThread(() -> {
+            try {
+                getBridge().getWebView().evaluateJavascript("window.__adSilence&&window.__adSilence()", null);
+            } catch (Throwable ignored) { }
+        });
+    }
+
     private void stopAdhan() {
         stopAdhan(false);
     }
@@ -596,10 +612,26 @@ public class MainActivity extends BridgeActivity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         int code = event.getKeyCode();
         if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            // الأذان يُشغَّل من الخدمة الأصلية: زر الصوت يوقفه ولا تختفي اللوحة
+            if (event.getAction() == KeyEvent.ACTION_DOWN && AdhanService.sPlaying) {
+                swallowVolume = true;
+                sSilencedAt = System.currentTimeMillis();
+                AdhanService.stop(this);
+                silenceAdhanJs();
+                return true;
+            }
             if (event.getAction() == KeyEvent.ACTION_DOWN && adhanPlaying) {
                 swallowVolume = true;
+                sSilencedAt = System.currentTimeMillis();
                 stopAdhan(true);
+                silenceAdhanJs();
                 return true;
+            }
+            // الأذان يصدر من إشعار النظام (الصفحة لا تشغّله): زر الصوت خلال دقيقتين من وقته يوقفه ويعلّمه «تم»
+            if (event.getAction() == KeyEvent.ACTION_DOWN
+                    && (adhanOpened || System.currentTimeMillis() - sAdhanAt < 120000L)) {
+                sSilencedAt = System.currentTimeMillis();
+                silenceAdhanJs();
             }
             if (swallowVolume) {
                 if (event.getAction() == KeyEvent.ACTION_UP) swallowVolume = false;

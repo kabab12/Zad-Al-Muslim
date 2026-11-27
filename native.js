@@ -199,7 +199,7 @@
 
       /* توقيع إعدادات التنبيهات: لا نعيد الجدولة إلا إذا تغيّر شيء مؤثّر (نتجاهل ما يتغير باستمرار كموضع التلاوة) */
       var VOL={wd:1,wdH:1,qres:1,ql:1,qp:1,qn:1,ntl:1,adl:1,nlog:1,ntI:1,silOn:1,silWarn:1,lastOpen:1};
-      var sigNow=function(){try{return "nx4|"+JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
+      var sigNow=function(){try{return "nx5|"+JSON.stringify(S,function(k,v){return VOL[k]?undefined:v})}catch(e){return String(Date.now())}};
       var lastSig=(function(){try{return localStorage.getItem("zadSchedSig")||""}catch(e){return""}})(),lastAt=0;
       var schedule=function(force){
         if(busy){again=true;return}
