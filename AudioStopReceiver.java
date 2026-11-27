@@ -8,6 +8,11 @@ import android.content.Intent;
 public class AudioStopReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent != null && DlService.ACTION_STOP.equals(intent.getAction())) {
+            try { DlService.stop(context); } catch (Throwable ignored) { }
+            try { MainActivity.evalJs("window.__zadDlStop&&window.__zadDlStop()"); } catch (Throwable ignored) { }
+            return;
+        }
         try {
             AudioShade.cancel(context);
         } catch (Throwable ignored) {

@@ -266,7 +266,7 @@ function set(){
 function fs(d){S.fs=Math.max(14,Math.min(34,S.fs+d));apply();save()}
 function pick(n){const c=CITIES.find(x=>x[0]==n);S.city=n;S.lat=c[1];S.lng=c[2];S.tz=c[3];S.chosen=1;S.gps=0;save()}
 
-function apply(){const r=document.documentElement;r.style.setProperty("--fs",S.fs+"px");const T=S.theme||"auto";T=="auto"?r.removeAttribute("data-theme"):r.setAttribute("data-theme",T);try{const dk=T=="dark"||(T=="auto"&&matchMedia("(prefers-color-scheme:dark)").matches);r.style.colorScheme=dk?"dark":"light";try{qsyncTheme()}catch(e){}let m=document.querySelector('meta[name="theme-color"]');if(m)m.content=dk?"#0e1815":"#0f6b4f"}catch(e){}}
+function apply(){const r=document.documentElement;r.style.setProperty("--fs",S.fs+"px");const T=S.theme||"auto";T=="auto"?r.removeAttribute("data-theme"):r.setAttribute("data-theme",T);try{const dk=T=="dark"||(T=="auto"&&matchMedia("(prefers-color-scheme:dark)").matches);r.style.colorScheme=dk?"dark":"light";let m=document.querySelector('meta[name="theme-color"]');if(m)m.content=dk?"#0e1815":"#0f6b4f"}catch(e){}}
 try{matchMedia("(prefers-color-scheme:dark)").addEventListener("change",()=>{if((S.theme||"auto")=="auto")apply()})}catch(e){}
 const CH=["أذكار الاستيقاظ من النوم","دعاء لبس الثوب","دعاء لبس الثوب الجديد","الدعاء لمن لبس ثوبا جديدا","ما يقول إذا وضع ثوبه","دعاء دخول الخلاء","دعاء الخروج من الخلاء","الذكر قبل الوضوء","الذكر بعد الفراغ من الوضوء","الذكر عند الخروج من المنزل","الذكر عند دخول المنزل","دعاء الذهاب إلى المسجد","دعاء دخول المسجد","دعاء الخروج من المسجد","أذكار الأذان","دعاء الاستفتاح","دعاء الركوع","دعاء الرفع من الركوع","دعاء السجود","دعاء الجلسة بين السجدتين","دعاء سجود التلاوة","التشهد","الصلاة على النبي ﷺ بعد التشهد","الدعاء بعد التشهد الأخير قبل السلام","الأذكار بعد السلام من الصلاة","دعاء صلاة الاستخارة","أذكار الصباح والمساء","أذكار النوم","الدعاء إذا تقلب ليلا","دعاء الفزع في النوم ومن بلي بالوحشة","ما يفعل من رأى الرؤيا أو الحلم","دعاء قنوت الوتر","الذكر عقب السلام من الوتر","دعاء الهم والحزن","دعاء الكرب","دعاء لقاء العدو وذي السلطان","دعاء من خاف ظلم السلطان","الدعاء على العدو","ما يقول من خاف قوما","دعاء من أصابه وسوسة في الإيمان","دعاء قضاء الدين","دعاء الوسوسة في الصلاة والقراءة","دعاء من استصعب عليه أمر","ما يقول ويفعل من أذنب ذنبا","دعاء طرد الشيطان ووساوسه","الدعاء حينما يقع ما لا يرضاه أو غلب على أمره","تهنئة المولود له وجوابه","ما يعوذ به الأولاد","الدعاء للمريض في عيادته","فضل عيادة المريض","دعاء المريض الذي يئس من حياته","تلقين المحتضر","دعاء من أصيب بمصيبة","الدعاء عند إغماض الميت","الدعاء للميت في الصلاة عليه","الدعاء للفرط في الصلاة عليه","دعاء التعزية","الدعاء عند إدخال الميت القبر","الدعاء بعد دفن الميت","دعاء زيارة القبور","دعاء الريح","دعاء الرعد","من أدعية الاستسقاء","الدعاء إذا رأى المطر","الذكر بعد نزول المطر","من أدعية الاستصحاء","دعاء رؤية الهلال","الدعاء عند إفطار الصائم","الدعاء قبل الطعام","الدعاء عند الفراغ من الطعام","دعاء الضيف لصاحب الطعام","التعريض بالدعاء لطلب الطعام أو الشراب","الدعاء إذا أفطر عند أهل بيت","دعاء الصائم إذا حضر الطعام ولم يفطر","ما يقول الصائم إذا سابه أحد","الدعاء عند رؤية باكورة الثمر","دعاء العطاس","ما يقال للكافر إذا عطس فحمد الله","الدعاء للمتزوج","دعاء المتزوج وشراء الدابة","الدعاء قبل إتيان الزوجة","دعاء الغضب","دعاء من رأى مبتلى","ما يقال في المجلس","كفارة المجلس","الدعاء لمن قال غفر الله لك","الدعاء لمن صنع إليك معروفا","ما يعصم الله به من الدجال","الدعاء لمن قال إني أحبك في الله","الدعاء لمن عرض عليك ماله","الدعاء لمن أقرض عند القضاء","دعاء الخوف من الشرك","الدعاء لمن قال بارك الله فيك","دعاء كراهية الطيرة","دعاء الركوب","دعاء السفر","دعاء دخول القرية أو البلدة","دعاء دخول السوق","الدعاء إذا تعس المركوب","دعاء المسافر للمقيم","دعاء المقيم للمسافر","التكبير والتسبيح في سير السفر","دعاء المسافر إذا أسحر","الدعاء إذا نزل منزلا في سفر أو غيره","ذكر الرجوع من السفر","ما يقول من أتاه أمر يسره أو يكرهه","فضل الصلاة على النبي ﷺ","إفشاء السلام","كيف يرد السلام على الكافر إذا سلم","الدعاء عند سماع صياح الديك ونهيق الحمار","الدعاء عند سماع نباح الكلاب بالليل","الدعاء لمن سببته","ما يقول المسلم إذا مدح المسلم","ما يقول المسلم إذا زكي","كيف يلبي المحرم في الحج أو العمرة","التكبير إذا أتى الحجر الأسود","الدعاء بين الركن اليماني والحجر الأسود","دعاء الوقوف على الصفا والمروة","الدعاء يوم عرفة","الذكر عند المشعر الحرام","التكبير عند رمي الجمار مع كل حصاة","دعاء التعجب والأمر السار","ما يفعل من أتاه أمر يسره","ما يفعل ويقول من أحس وجعا في جسده","دعاء من خشي أن يصيب شيئا بعينه","ما يقال عند الفزع","ما يقول عند الذبح أو النحر","ما يقول لرد كيد مردة الشياطين","الاستغفار والتوبة","فضل التسبيح والتحميد، والتهليل، والتكبير","كيف كان النبي ﷺ يسبح؟","من أنواع الخير والآداب الجامعة"];
 const HD={0:[["«الْحَمْدُ للَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا، وَإِلَيْهِ النُّشُورُ»",1,"البخاري مع الفتح، ١١/ ١١٣، برقم ٦٣١٤، ومسلم، ٤/ ٢٠٨٣، برقم ٢٧١١."],["«لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَريكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ، سُبْحَانَ اللَّهِ، وَالْحَمْدُ للَّهِ، وَلاَ إِلَهَ إِلاَّ اللَّهُ، وَاللَّهُ أَكبَرُ، وَلاَ حَوْلَ وَلاَ قُوَّةَ إِلاَّ بِاللَّهِ الْعَلِيِّ الْعَظِيمِ، رَبِّ اغْفرْ لِي»",1,"من قال ذلك غُفِرَ له، فإن دعا استجيب له، فإن قام فتوضأ ثم صلى قُبلت صلاته، البخاري مع الفتح، ٣/ ٣٩، برقم ١١٥٤، وغيره، واللفظ لابن ماجه، انظر: صحيح ابن ماجه، ٢/ ٣٣٥."],["«الْحَمْدُ لِلَّهِ الَّذِي عَافَانِي فِي جَسَدِي، وَرَدَّ عَلَيَّ رُوحِي، وَأَذِنَ لي بِذِكْرِهِ»",1,"الترمذي، ٥/ ٤٧٣، برقم ٣٤٠١، وانظر: صحيح الترمذي، ٣/ ١٤٤."],["«﴿إِنَّ فِي خَلْقِ السَّمَوَاتِ وَالأَرْضِ وَاخْتِلاَفِ اللَّيْلِ وَالنَّهَارِ لَآيَاتٍ لأُوْلِي الألْبَابِ * الَّذِينَ يَذْكُرُونَ اللَّهَ قِيَامًا وَقُعُودًا وَعَلَىَ جُنُوبِهِمْ وَيَتَفَكَّرُونَ فِي خَلْقِ السَّمَوَاتِ وَالأَرْضِ رَبَّنَا مَا خَلَقْتَ هَذا بَاطِلًا سُبْحَانَكَ فَقِنَا عَذَابَ النَّارِ* رَبَّنَا إِنَّكَ مَن تُدْخِلِ النَّارَ فَقَدْ أَخْزَيْتَهُ وَمَا لِلظَّالِمِينَ مِنْ أَنصَارٍ* رَّبَّنَا إِنَّنَا سَمِعْنَا مُنَادِيًا يُنَادِي لِلإِيمَانِ أَنْ آمِنُواْ بِرَبِّكُمْ فَآمَنَّا رَبَّنَا فَاغْفِرْ لَنَا ذُنُوبَنَا وَكَفِّرْ عَنَّا سَيِّئَاتِنَا وَتَوَفَّنَا مَعَ الأبْرَارِ* رَبَّنَا وَآتِنَا مَا وَعَدتَّنَا عَلَى رُسُلِكَ وَلاَ تُخْزِنَا يَوْمَ الْقِيَامَةِ إِنَّكَ لاَ تُخْلِفُ الْمِيعَادَ* فَاسْتَجَابَ لَهُمْ رَبُّهُمْ أَنِّي لاَ أُضِيعُ عَمَلَ عَامِلٍ مِّنكُم مِّن ذَكَرٍ أَوْ أُنثَى بَعْضُكُم مِّن بَعْضٍ فَالَّذِينَ هَاجَرُواْ وَأُخْرِجُواْ مِن دِيَارِهِمْ وَأُوذُواْ فِي سَبِيلِي وَقَاتَلُواْ وَقُتِلُواْ لأُكَفِّرَنَّ عَنْهُمْ سَيِّئَاتِهِمْ وَلأُدْخِلَنَّهُمْ جَنَّاتٍ تَجْرِي مِن تَحْتِهَا الأَنْهَارُ ثَوَابًا مِّن عِندِ اللَّهِ وَاللَّهُ عِندَهُ حُسْنُ الثَّوَابِ * لاَ يَغُرَّنَّكَ تَقَلُّبُ الَّذِينَ كَفَرُواْ فِي الْبِلاَدِ * مَتَاعٌ قَلِيلٌ ثُمَّ مَأْوَاهُمْ جَهَنَّمُ وَبِئْسَ الْمِهَادُ * لَكِنِ الَّذِينَ اتَّقَوْاْ رَبَّهُمْ لَهُمْ جَنَّاتٌ تَجْرِي مِنْ تَحْتِهَا الأَنْهَارُ خَالِدِينَ فِيهَا نُزُلًا مِّنْ عِندِ اللَّهِ وَمَا عِندَ اللَّهِ خَيْرٌ لِّلأَبْرَارِ * وَإِنَّ مِنْ أَهْلِ الْكِتَابِ لَمَن يُؤْمِنُ بِاللَّهِ وَمَا أُنزِلَ إِلَيْكُمْ وَمَآ أُنزِلَ إِلَيْهِمْ خَاشِعِينَ لِلَّهِ لاَ يَشْتَرُونَ بِآيَاتِ اللَّهِ ثَمَنًا قَلِيلًا أُوْلَئِكَ لَهُمْ أَجْرُهُمْ عِندَ رَبِّهِمْ إِنَّ اللَّهَ سَرِيعُ الْحِسَابِ*يَا أَيُّهَا الَّذِينَ آمَنُواْ اصْبِرُواْ وَصَابِرُواْ وَرَابِطُواْ وَاتَّقُواْ اللَّهَ لَعَلَّكُمْ تُفْلِحُونَ﴾»",1,"الآيات من سورة آل عمران، ١٩٠ - ٢٠٠، البخاري مع الفتح، ٨/ ٣٣٧، برقم ٤٥٦٩، ومسلم، ١/ ٥٣٠، برقم ٢٥٦."]]};
@@ -815,8 +815,8 @@ function qls(){return matchMedia("(orientation:landscape) and (max-height:700px)
 if(!S.mzv){S.mzv=1;S.qst="";try{save()}catch(e){}}
 const QST=()=>S.qst===undefined||S.qst===null?"":S.qst;
 const QCOL=[["white","أبيض","#ffffff"],["cream","كريمي","#fff9f1"],["gray","رمادي","#d1ccc6"],["green","أخضر","#eef5ee"],["dark","ليلي","#19191b"]];
-const qDark=()=>{try{const T=S.theme||"auto";return T=="dark"||(T=="auto"&&matchMedia("(prefers-color-scheme:dark)").matches)}catch(e){return false}};const qcolor=()=>{const v=QCOL.some(c=>c[0]==S.qcol)?S.qcol:"white";return v=="dark"||(qDark()&&!S.qpin)?"dark":v};function qsyncTheme(){try{const d=qDark();if(window._qld!==undefined&&window._qld!==d&&S.qpin){delete S.qpin;save()}window._qld=d;const q=document.getElementById("qv");if(q)q.dataset.qc=qcolor()}catch(e){}}try{matchMedia("(prefers-color-scheme:dark)").addEventListener("change",qsyncTheme)}catch(e){}
-function qcset(v){S.qcol=v;S.qpin=1;save();const q=$("#qv");if(q)q.dataset.qc=qcolor();document.querySelectorAll("[data-qcb]").forEach(b=>b.classList.toggle("p",b.dataset.qcb==qcolor()))}
+const qcolor=()=>QCOL.some(c=>c[0]==S.qcol)?S.qcol:"white";
+function qcset(v){S.qcol=v;save();const q=$("#qv");if(q)q.dataset.qc=qcolor();document.querySelectorAll("[data-qcb]").forEach(b=>b.classList.toggle("p",b.dataset.qcb==qcolor()))}
 function qcCard(){const c=qcolor();return `<div class="card"><div class="lh">🎨 لون المصحف</div><div class="set" style="gap:8px;flex-wrap:wrap">${QCOL.map(x=>`<button data-qcb="${x[0]}" class="${c==x[0]?"p":""}" style="flex:1 1 28%" onclick="qcset('${x[0]}')"><i style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${x[2]};border:1px solid #888;vertical-align:middle;margin-inline-end:6px"></i>${x[1]}</button>`).join("")}</div></div>`}
 const QZS=[1,1.42,1.9],QZ=()=>Math.max(0,Math.min(2,S.qz|0)),QZF=()=>1;
 const qrd=()=>QST()=="read"||QZ()>0;
@@ -1180,15 +1180,15 @@ function qplui(){
 function qpt(){if(AP.on)atog();else{const [s,a]=qstart();qplay(s,a)}}
 function qrpick(){
   const f=S.qrec||RLD[0],rl=RC.map(r=>r[0]);
-  qshow("qo-r","اختيار القارئ",`<div class="card">${rl.map(id=>{const r=RC.find(x=>x[0]==id);return r?`<div class="row" style="cursor:pointer" onclick="qrset('${id}')"><span>${id==f?"● ":"○ "}${r[1]}</span><button class="gdl sm" aria-label="تنزيل" onclick="event.stopPropagation();qrdlall('${id}')">⬇</button></div>`:""}).join("")}</div>`)}
+  qshow("qo-r","اختيار القارئ",`<div class="card">${rl.map(id=>{const r=RC.find(x=>x[0]==id);return r?`<div class="row" style="cursor:pointer" onclick="qrset('${id}')"><span>${id==f?"● ":"○ "}${r[1]}</span><button data-dl="${id}" class="gdl sm" aria-label="تنزيل" onclick="event.stopPropagation();qrdlall('${id}')">⬇</button></div>`:""}).join("")}</div>`);dlHideFull()}
 function qrset(id){S.qrec=id;save();qpop();qplui();if(AP.on)aload()}
 const qstart=()=>QS?[QS.s,QS.a]:QD.pages[qn-1].slice();
 let qrOpen=0;
 function qlisten(){
  const [s,a]=qstart(),f=S.qrec||RLD[0],rl=RC.map(r=>r[0]);
- const rows=rl.map(id=>{const r=RC.find(x=>x[0]==id);if(!r)return"";return `<div class="row" style="cursor:pointer" onclick="qrsel('${id}')"><span>${id==f?"● ":"○ "}${r[1]}</span><span style="display:flex;gap:6px;align-items:center"><button class="gdl sm" aria-label="تنزيل" onclick="event.stopPropagation();qrdlall('${id}')">⬇</button></span></div>`}).join("");
+ const rows=rl.map(id=>{const r=RC.find(x=>x[0]==id);if(!r)return"";return `<div class="row" style="cursor:pointer" onclick="qrsel('${id}')"><span>${id==f?"● ":"○ "}${r[1]}</span><span style="display:flex;gap:6px;align-items:center"><button data-dl="${id}" class="gdl sm" aria-label="تنزيل" onclick="event.stopPropagation();qrdlall('${id}')">⬇</button></span></div>`}).join("");
  qshow("qo-l","الاستماع",`<div class="card">${(()=>{const r=resInfo();return r&&!AP.on?`<button class="p" style="width:100%;margin-bottom:8px" onclick="qpop();qresume()">⏯ متابعة من حيث توقفت: ${QD.names[r.s-1]} · آية ${AD(r.a)}</button>`:""})()}<button class="p" style="width:100%" onclick="qgoplay(${s},${a})">▶ استماع السورة</button>${AP.on?`<button style="width:100%;margin-top:8px" onclick="qstop();qlisten()">⏹ إيقاف</button>`:""}
- <div class="set"><span>القارئ: <b>${recname()}</b></span><button class="gdl" onclick="qrdlall()">⬇ تنزيل</button></div>
+ <div class="set"><span>القارئ: <b>${recname()}</b></span><button data-dl="cur" class="gdl" onclick="qrdlall()">⬇ تنزيل</button></div>
  <button style="width:100%;margin-bottom:6px" onclick="qrOpen=!qrOpen;qlisten()">${qrOpen?"إغلاق القائمة":"تغيير القارئ"}</button>
  ${qrOpen?`<div style="margin-bottom:6px">${rows}</div>`:""}
  <div class="set"><span>المتابعة مع القراءة</span><input type="checkbox" ${S.qfollow!==false?"checked":""} onchange="S.qfollow=this.checked;save()" style="width:22px;height:22px"></div><div class="set"><span>تظليل كلمة بكلمة</span><input type="checkbox" ${S.qwf===true?"checked":""} onchange="S.qwf=this.checked;save();wmark()" style="width:22px;height:22px"></div></div>`);
@@ -1208,7 +1208,7 @@ function dlRow(e,s){if(e&&e.target&&e.target.closest&&e.target.closest("button,.
 function dlUnq(s){for(let i=DLQ.length-1;i>=0;i--){DLQ[i][0]=DLQ[i][0].filter(x=>x[0]!=s);if(!DLQ[i][0].length)DLQ.splice(i,1)}DLQS.delete(s);qdrows()}
 function dlSelAll(){const pre=DLF;const all=[];for(let s=1;s<=114;s++)all.push(s);if(DLSEL.size>=all.length)DLSEL.clear();else all.forEach(s=>DLSEL.add(s));qdrows()}
 function dlSurList(ss){const l=[];ss.forEach(s=>{if(SUD[DLF])l.push([s,1]);else for(let a=1;a<=QD.text[s-1].length;a++)l.push([s,a])});return SUD[DLF]?l:qbsfix(l)}
-function dlMany(ss,label){if(ADL==2){qtoast("جارٍ الإيقاف…");return}if(!ss.length){qtoast("اختر سورة واحدة على الأقل");return}if(!navigator.onLine){qtoast("يلزم اتصال بالإنترنت");return}adlGo(dlSurList(ss),label,DLF)}
+function dlMany(ss,label){if(ADL==2){qtoast("جارٍ الإيقاف…");return}if(!ss.length){qtoast("اختر سورة واحدة على الأقل");return}adlGo(dlSurList(ss),label,DLF)}
 function dlSelGo(){const ss=[...DLSEL].sort((a,b)=>a-b);DLSEL.clear();dlMany(ss,AD(ss.length)+" سور مختارة")}
 async function dlTen(){const pre="au:"+DLF+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});const ss=[];for(let s=1;s<=114&&ss.length<10;s++){const t=SUD[DLF]?1:QD.text[s-1].length;if((c[s]||0)<t)ss.push(s)}if(!ss.length){qtoast("كل السور محمّلة");return}dlMany(ss,"أول "+AD(ss.length)+" سور غير محمّلة")}
 function qrdlall(id){
@@ -1220,34 +1220,90 @@ async function qdrows(){
  const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});
  const e2=$("#dlrows");if(!e2)return;
  e2.innerHTML=QD.names.map((n,i)=>{const s=i+1,t=SUD[DLF]?1:QD.text[i].length,d=c[s]||0,full=d>=t,run=ADL==1&&DLP&&DLP.t[s];const act=full?`<button class="dlx" onclick="qdd2(${s})" aria-label="حذف">🗑</button>`:run?`<span class="dpw" onclick="adlStop()" title="اضغط للإيقاف"><button class="dpr" id="dp${s}" style="--p:${Math.round(100*(DLP.c[s]||0)/DLP.t[s])}" aria-label="جارٍ التنزيل"></button><i></i></span>`:DLQS.has(s)?`<span class="dpw" onclick="dlUnq(${s})" title="في الانتظار — اضغط للإلغاء"><button class="dpr" style="--p:0" aria-label="في الانتظار"></button></span>`:`<button class="dlb" aria-label="تنزيل" onclick="qdlsur(${s})">⬇</button>`;return `<div class="dlr${full?" ok":""}"><span class="dln">${full?"✓":AD(s)}</span><span class="dli"><b>${n}</b><small>${full?"محمّلة · تعمل دون إنترنت":d?AD(d)+" من "+AD(t)+" آية":AD(t)+" آية"}</small>${d&&!full?`<i class="dlm"><u style="width:${Math.round(100*d/t)}%"></u></i>`:""}</span><span class="dla">${act}</span></div>`}).join("")}
-function adlStop(){if(ADL!=1)return;ADL=2;DLQ.length=0;DLQS.clear();try{ADAC&&ADAC.abort()}catch(e){}try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}qtoast("أُوقف التنزيل");qdrows()}
+function adlStop(){if(ADL!=1)return;ADL=2;DLQ.length=0;DLQS.clear();try{localStorage.removeItem(ZJK)}catch(e){}try{ADAC&&ADAC.abort()}catch(e){}dlPoke(1);try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}qtoast("أُوقف التنزيل");qdrows()}
 function qdlsur(s){adlGo(SUD[DLF]?[[s,1]]:qbsfix(Array.from({length:QD.text[s-1].length},(_,i)=>[s,i+1])),"سورة "+QD.names[s-1],DLF)}
 async function qdd2(s){try{await idbDel("au:"+DLF+"/"+p3(s)+"000")}catch(e){}for(let a=1;a<=QD.text[s-1].length;a++){try{await idbDel("au:"+DLF+"/"+p3(s)+p3(a))}catch(e){}}qdrows();qdlist()}
 function qrdlgo(){
   const r=RC.find(x=>x[0]==DLF),nm=r?r[1]:"القارئ";
   if(ADL==1){adlStop();return}
   if(ADL){qtoast("جارٍ الإيقاف…");return}
-  if(!navigator.onLine){qtoast("يلزم اتصال بالإنترنت");return}
  const l=[];for(let s=1;s<=114;s++)for(let a=1;a<=QD.text[s-1].length;a++)l.push([s,a]);
  adlGo(qbsfix(l),"المصحف كاملًا",DLF)}
 function qdls(){const s=+$("#ds").value;adlGo(qbsfix(Array.from({length:QD.text[s-1].length},(_,i)=>[s,i+1])),"سورة "+QD.names[s-1])}
 function qdlp(){adlGo(qbsfix(qpv(qn)),"الصفحة "+AD(qn))}
 const adpSet=(h,tx)=>["#adp","#adp2"].forEach(q=>{const e=$(q);if(e){if(tx)e.textContent=h;else e.innerHTML=h}});
 var ADERR="";
-async function adlGo(list,label,fid){
- if(ADL){if(ADL==1&&(fid||S.qrec||RLD[0])==DLF){DLQ.push([list,label,fid]);list.forEach(x=>DLQS.add(x[0]));qtoast("أُضيفت إلى قائمة الانتظار");qdrows()}else qtoast("هناك تحميل جارٍ");return}ADERR="";
- ADL=1;ADAC=new AbortController();const f=fid||S.qrec||RLD[0];if(SUD[f]){const u=[];list.forEach(([s0])=>{if(!u.includes(s0))u.push(s0)});list=u.map(s0=>[s0,0])}const n=list.length;let done=0,fail=0,i=0,lu=0,lr=0;DLP={t:{},c:{}};list.forEach(([s0])=>{DLP.t[s0]=(DLP.t[s0]||0)+1});
+/* ---- التنزيل الذكي: يستمر في الخلفية (خدمة أمامية)، ينتظر عودة الشبكة، ويكمل من حيث توقف ---- */
+var ADW=0,ADJ=null;const ZJK="zadDlJobs",DLS=new Set();
+const dlNet=()=>{try{if(window.ZadDl&&ZadDl.net)return!!ZadDl.net()}catch(e){}return navigator.onLine!==false};
+function dlSleep(ms){return new Promise(res=>{const o={d:Date.now()+ms};o.f=()=>{clearTimeout(o.t);DLS.delete(o);res()};o.t=setTimeout(o.f,ms);DLS.add(o)})}
+function dlPoke(force){const n=Date.now();[...DLS].forEach(o=>{if(force||n>=o.d)o.f()})}
+window.addEventListener("online",()=>dlPoke(1));
+document.addEventListener("visibilitychange",()=>dlPoke(0));
+window.__dlTick=()=>dlPoke(0);
+window.__zadDlStop=()=>{try{adlStop()}catch(e){}};
+function dlNat(t,x,p){try{window.ZadDl&&ZadDl.update(t,x,p)}catch(e){}}
+function dlNatEnd(t,x){try{window.ZadDl&&ZadDl.end(t,x)}catch(e){}}
+function dlPersist(){try{if(!ADJ&&!DLQ.length){localStorage.removeItem(ZJK);return}const mk=(l,lb,f)=>({f:f,lb:lb,l:l.map(x=>x[0]*1000+x[1])}),a=[];if(ADJ)a.push(mk(ADJ.l,ADJ.lb,ADJ.f));DLQ.forEach(q=>a.push(mk(q[0],q[1],q[2]||S.qrec||RLD[0])));localStorage.setItem(ZJK,JSON.stringify(a))}catch(e){}}
+function dlResume(){if(ADL)return;let a=null;try{a=JSON.parse(localStorage.getItem(ZJK)||"null")}catch(e){}if(!Array.isArray(a)||!a.length)return;try{const mk=j=>[j.l.map(v=>[Math.floor(v/1000),v%1000]),j.lb,j.f],js=a.map(mk),first=js[0];DLQ.length=0;DLQS.clear();js.slice(1).forEach(q=>{DLQ.push(q);q[0].forEach(x=>DLQS.add(x[0]))});qtoast("استئناف التنزيل: "+first[1],3500);adlGo(first[0],first[1],first[2],1)}catch(e){try{localStorage.removeItem(ZJK)}catch(x){}}}
+if(document.readyState=="complete")setTimeout(dlResume,3000);else window.addEventListener("load",()=>setTimeout(dlResume,3000));
+/* يجلب ملفًا واحدًا: مهلة توقف، واستكمال من نقطة التوقف (Range) للملفات الكبيرة */
+async function dlGet(u,k,big,sig){
+ const c=new AbortController(),ab=()=>c.abort();sig.addEventListener("abort",ab);
+ let last=Date.now();const iv=setInterval(()=>{if(Date.now()-last>(big?25000:20000))c.abort()},3000);
+ const pk="ap:"+k;let ch=[],start=0,got=0;
+ try{
+  if(big){let p;try{p=await idbOp("get",pk)}catch(e){}if(p&&p.size){ch=[p];start=p.size}}
+  got=start;
+  const r=await fetch(u,{signal:c.signal,headers:start?{Range:"bytes="+start+"-"}:undefined});
+  if(r.status==416){try{await idbOp("delete",pk)}catch(e){}throw new Error("RESTART")}
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  if(start&&r.status!=206){ch=[];start=0;got=0}
+  last=Date.now();
+  if(!big||!r.body||!r.body.getReader){const b=await r.blob();if(b.size<200)throw new Error("HTTP 415");return b}
+  const rd=r.body.getReader();let sv=got;
+  for(;;){const q=await rd.read();if(q.done)break;ch.push(q.value);got+=q.value.length;last=Date.now();if(got-sv>4194304){sv=got;const sb=new Blob(ch);ch=[sb];try{await idbOp("put",sb,pk)}catch(e){}}}
+  return new Blob(ch,{type:"audio/mpeg"})
+ }catch(e){
+  if(big&&got>start){try{await idbOp("put",new Blob(ch),pk)}catch(x){}}
+  throw e
+ }finally{clearInterval(iv);sig.removeEventListener("abort",ab)}}
+async function adlGo(list,label,fid,resume){
+ if(ADL){if(ADL==1&&(fid||S.qrec||RLD[0])==DLF){DLQ.push([list,label,fid]);list.forEach(x=>DLQS.add(x[0]));dlPersist();qtoast("أُضيفت إلى قائمة الانتظار");qdrows()}else qtoast("هناك تحميل جارٍ");return}ADERR="";
+ ADL=1;ADW=0;ADAC=new AbortController();const f=fid||S.qrec||RLD[0];if(resume)DLF=f;ADJ={f:f,lb:label,l:list};dlPersist();
+ if(SUD[f]){const u=[];list.forEach(([s0])=>{if(!u.includes(s0))u.push(s0)});list=u.map(s0=>[s0,0])}const n=list.length;let done=0,fail=0,i=0,lu=0,lr=0,ln=0;DLP={t:{},c:{}};list.forEach(([s0])=>{DLP.t[s0]=(DLP.t[s0]||0)+1});
  let have=new Set();try{have=new Set(await idbKeys("au:"+f+"/"))}catch(e){}
  const todo=[];list.forEach(x=>{if(have.has("au:"+f+"/"+p3(x[0])+p3(x[1]))){done++;DLP.c[x[0]]=(DLP.c[x[0]]||0)+1}else todo.push(x)});const m=todo.length;
- const upd=()=>{const now=Date.now();if(now-lu<300&&done<n)return;lu=now;for(const k in DLP.t){const e=document.getElementById("dp"+k);if(e)e.style.setProperty("--p",Math.round(100*(DLP.c[k]||0)/DLP.t[k]))}if(now-lr>2500){lr=now;qdrows()}const bi=document.getElementById("dlbi");if(bi)bi.style.width=Math.round(100*done/n)+"%";const h=`${label}: ${AD(done)} / ${AD(n)}${fail?` · فشل ${AD(fail)}`:""} <button onclick="adlStop()">إيقاف</button>`;adpSet(h)};
- const w=async()=>{while(ADL==1&&i<m){const [s,a]=todo[i++],k="au:"+f+"/"+p3(s)+p3(a);try{{const r=await fetch(SUD[f]?SUD[f][1]+p3(s)+(SUD[f][2]||"")+".mp3":aurl(f,s,a),{signal:ADAC.signal});if(!r.ok)throw new Error("HTTP "+r.status);await idbSet(k,await r.blob())}done++;DLP.c[s]=(DLP.c[s]||0)+1}catch(e){if(ADL!=1)break;fail++;ADERR=String(e&&e.message||e);try{window.__zlog&&window.__zlog("dl fail "+k+": "+ADERR)}catch(x){}if(fail>5)ADL=2}upd();await new Promise(r=>setTimeout(r,0))}};
- qdrows();upd();await Promise.all([w(),w(),w(),w(),w(),w()]);
- const bi=document.getElementById("dlbi");if(bi&&ADL!=1)bi.style.width=ADL==2?bi.style.width:"0%";const ok=ADL==1&&!fail,us=ADL==2&&fail<=5;ADL=0;ADAC=null;DLP=null;
+ const upd=force=>{const now=Date.now();if(!force&&now-lu<300&&done<n)return;lu=now;for(const k in DLP.t){const e=document.getElementById("dp"+k);if(e)e.style.setProperty("--p",Math.round(100*(DLP.c[k]||0)/DLP.t[k]))}if(now-lr>2500){lr=now;qdrows()}const bi=document.getElementById("dlbi");if(bi)bi.style.width=Math.round(100*done/(n||1))+"%";const st=ADW==1?" · ⏸ بانتظار الشبكة…":ADW==2?" · الشبكة ضعيفة — إعادة المحاولة…":"";const h=`${label}: ${AD(done)} / ${AD(n)}${fail?` · فشل ${AD(fail)}`:""}${st} <button onclick="adlStop()">إيقاف</button>`;adpSet(h);if(force||now-ln>1200){ln=now;const pc=Math.round(100*done/(n||1));dlNat("تنزيل: "+label,ADW==1?"بانتظار الشبكة… "+done+" من "+n:done+" من "+n+" ("+pc+"%)",ADW==1?-1:pc)}};
+ const w=async()=>{while(ADL==1&&i<m){
+  const [s,a]=todo[i++],k="au:"+f+"/"+p3(s)+p3(a),big=!!SUD[f],u=big?SUD[f][1]+p3(s)+(SUD[f][2]||"")+".mp3":aurl(f,s,a);
+  let ne=0,hr=0,ok=false,bad=false;
+  while(ADL==1){
+   if(!dlNet()){if(ADW!=1){ADW=1;upd(1)}await dlSleep(1500);continue}
+   if(ADW==1){ADW=0;upd(1)}
+   try{const b=await dlGet(u,k,big,ADAC.signal);await idbSet(k,b);if(big){try{await idbOp("delete","ap:"+k)}catch(x){}}ok=true;break}
+   catch(e){
+    if(ADL!=1)break;
+    const msg=String(e&&e.message||e);ADERR=msg;
+    if(msg=="RESTART")continue;
+    if(/^HTTP (\d+)/.test(msg)){const c=+RegExp.$1;if((c==429||c==408||c>=500)&&++hr<=3){ADW=2;upd(1);await dlSleep(2000*hr);continue}bad=true;break}
+    if(!dlNet())continue;
+    if(++ne>8){bad=true;break}
+    ADW=2;upd(1);await dlSleep(Math.min(20000,1000*Math.pow(2,Math.min(ne,5))))
+   }
+  }
+  if(ok){if(ADW==2)ADW=0;done++;DLP.c[s]=(DLP.c[s]||0)+1}else if(bad){fail++;try{window.__zlog&&window.__zlog("dl fail "+k+": "+ADERR)}catch(x){}if(fail>5)ADL=2}
+  if(ADL!=1&&!ok&&!bad)break;
+  upd();await null}};
+ qdrows();upd(1);await Promise.all([w(),w(),w(),w(),w(),w()]);
+ const bi=document.getElementById("dlbi");if(bi&&ADL!=1)bi.style.width=ADL==2?bi.style.width:"0%";const ok=ADL==1&&!fail,us=ADL==2&&fail<=5;ADL=0;ADW=0;ADAC=null;DLP=null;ADJ=null;
  adpSet(ok?`اكتمل تحميل ${label} — يعمل دون إنترنت`:us?`أُوقف التحميل (${AD(done)} من ${AD(n)}). يمكنك المتابعة لاحقًا.`:`توقّف التحميل (${AD(done)} من ${AD(n)}). تحقق من الاتصال ثم أعد المحاولة.${ADERR?" ["+ADERR+"]":""}`,1);
  qdlist();qdrows();
- if(ok&&DLQ.length){const q=DLQ.shift();DLQS.clear();DLQ.forEach(x=>x[0].forEach(y=>DLQS.add(y[0])));setTimeout(()=>adlGo(q[0],q[1],q[2]),50)}else{DLQ.length=0;DLQS.clear();qdrows()}}
+ if(ok&&DLQ.length){const q=DLQ.shift();DLQS.clear();DLQ.forEach(x=>x[0].forEach(y=>DLQS.add(y[0])));Promise.resolve().then(()=>adlGo(q[0],q[1],q[2]))}else{DLQ.length=0;DLQS.clear();dlPersist();dlNatEnd(us?"":"زاد المسلم",us?"":ok?"اكتمل تحميل "+label:"توقّف التنزيل ("+done+" من "+n+")");qdrows()}}
+async function dlHideFull(){try{const ks=await idbKeys("au:"),c={};ks.forEach(k=>{const m=/^au:(.+)\/(\d{3})(\d{3})$/.exec(k);if(!m)return;const o=c[m[1]]||(c[m[1]]={});o[+m[2]]=(o[+m[2]]||0)+1});
+ document.querySelectorAll("button[data-dl]").forEach(b=>{const id=b.dataset.dl=="cur"?(S.qrec||RLD[0]):b.dataset.dl,d=c[id];if(!d)return;let full=true;for(let s=1;s<=114;s++){const t=SUD[id]?1:QD.text[s-1].length;if((d[s]||0)<t){full=false;break}}if(full){const sp=document.createElement("span");sp.textContent="✓ محمّل";sp.style.cssText="color:#1e9e57;font-weight:bold;font-size:.85em;white-space:nowrap;flex:none";b.replaceWith(sp)}})}catch(e){}}
 async function qdlist(){
- const e=$("#adl");if(!e)return;const f=S.qrec||RLD[0],pre="au:"+f+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}
+ dlHideFull();const e=$("#adl");if(!e)return;const f=S.qrec||RLD[0],pre="au:"+f+"/";let ks=[];try{ks=await idbKeys(pre)}catch(x){}
  const c={};ks.forEach(k=>{const s=+k.slice(pre.length,pre.length+3);c[s]=(c[s]||0)+1});
  const rows=Object.keys(c).map(Number).sort((a,b)=>a-b).map(s=>{const t=SUD[f]?1:QD.text[s-1].length;return `<div class="row"><span>${QD.names[s-1]} <span class="mu">${c[s]>=t?"كاملة":AD(c[s])+" من "+AD(t)}</span></span><button onclick="qdd(${s})">حذف</button></div>`}).join("");
  const e2=$("#adl");if(e2)e2.innerHTML=rows?`<div class="mu" style="margin:8px 0 4px">المحمّل لهذا القارئ</div>${rows}`:""}
@@ -2536,9 +2592,9 @@ function adScrClose(stop){const a=AS;if(!a)return;AS=null;clearInterval(a.tm);cl
  if(!a.demo)window.__adDis[a.k]=1;if(stop){if(adPlaying){try{adStop()}catch(e){}}try{window.AdhanScreen&&AdhanScreen.stopSound()}catch(e){}}try{window.AdhanNative&&AdhanNative.screenClosed&&AdhanNative.screenClosed()}catch(e){}
  a.el.classList.remove("on");setTimeout(()=>{try{a.el.remove()}catch(e){}},750)}
 function adScrNext(){try{const n=new Date(),t=times(n);for(const p of ADN){if(t[p[0]]>n)return p[0]}}catch(e){}return 2}
-function adScrLate(n,t){const c=adS();if(!c.on||!adScrOn()||AS||document.visibilityState!="visible")return;const dk=n.toDateString();
+function adScrLate(n,t){return;const c=adS();if(!c.on||!adScrOn()||AS||document.visibilityState!="visible")return;const dk=n.toDateString();
  for(let i=0;i<ADN.length;i++){const p=ADN[i];if(!c.pr[i])continue;const d=n-t[p[0]];if(d>=0&&d<9e4&&!window.__adDis[dk+"|"+p[0]]){adScr(p[0],{start:+t[p[0]],nat:adNat()});break}}}
-window.adScrNative=function(i){try{const n=new Date(),t=times(n),tm=+t[i],d=n-tm;if(!(d>-6e4&&d<9e4))return;adScr(i,{start:d>=0?tm:Date.now(),nat:1,force:0})}catch(e){}};
+window.adScrNative=function(i){try{const n=new Date(),t=times(n),tm=+t[i],d=n-tm;if(!(d>-5e3&&d<45e3))return;adScr(i,{start:d>=0?tm:Date.now(),nat:1,force:0})}catch(e){}};
 setTimeout(()=>{try{const m=/[#?&]adhan=(\d)/.exec(location.href);if(m)window.adScrNative(+m[1])}catch(e){}},1200);
 function adScrSync(){try{const B=window.AdhanScreen;if(!B||!B.set)return;const c=adS(),out=[],now=Date.now();
  if(c.on&&adScrOn()){for(let d=0;d<7;d++){const dt=new Date();dt.setDate(dt.getDate()+d);const t=times(dt);ADN.forEach((p,i)=>{if(!c.pr[i])return;const ms=+t[p[0]];if(ms>now-6e4)out.push([ms,p[0]])})}}
@@ -2551,7 +2607,7 @@ function adScrSet(){const on=adScrOn(),pn=adPnGet();
  <div class="set"><button class="gdl" onclick="adScr(2,{demo:1,dur:46,force:1})">👁 معاينة اللوحة</button></div>${(window.AdhanScreen&&AdhanScreen.fsi&&!AdhanScreen.fsi())?`<div class="mu" style="margin:6px 2px;line-height:1.8">لتظهر اللوحة والشاشة مقفلة اسمح بـ«الإشعارات بملء الشاشة» لهذا التطبيق.</div><div class="set"><button class="gdl" onclick="AdhanScreen.askFsi()">السماح بملء الشاشة</button></div>`:""}`:""}</div>`}
 
 function adTick(){const c=adS();if(!c.on)return;const n=new Date(),t=times(n),dk=n.toDateString();S.adl=S.adl||{};let ch=0;
- ADN.forEach((p,i)=>{if(!c.pr[i])return;const tm=t[p[0]],d=n-tm,k=dk+"|"+p[0];if(d>=0&&d<9e4&&S.adl[k]!=1){S.adl[k]=1;ch=1;Object.keys(S.adl).forEach(x=>{if(x.split("|")[0]!=dk)delete S.adl[x]});ntFire("حان الآن وقت صلاة "+p[1],"حيّ على الصلاة",k,"nt",true);if(!adNat())adPlay(p[1]);try{adScr(p[0],{start:+tm,nat:adNat()})}catch(e){}}});
+ ADN.forEach((p,i)=>{if(!c.pr[i])return;const tm=t[p[0]],d=n-tm,k=dk+"|"+p[0];if(d>=0&&d<9e4&&S.adl[k]!=1){S.adl[k]=1;ch=1;Object.keys(S.adl).forEach(x=>{if(x.split("|")[0]!=dk)delete S.adl[x]});ntFire("حان الآن وقت صلاة "+p[1],"حيّ على الصلاة",k,"nt",true);if(!adNat())adPlay(p[1]);try{if(d<2e4)adScr(p[0],{start:+tm,nat:adNat()})}catch(e){}}});
  try{adScrLate(n,t)}catch(e){}try{if(((window.__adc=(window.__adc||0)+1)%12)==1)adScrSync()}catch(e){}
  if(ch)save();try{adArm()}catch(e){}}
 let __adArmT=null;function adArm(){clearTimeout(__adArmT);try{const c=adS();if(!c.on)return;const n=Date.now();let best=0;for(let d=0;d<2;d++){const dt=new Date();dt.setDate(dt.getDate()+d);const t=times(dt);ADN.forEach((p,i)=>{if(!c.pr[i])return;const ms=+t[p[0]];if(ms>n+50&&(!best||ms<best))best=ms})}if(best&&best-n<864e5)__adArmT=setTimeout(adTick,Math.max(0,best-Date.now())+20)}catch(e){}}

@@ -21,9 +21,6 @@ import com.getcapacitor.BridgeActivity;
  *  - AudioShade: إشعار «إيقاف» في الستارة يوقف القرآن/الأذكار دون فتح التطبيق.
  */
 public class MainActivity extends BridgeActivity {
-    /** وقت آخر أذان وصل (يضبطه AdhanScreenReceiver) ووقت آخر إيقاف بزر الصوت: لئلا يُعاد الأذان بعد إيقافه */
-    static volatile long sAdhanAt = 0;
-    static volatile long sSilencedAt = 0;
     private volatile boolean adhanPlaying = false;
     /** مهلة أمان: لا يُوقَف الأذان تلقائيًا (فقدان تركيز/شريط الحالة) في أول ثوانٍ لأن فتح اللوحة نفسه يسبب هذه الأحداث */
     private volatile long adhanGraceUntil = 0;
@@ -55,6 +52,18 @@ public class MainActivity extends BridgeActivity {
     }
 
     /** يُستدعى من زر «إيقاف» في الستارة: يأمر الصفحة بإيقاف كل صوت. */
+    /** ينفّذ جافاسكربت في الصفحة (من خدمة التنزيل وزر الإيقاف). */
+    static void evalJs(final String js) {
+        final MainActivity a = sInst;
+        if (a == null) return;
+        a.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try { a.getBridge().getWebView().evaluateJavascript(js, null); } catch (Throwable ignored) { }
+            }
+        });
+    }
+
     static void stopAudioFromShade() {
         final MainActivity a = sInst;
         if (a == null) return;
@@ -384,6 +393,7 @@ public class MainActivity extends BridgeActivity {
             getBridge().getWebView().addJavascriptInterface(new PermBridge(), "ZadPerm");
             getBridge().getWebView().addJavascriptInterface(new ZadFiles(this), "ZadFiles");
             getBridge().getWebView().addJavascriptInterface(new AdhanScreen(this), "AdhanScreen");
+            getBridge().getWebView().addJavascriptInterface(new ZadDl(this), "ZadDl");
         } catch (Throwable ignored) { }
         // مصالحة الصامت عند كل تشغيل: تصلح أي حالة عالقة وتعيد ضبط المنبّه التالي
         try { AndroidSilent.reconcile(this); } catch (Throwable ignored) { }
@@ -429,7 +439,7 @@ public class MainActivity extends BridgeActivity {
             if (idx < 0) return;
             // لا تُعرض اللوحة إلا في وقت الأذان نفسه؛ نية قديمة (إعادة فتح من التطبيقات الأخيرة…) تُتجاهل
             long dlt = System.currentTimeMillis() - fms;
-            if (fms <= 0 || dlt < -10000 || dlt > 100000L) return;
+            if (fms <= 0 || dlt < -10000 || dlt > 50000L) return;
             adhanOpened = true;
             adhanGraceUntil = System.currentTimeMillis() + 10000;
             if (Build.VERSION.SDK_INT >= 27) {
@@ -452,12 +462,7 @@ public class MainActivity extends BridgeActivity {
                 h.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        try {
-                            // بعد أن أوقف المستخدم الأذان بزر الصوت لا نعيد عرض اللوحة ولا الصوت
-                            String run = (System.currentTimeMillis() - sSilencedAt < 180000L)
-                                    ? js + ";window.__adSilence&&window.__adSilence()" : js;
-                            getBridge().getWebView().evaluateJavascript(run, null);
-                        } catch (Throwable ignored) { }
+                        try { getBridge().getWebView().evaluateJavascript(js, null); } catch (Throwable ignored) { }
                     }
                 }, d);
             }
@@ -578,14 +583,6 @@ public class MainActivity extends BridgeActivity {
         super.onDestroy();
     }
 
-    private void silenceAdhanJs() {
-        runOnUiThread(() -> {
-            try {
-                getBridge().getWebView().evaluateJavascript("window.__adSilence&&window.__adSilence()", null);
-            } catch (Throwable ignored) { }
-        });
-    }
-
     private void stopAdhan() {
         stopAdhan(false);
     }
@@ -612,26 +609,10 @@ public class MainActivity extends BridgeActivity {
     public boolean dispatchKeyEvent(KeyEvent event) {
         int code = event.getKeyCode();
         if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            // الأذان يُشغَّل من الخدمة الأصلية: زر الصوت يوقفه ولا تختفي اللوحة
-            if (event.getAction() == KeyEvent.ACTION_DOWN && AdhanService.sPlaying) {
-                swallowVolume = true;
-                sSilencedAt = System.currentTimeMillis();
-                AdhanService.stop(this);
-                silenceAdhanJs();
-                return true;
-            }
             if (event.getAction() == KeyEvent.ACTION_DOWN && adhanPlaying) {
                 swallowVolume = true;
-                sSilencedAt = System.currentTimeMillis();
                 stopAdhan(true);
-                silenceAdhanJs();
                 return true;
-            }
-            // الأذان يصدر من إشعار النظام (الصفحة لا تشغّله): زر الصوت خلال دقيقتين من وقته يوقفه ويعلّمه «تم»
-            if (event.getAction() == KeyEvent.ACTION_DOWN
-                    && (adhanOpened || System.currentTimeMillis() - sAdhanAt < 120000L)) {
-                sSilencedAt = System.currentTimeMillis();
-                silenceAdhanJs();
             }
             if (swallowVolume) {
                 if (event.getAction() == KeyEvent.ACTION_UP) swallowVolume = false;
