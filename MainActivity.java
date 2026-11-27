@@ -31,6 +31,8 @@ public class MainActivity extends BridgeActivity {
     private static MainActivity sInst;
     /** هل شاشة التطبيق ظاهرة الآن (لا حاجة لإشعار اللوحة حينها) */
     static volatile boolean sVisible = false;
+    /** وقت آخر أذان (يُضبط من AdhanScreenReceiver) */
+    static volatile long sAdhanAt = 0;
     private boolean adhanOpened = false;
     /** غطاء أصلي فوري يظهر لحظة الأذان حتى تُحمَّل صفحة الويب (التحميل البارد يستغرق ثوانٍ) */
     private android.view.View adhanCover = null;
